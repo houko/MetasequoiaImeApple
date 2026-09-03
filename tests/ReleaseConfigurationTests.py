@@ -46,6 +46,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("timeout-minutes: 30", workflow)
         self.assertIn("gh release upload", workflow)
         self.assertIn("gh release edit", workflow)
+        self.assertIn("全拼 or 小鹤双拼", readme)
         self.assertIn("Open Anyway", readme)
         self.assertIn("Privacy & Security", readme)
         self.assertIn("native 水杉输入法设置 panel", readme)
@@ -54,6 +55,9 @@ class ReleaseConfigurationTests(unittest.TestCase):
         preferences_controller = (PROJECT_ROOT / "src/PreferencesWindowController.mm").read_text()
         self.assertIn("initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner", preferences_controller)
         self.assertIn("showAndActivate", preferences_controller)
+        self.assertIn("storedScheme", preferences_controller)
+        self.assertIn("setStoredScheme", preferences_controller)
+        self.assertIn("小鹤双拼", preferences_controller)
 
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
         self.assertNotIn("xcrun", release_installer)

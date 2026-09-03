@@ -4,9 +4,13 @@ namespace
 {
 constexpr CGFloat kWindowWidth = 480.0;
 constexpr CGFloat kWindowHeight = 276.0;
+NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 } // namespace
 
 @implementation MetasequoiaPreferencesWindowController
+{
+    NSPopUpButton *_schemeButton;
+}
 
 + (instancetype)sharedController
 {
@@ -16,6 +20,20 @@ constexpr CGFloat kWindowHeight = 276.0;
         controller = [[self alloc] init];
     });
     return controller;
+}
+
++ (NSInteger)storedScheme
+{
+    const NSInteger scheme = [[NSUserDefaults standardUserDefaults] integerForKey:kSchemePreferenceKey];
+    return scheme == 1 ? scheme : 0;
+}
+
++ (void)setStoredScheme:(NSInteger)scheme
+{
+    const NSInteger normalizedScheme = scheme == 1 ? scheme : 0;
+    [[NSUserDefaults standardUserDefaults] setInteger:normalizedScheme forKey:kSchemePreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaInputSchemeDidChangeNotification"
+                                                        object:@(normalizedScheme)];
 }
 
 - (instancetype)initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner
@@ -63,13 +81,15 @@ constexpr CGFloat kWindowHeight = 276.0;
     NSTextField *schemeLabel = [NSTextField labelWithString:@"输入方案"];
     schemeLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSPopUpButton *schemeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
-    [schemeButton addItemWithTitle:@"全拼（当前支持）"];
-    schemeButton.enabled = NO;
-    schemeButton.accessibilityLabel = @"输入方案";
-    schemeButton.translatesAutoresizingMaskIntoConstraints = NO;
+    _schemeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_schemeButton addItemWithTitle:@"全拼"];
+    [_schemeButton addItemWithTitle:@"小鹤双拼"];
+    _schemeButton.target = self;
+    _schemeButton.action = @selector(schemeChanged:);
+    _schemeButton.accessibilityLabel = @"输入方案";
+    _schemeButton.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSTextField *statusLabel = [NSTextField labelWithString:@"更多设置将在后续版本提供。"];
+    NSTextField *statusLabel = [NSTextField labelWithString:@"输入方案会保存到当前用户设置，并在下一次输入会话中生效。"];
     statusLabel.textColor = [NSColor secondaryLabelColor];
     statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
@@ -81,7 +101,7 @@ constexpr CGFloat kWindowHeight = 276.0;
     [contentView addSubview:titleLabel];
     [contentView addSubview:descriptionLabel];
     [contentView addSubview:schemeLabel];
-    [contentView addSubview:schemeButton];
+    [contentView addSubview:_schemeButton];
     [contentView addSubview:statusLabel];
     [contentView addSubview:closeButton];
 
@@ -95,10 +115,10 @@ constexpr CGFloat kWindowHeight = 276.0;
         [schemeLabel.topAnchor constraintEqualToAnchor:descriptionLabel.bottomAnchor constant:34.0],
         [schemeLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [schemeLabel.widthAnchor constraintEqualToConstant:100.0],
-        [schemeButton.centerYAnchor constraintEqualToAnchor:schemeLabel.centerYAnchor],
-        [schemeButton.leadingAnchor constraintEqualToAnchor:schemeLabel.trailingAnchor constant:12.0],
-        [schemeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
-        [statusLabel.topAnchor constraintEqualToAnchor:schemeButton.bottomAnchor constant:20.0],
+        [_schemeButton.centerYAnchor constraintEqualToAnchor:schemeLabel.centerYAnchor],
+        [_schemeButton.leadingAnchor constraintEqualToAnchor:schemeLabel.trailingAnchor constant:12.0],
+        [_schemeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
+        [statusLabel.topAnchor constraintEqualToAnchor:_schemeButton.bottomAnchor constant:20.0],
         [statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
         [closeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
@@ -110,10 +130,17 @@ constexpr CGFloat kWindowHeight = 276.0;
 
 - (void)showAndActivate
 {
+    [_schemeButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedScheme]];
     [self showWindow:nil];
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
+}
+
+- (void)schemeChanged:(id)sender
+{
+    NSPopUpButton *schemeButton = (NSPopUpButton *)sender;
+    [MetasequoiaPreferencesWindowController setStoredScheme:schemeButton.indexOfSelectedItem];
 }
 
 - (void)close:(id)sender

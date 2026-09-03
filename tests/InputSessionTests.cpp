@@ -79,6 +79,11 @@ int main()
         database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '你好', 200)");
         database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '拟好', 100)");
 
+        metasequoia::mac::InputSession default_session;
+        require(default_session.scheme_type() == SchemeType::Quanpin, "The default input scheme should be full pinyin.");
+        metasequoia::mac::InputSession shuangpin_session(SchemeType::Shuangpin);
+        require(shuangpin_session.scheme_type() == SchemeType::Shuangpin, "The requested double-pinyin scheme was not retained.");
+
         metasequoia::mac::InputSession session;
         type(session, "nihao");
         require(session.preedit() == "nihao", "The marked text did not mirror the raw pinyin.");
