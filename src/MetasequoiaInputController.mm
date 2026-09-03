@@ -235,7 +235,9 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     }
     const NSEventModifierFlags inputModeModifiers =
         event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
-    if (metasequoia::mac::IsInputModeToggle(event.keyCode, inputModeModifiers))
+    if (metasequoia::mac::ShouldToggleInputMode(
+            [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled], event.keyCode,
+            inputModeModifiers))
     {
         [self setEnglishInputMode:![MetasequoiaPreferencesWindowController storedEnglishInputMode] client:sender];
         return YES;

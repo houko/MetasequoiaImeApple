@@ -22,5 +22,7 @@
 + (void)setCandidateLearningEnabled:(BOOL)enabled;
 + (BOOL)storedEnglishInputMode;
 + (void)setEnglishInputMode:(BOOL)enabled;
++ (BOOL)storedInputModeShortcutEnabled;
++ (void)setInputModeShortcutEnabled:(BOOL)enabled;
 - (void)showAndActivate;
 @end
