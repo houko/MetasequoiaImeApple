@@ -28,6 +28,7 @@ class InputSession
                           bool helpcode_enabled = true);
 
     KeyResult handle_character(char character);
+    KeyResult handle_candidate_key(char character);
     KeyResult handle_command(Command command);
     KeyResult select_candidate(size_t index);
     KeyResult select_candidate(const std::string &candidate);

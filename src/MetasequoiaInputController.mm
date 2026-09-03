@@ -85,6 +85,14 @@ NSString *StringFromUtf8(const std::string &value)
             {
                 result = _session->handle_character(static_cast<char>(character));
             }
+            else if (character >= '1' && character <= '9')
+            {
+                result = _session->handle_candidate_key(static_cast<char>(character));
+                if (!result.handled && _session->has_composition())
+                {
+                    return YES;
+                }
+            }
         }
         break;
     }

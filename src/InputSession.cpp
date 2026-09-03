@@ -26,6 +26,15 @@ KeyResult InputSession::handle_character(char character)
     return {true, std::nullopt};
 }
 
+KeyResult InputSession::handle_candidate_key(char character)
+{
+    if (!has_composition() || character < '1' || character > '9')
+    {
+        return {};
+    }
+    return select_candidate(static_cast<size_t>(character - '1'));
+}
+
 KeyResult InputSession::handle_command(Command command)
 {
     if (!has_composition())
