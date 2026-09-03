@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.11.0...v0.12.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** choose candidate window layout ([#56](https://github.com/houko/MetasequoiaImeMac/issues/56)) ([0f1f313](https://github.com/houko/MetasequoiaImeMac/commit/0f1f3136c84393cd5ca052011771e164f6435fbe))
+
 ## [0.11.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.10.1...v0.11.0) (2026-09-03)
 
 
