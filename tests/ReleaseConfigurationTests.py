@@ -73,6 +73,11 @@ class ReleaseConfigurationTests(unittest.TestCase):
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
         self.assertNotIn("xcrun", release_installer)
         self.assertNotIn("swift", release_installer.lower())
+        install_script = (PROJECT_ROOT / "scripts/install.sh").read_text()
+        self.assertIn("staging_root=$(mktemp -d", install_script)
+        self.assertIn("backup_root=$(mktemp -d", install_script)
+        self.assertIn("install_complete=false", install_script)
+        self.assertIn("TISRegisterInputSource", (PROJECT_ROOT / "scripts/register_input_source.swift").read_text())
 
     def test_release_scripts_have_valid_zsh_syntax(self):
         for relative_path in ("scripts/install-release.sh", "scripts/package_release.sh"):
