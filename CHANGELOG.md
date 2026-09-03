@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.7.1...v0.7.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **input:** preserve candidate panel on recovery ([a9ddf4f](https://github.com/houko/MetasequoiaImeMac/commit/a9ddf4f2b764f6763d54a5b2e04092409604679e))
+
 ## [0.7.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.7.0...v0.7.1) (2026-09-03)
 
 
