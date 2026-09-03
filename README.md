@@ -61,7 +61,18 @@ Download the `.pkg` and its checksum, verify it, then double-click the package t
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
 ```
 
-Release builds are signed with a Developer ID Application identity, signed as an installer with a Developer ID Installer identity, and notarized before publication. The release workflow requires the corresponding certificate and App Store Connect credentials to be configured as repository secrets; it fails closed when they are missing. Local development builds remain ad-hoc signed. After installation and logout, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
+Release builds are signed with a Developer ID Application identity, signed as an installer with a Developer ID Installer identity, and notarized before publication. The release workflow requires these repository secrets and fails before downloading build dependencies when any are missing:
+
+- `MACOS_DEVELOPER_ID_CERTIFICATE_BASE64`
+- `MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD`
+- `MACOS_SIGNING_KEYCHAIN_PASSWORD`
+- `MACOS_NOTARY_APPLE_ID`
+- `MACOS_NOTARY_TEAM_ID`
+- `MACOS_NOTARY_APP_SPECIFIC_PASSWORD`
+- `MACOS_DEVELOPER_ID_APPLICATION`
+- `MACOS_DEVELOPER_ID_INSTALLER`
+
+Local development builds remain ad-hoc signed. After installation and logout, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
 
 The ZIP provides the same current-user destination through `Install.command` when a command-line installation is preferred. The installer verifies both the code signature and Gatekeeper acceptance before replacing an existing installation.
 
