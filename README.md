@@ -63,12 +63,11 @@ shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
 
 Release builds are signed with a Developer ID Application identity, signed as an installer with a Developer ID Installer identity, and notarized before publication. The release workflow requires the corresponding certificate and App Store Connect credentials to be configured as repository secrets; it fails closed when they are missing. Local development builds remain ad-hoc signed. After installation and logout, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
 
-The ZIP remains the no-administrator option: it installs the signed bundle for the current user in `~/Library/Input Methods` via `Install.command`.
+The ZIP remains the no-administrator option: it installs the signed and notarized bundle for the current user in `~/Library/Input Methods` via `Install.command`. The installer verifies both the code signature and Gatekeeper acceptance before replacing an existing installation.
 
-Verify the ZIP checksum, extract it, remove quarantine from the extracted release directory, and run `Install.command`:
+Verify the ZIP checksum, extract it, and run `Install.command`:
 
 ```sh
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256
-xattr -dr com.apple.quarantine MetasequoiaIME-vX.Y.Z
 ./MetasequoiaIME-vX.Y.Z/Install.command
 ```
