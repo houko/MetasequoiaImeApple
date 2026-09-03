@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.15.0...v0.16.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** configure candidate font size ([#64](https://github.com/houko/MetasequoiaImeMac/issues/64)) ([78f4deb](https://github.com/houko/MetasequoiaImeMac/commit/78f4deb4dd912822cb004f729f8bba4c74032360))
+
 ## [0.15.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.14.0...v0.15.0) (2026-09-03)
 
 
