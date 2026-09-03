@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.0...v0.19.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **release:** publish unsigned fallback ([#72](https://github.com/houko/MetasequoiaImeMac/issues/72)) ([36974b7](https://github.com/houko/MetasequoiaImeMac/commit/36974b760fb274f8f3af200f010fef1b736ae1d9))
+
 ## [0.19.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.18.0...v0.19.0) (2026-09-03)
 
 
