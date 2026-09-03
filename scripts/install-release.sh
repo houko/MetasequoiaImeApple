@@ -27,13 +27,16 @@ fi
 
 verify_bundle() {
     local bundle=$1
-    codesign --verify --deep --strict --verbose=2 "$bundle"
+    codesign --verify --deep --strict --verbose=2 "$bundle" || return 1
     if [[ "$unsigned_release" != true ]]; then
-        spctl --assess --type execute --verbose=2 "$bundle"
+        spctl --assess --type execute --verbose=2 "$bundle" || return 1
     fi
 }
 
-verify_bundle "$source_bundle"
+if ! verify_bundle "$source_bundle"; then
+    print -u2 "Release bundle verification failed before installation."
+    exit 1
+fi
 mkdir -p "$destination_root"
 staging_root=$(mktemp -d "$destination_root/.MetasequoiaIME.installing.XXXXXX")
 backup_root=$(mktemp -d "$destination_root/.MetasequoiaIME.backup.XXXXXX")
@@ -44,28 +47,53 @@ moved_new=false
 install_complete=false
 
 cleanup() {
+    local exit_status=$?
+    trap - EXIT HUP INT TERM
+    local rollback_failed=false
     if [[ "$install_complete" != true ]]; then
-        if [[ "$moved_new" == true && -e "$destination_bundle" ]]; then
-            rm -rf "$destination_bundle"
+        if [[ "$moved_new" == true && -e "$destination_bundle" ]] &&
+            ! rm -rf -- "$destination_bundle"; then
+            rollback_failed=true
         fi
         if [[ "$had_previous" == true && -e "$backup_bundle" ]]; then
-            mv "$backup_bundle" "$destination_bundle"
+            if [[ -e "$destination_bundle" ]] || ! mv "$backup_bundle" "$destination_bundle"; then
+                rollback_failed=true
+            fi
         fi
     fi
-    rm -rf "$staging_root" "$backup_root"
+    if [[ "$rollback_failed" == true ]]; then
+        if [[ -e "$backup_bundle" ]]; then
+            print -u2 "Installation rollback was incomplete. Previous installation is preserved at: $backup_bundle"
+        else
+            print -u2 "Installation rollback was incomplete. Recovery files are preserved at: $staging_root"
+        fi
+        exit 1
+    fi
+    if ! rm -rf -- "$staging_root" "$backup_root"; then
+        print -u2 "Installation cleanup was incomplete. Recovery files may remain at: $staging_root or $backup_root"
+        exit 1
+    fi
+    exit "$exit_status"
 }
 
 trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
 ditto "$source_bundle" "$staging_bundle"
-verify_bundle "$staging_bundle"
+if ! verify_bundle "$staging_bundle"; then
+    print -u2 "Staged release bundle verification failed."
+    exit 1
+fi
 pkill -x MetasequoiaIME 2>/dev/null || true
 if [[ -e "$destination_bundle" ]]; then
-    mv "$destination_bundle" "$backup_bundle"
     had_previous=true
+    mv "$destination_bundle" "$backup_bundle"
 fi
-mv "$staging_bundle" "$destination_bundle"
 moved_new=true
-verify_bundle "$destination_bundle"
+mv "$staging_bundle" "$destination_bundle"
+if ! verify_bundle "$destination_bundle"; then
+    print -u2 "Installed release bundle verification failed; restoring the previous installation."
+    exit 1
+fi
 install_complete=true
 print "Installed $destination_bundle"
 if [[ "$unsigned_release" == true ]]; then
