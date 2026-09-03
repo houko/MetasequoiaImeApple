@@ -24,6 +24,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         config = json.loads((PROJECT_ROOT / "release-please-config.json").read_text())
         package = config["packages"]["."]
         workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text()
+        merge_release_pr = (PROJECT_ROOT / "scripts/merge-release-pr.sh").read_text()
         readme = (PROJECT_ROOT / "README.md").read_text()
         info_plist = (PROJECT_ROOT / "resources/Info.plist").read_text()
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
@@ -37,10 +38,17 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7", workflow)
         self.assertIn("actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803", workflow)
         self.assertIn("steps.release.outputs.release_created", workflow)
+        self.assertIn("scripts/merge-release-pr.sh", workflow)
+        self.assertIn("id: merge_release_pr", workflow)
+        self.assertIn("id: finalized_release", workflow)
+        self.assertIn("steps.merge_release_pr.outputs.merged == 'true'", workflow)
+        self.assertIn("steps.finalized_release.outputs.release_created", workflow)
         self.assertIn("workflow_dispatch:", workflow)
         self.assertIn("persist-credentials: false", workflow)
         self.assertIn("GH_REPO: ${{ github.repository }}", workflow)
-        self.assertIn("gh workflow run ci.yml", workflow)
+        self.assertIn("gh workflow run ci.yml", merge_release_pr)
+        self.assertIn("gh run watch", merge_release_pr)
+        self.assertIn("--match-head-commit", merge_release_pr)
         self.assertIn("scripts/package_release.sh", workflow)
         self.assertIn("macos-universal.pkg", workflow)
         self.assertIn("timeout-minutes: 30", workflow)
@@ -125,7 +133,11 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("THIRD_PARTY_NOTICES.txt", package_script)
 
     def test_release_scripts_have_valid_zsh_syntax(self):
-        for relative_path in ("scripts/install-release.sh", "scripts/package_release.sh"):
+        for relative_path in (
+            "scripts/install-release.sh",
+            "scripts/merge-release-pr.sh",
+            "scripts/package_release.sh",
+        ):
             result = subprocess.run(["zsh", "-n", str(PROJECT_ROOT / relative_path)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
 

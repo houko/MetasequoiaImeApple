@@ -10,7 +10,7 @@
       "draft": true,
       "force-tag-creation": true,
       "pull-request-header": "This PR prepares the next Metasequoia IME for macOS release.",
-      "pull-request-footer": "Merge after CI passes to create the tag and build release assets.",
+      "pull-request-footer": "CI runs automatically; after it passes, this PR is squash-merged and the release is finalized automatically.",
       "extra-files": [
         {
           "type": "generic",
