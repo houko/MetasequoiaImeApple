@@ -33,7 +33,7 @@ jobs:
     steps:
       - name: Check out release automation
         if: ${{ github.event_name == 'push' }}
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Prepare release
@@ -83,7 +83,7 @@ jobs:
       contents: write
     steps:
       - name: Check out trusted release automation
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.repository.default_branch }}
           path: .release-automation
@@ -114,7 +114,7 @@ jobs:
           MACOS_DEVELOPER_ID_INSTALLER: ${{ secrets.MACOS_DEVELOPER_ID_INSTALLER }}
         run: exec "$RUNNER_TEMP/detect-release-signing.sh"
       - name: Check out release tag
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prepare.outputs.tag_name }}
           submodules: recursive
