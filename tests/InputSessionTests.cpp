@@ -93,6 +93,14 @@ int main()
         require(!ascii_punctuation_session.chinese_punctuation_enabled(), "The requested punctuation setting was not retained.");
         require(!ascii_punctuation_session.handle_punctuation('.').handled, "Disabled Chinese punctuation swallowed ASCII punctuation.");
 
+        metasequoia::mac::InputSession uppercase_session;
+        require(!uppercase_session.handle_character('N').handled,
+                "An uppercase letter was swallowed while no composition was active.");
+        type(uppercase_session, "ni");
+        require(!uppercase_session.handle_character('H').handled && uppercase_session.preedit() == "ni",
+                "An uppercase letter entered the active pinyin composition.");
+        uppercase_session.handle_command(metasequoia::mac::Command::Cancel);
+
         metasequoia::mac::InputSession session;
         type(session, "nihao");
         require(session.preedit() == "nihao", "The marked text did not mirror the raw pinyin.");
