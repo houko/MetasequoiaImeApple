@@ -225,7 +225,7 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     NSError *error = nil;
     if (EnsureMetasequoiaDictionary(&error))
     {
-        _statusLabel.stringValue = @"词库已就绪；设置将在下次激活时生效。";
+        _statusLabel.stringValue = @"词库已就绪；设置将在当前输入结束后的下一次按键生效。";
         _statusLabel.textColor = [NSColor secondaryLabelColor];
         _statusLabel.toolTip = nil;
         return;
