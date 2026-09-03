@@ -77,6 +77,14 @@ class ReleasePackageTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary = Path(temporary_directory)
+            legacy_bundle = temporary / "MetasequoiaIME.app"
+            shutil.copytree(bundle, legacy_bundle, symlinks=True)
+            legacy_uninstaller = legacy_bundle / "Contents/Resources/Uninstall.command"
+            legacy_uninstaller.unlink()
+            subprocess.run(
+                ["/usr/bin/codesign", "--force", "--deep", "--sign", "-", legacy_bundle],
+                check=True,
+            )
             fake_bin = temporary / "bin"
             fake_bin.mkdir()
             signing_log = temporary / "signing.log"
@@ -86,7 +94,11 @@ class ReleasePackageTests(unittest.TestCase):
                 "set -euo pipefail\n"
                 "printf 'codesign %s\\n' \"$*\" >> \"$FAKE_SIGNING_LOG\"\n"
                 "case \" $* \" in\n"
-                "  *' --force '*) exit 0 ;;\n"
+                "  *' --force '*)\n"
+                "    target=\n"
+                "    for argument in \"$@\"; do target=$argument; done\n"
+                "    exec /usr/bin/codesign --force --deep --sign - \"$target\"\n"
+                "    ;;\n"
                 "esac\n"
                 "exec /usr/bin/codesign \"$@\"\n"
             )
@@ -128,10 +140,13 @@ class ReleasePackageTests(unittest.TestCase):
                     "METASEQUOIA_RELEASE_INSTALL_SCRIPT": str(
                         PROJECT_ROOT / "scripts/install-release.sh"
                     ),
+                    "METASEQUOIA_RELEASE_UNINSTALL_SCRIPT": str(
+                        PROJECT_ROOT / "scripts/uninstall.sh"
+                    ),
                 }
             )
             result = subprocess.run(
-                [PROJECT_ROOT / "scripts/package_release.sh", f"v{version}", bundle, output],
+                [PROJECT_ROOT / "scripts/package_release.sh", f"v{version}", legacy_bundle, output],
                 capture_output=True,
                 text=True,
                 env=environment,
@@ -145,6 +160,7 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertTrue(installer_package.is_file())
             self.assertTrue(installer_package.with_suffix(".pkg.sha256").is_file())
             self.assertFalse(any(output.glob("*-unsigned.*")))
+            self.assertFalse(legacy_uninstaller.exists())
 
             signing_calls = signing_log.read_text()
             self.assertIn("--sign Developer ID Application: Test", signing_calls)
@@ -167,6 +183,14 @@ class ReleasePackageTests(unittest.TestCase):
             subprocess.run(["ditto", "-x", "-k", archive, extracted], check=True)
             package_root = extracted / f"MetasequoiaIME-v{version}"
             self.assertFalse((package_root / "UNSIGNED_BUILD.txt").exists())
+            packaged_uninstaller = package_root / "MetasequoiaIME.app/Contents/Resources/Uninstall.command"
+            self.assertTrue(packaged_uninstaller.is_file())
+            self.assertTrue(os.access(packaged_uninstaller, os.X_OK))
+            self.assertEqual(packaged_uninstaller.read_bytes(), (PROJECT_ROOT / "scripts/uninstall.sh").read_bytes())
+            subprocess.run(
+                ["/usr/bin/codesign", "--verify", "--deep", "--strict", package_root / "MetasequoiaIME.app"],
+                check=True,
+            )
             install_command = (package_root / "Install.command").read_text()
             self.assertIn("spctl --assess --type execute", install_command)
 
@@ -175,6 +199,13 @@ class ReleasePackageTests(unittest.TestCase):
             installer_readme = (expanded_package / "Resources/InstallerReadMe.txt").read_text()
             self.assertIn("Developer ID signed and notarized", installer_readme)
             self.assertNotIn("UNSIGNED TEST BUILD", installer_readme)
+            component_info_path = next(expanded_package.glob("*.pkg/PackageInfo"))
+            installer_uninstaller = (
+                component_info_path.parent / "Payload/MetasequoiaIME.app/Contents/Resources/Uninstall.command"
+            )
+            self.assertTrue(installer_uninstaller.is_file())
+            self.assertTrue(os.access(installer_uninstaller, os.X_OK))
+            self.assertEqual(installer_uninstaller.read_bytes(), (PROJECT_ROOT / "scripts/uninstall.sh").read_bytes())
 
             fake_spctl = fake_bin / "spctl"
             fake_spctl.write_text(
@@ -217,6 +248,11 @@ class ReleasePackageTests(unittest.TestCase):
             dictionary_fingerprint = bundle_info["MetasequoiaDictionarySHA256"]
         self.assertTrue(dictionary.is_file())
         self.assertEqual(dictionary_fingerprint, sha256_file(dictionary))
+
+        bundled_uninstaller = bundle / "Contents/Resources/Uninstall.command"
+        self.assertTrue(bundled_uninstaller.is_file())
+        self.assertTrue(os.access(bundled_uninstaller, os.X_OK))
+        self.assertEqual(bundled_uninstaller.read_bytes(), (PROJECT_ROOT / "scripts/uninstall.sh").read_bytes())
 
         icon_name = "MetasequoiaIME.icns"
         input_mode = bundle_info["ComponentInputModeDict"]["tsInputModeListKey"][
@@ -492,6 +528,7 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertIn("verify the downloaded .pkg SHA-256 checksum", installer_readme)
             self.assertIn("Third-party notices", installer_readme)
             self.assertIn("MetasequoiaImeEngine", installer_readme)
+            self.assertIn("Contents/Resources/Uninstall.command", installer_readme)
 
             component_info_path = next(expanded_package.glob("*.pkg/PackageInfo"))
             component_info = ElementTree.parse(component_info_path).getroot()
@@ -503,6 +540,11 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertIsNotNone(upgrade_bundle)
             self.assertEqual(upgrade_bundle.attrib["id"], "com.houko.inputmethod.MetasequoiaIME")
             self.assertTrue((component_info_path.parent / "Payload/MetasequoiaIME.app/Contents/Info.plist").is_file())
+            packaged_uninstaller = (
+                component_info_path.parent / "Payload/MetasequoiaIME.app/Contents/Resources/Uninstall.command"
+            )
+            self.assertTrue(packaged_uninstaller.is_file())
+            self.assertTrue(os.access(packaged_uninstaller, os.X_OK))
             self.assertTrue(
                 (
                     component_info_path.parent

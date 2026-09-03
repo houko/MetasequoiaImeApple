@@ -75,6 +75,8 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Boost-1.0.txt COPYONLY)
     configure_file(licenses/fmt-LICENSE ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt COPYONLY)
     configure_file(licenses/spdlog-LICENSE ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt COPYONLY)
+    set(METASEQUOIA_IME_UNINSTALLER ${CMAKE_CURRENT_BINARY_DIR}/Uninstall.command)
+    configure_file(scripts/uninstall.sh ${METASEQUOIA_IME_UNINSTALLER} COPYONLY)
 
     set(METASEQUOIA_IME_ICON resources/MetasequoiaIME.icns)
     set(METASEQUOIA_IME_LOCALIZATIONS resources/en.lproj/InfoPlist.strings resources/zh-Hans.lproj/InfoPlist.strings)
@@ -85,13 +87,15 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Boost-1.0.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt)
-    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/MetasequoiaInputController.mm src/PreferencesWindowController.mm src/StringConversion.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICON} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES})
+    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/MetasequoiaInputController.mm src/PreferencesWindowController.mm src/StringConversion.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICON} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
     set_source_files_properties(${METASEQUOIA_IME_DICTIONARY} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(${METASEQUOIA_IME_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(resources/en.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/en.lproj)
     set_source_files_properties(resources/zh-Hans.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/zh-Hans.lproj)
     set_source_files_properties(${METASEQUOIA_IME_LEGAL_RESOURCES}
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources/Licenses)
+    set_source_files_properties(${METASEQUOIA_IME_UNINSTALLER}
+        PROPERTIES MACOSX_PACKAGE_LOCATION Resources HEADER_FILE_ONLY TRUE)
     set_target_properties(MetasequoiaIME PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/MetasequoiaIME-Info.plist MACOSX_BUNDLE_BUNDLE_NAME "Metasequoia IME" MACOSX_BUNDLE_GUI_IDENTIFIER "com.houko.inputmethod.MetasequoiaIME" MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION} OUTPUT_NAME MetasequoiaIME)
     target_compile_options(MetasequoiaIME PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(MetasequoiaIME PRIVATE MetasequoiaImeMacCore ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
