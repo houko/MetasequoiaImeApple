@@ -89,6 +89,9 @@ int main()
         require(!no_autocorrect_session.quanpin_autocorrect_enabled(), "The requested pinyin autocorrect setting was not retained.");
         metasequoia::mac::InputSession no_helpcode_session(SchemeType::Quanpin, true, false);
         require(!no_helpcode_session.helpcode_enabled(), "The requested helpcode setting was not retained.");
+        metasequoia::mac::InputSession ascii_punctuation_session(SchemeType::Quanpin, true, true, false);
+        require(!ascii_punctuation_session.chinese_punctuation_enabled(), "The requested punctuation setting was not retained.");
+        require(!ascii_punctuation_session.handle_punctuation('.').handled, "Disabled Chinese punctuation swallowed ASCII punctuation.");
 
         metasequoia::mac::InputSession session;
         type(session, "nihao");
@@ -102,6 +105,12 @@ int main()
         type(session, "nihao");
         const auto space = session.handle_command(metasequoia::mac::Command::CommitCandidate);
         require(space.handled && space.commit == "你好", "Space did not commit the leading candidate.");
+
+        type(session, "nihao");
+        const auto composed_punctuation = session.handle_punctuation(',');
+        require(composed_punctuation.handled && composed_punctuation.commit == "你好，", "Punctuation did not commit the candidate atomically.");
+        const auto idle_punctuation = session.handle_punctuation('.');
+        require(idle_punctuation.handled && idle_punctuation.commit == "。", "Idle Chinese punctuation was not converted.");
 
         type(session, "nihao");
         const auto digit = session.handle_candidate_key('2');

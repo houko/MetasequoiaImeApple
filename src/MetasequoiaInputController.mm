@@ -38,7 +38,9 @@ NSString *StringFromUtf8(const std::string &value)
         const SchemeType scheme = storedScheme == 1 ? SchemeType::Shuangpin : SchemeType::Quanpin;
         const BOOL autocorrectEnabled = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled];
         const BOOL helpcodeEnabled = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled];
-        _session = std::make_unique<metasequoia::mac::InputSession>(scheme, autocorrectEnabled, helpcodeEnabled);
+        const BOOL chinesePunctuationEnabled = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled];
+        _session = std::make_unique<metasequoia::mac::InputSession>(scheme, autocorrectEnabled, helpcodeEnabled,
+                                                                   chinesePunctuationEnabled);
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
         [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @NO}];
     }
@@ -92,6 +94,11 @@ NSString *StringFromUtf8(const std::string &value)
                 {
                     return YES;
                 }
+            }
+            else if (character == ',' || character == '.' || character == '?' || character == '!' ||
+                     character == ';' || character == ':')
+            {
+                result = _session->handle_punctuation(static_cast<char>(character));
             }
         }
         break;

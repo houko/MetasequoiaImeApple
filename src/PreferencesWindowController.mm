@@ -3,10 +3,11 @@
 namespace
 {
 constexpr CGFloat kWindowWidth = 480.0;
-constexpr CGFloat kWindowHeight = 276.0;
+constexpr CGFloat kWindowHeight = 320.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
+NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunctuation";
 } // namespace
 
 @implementation MetasequoiaPreferencesWindowController
@@ -14,6 +15,7 @@ NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
     NSPopUpButton *_schemeButton;
     NSButton *_autocorrectButton;
     NSButton *_helpcodeButton;
+    NSButton *_chinesePunctuationButton;
 }
 
 + (instancetype)sharedController
@@ -63,6 +65,19 @@ NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
 {
     [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kHelpcodePreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaHelpcodeDidChangeNotification"
+                                                        object:@(enabled)];
+}
+
++ (BOOL)storedChinesePunctuationEnabled
+{
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:kChinesePunctuationPreferenceKey];
+    return value == nil ? YES : [value boolValue];
+}
+
++ (void)setChinesePunctuationEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kChinesePunctuationPreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaChinesePunctuationDidChangeNotification"
                                                         object:@(enabled)];
 }
 
@@ -125,6 +140,9 @@ NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
     _helpcodeButton = [NSButton checkboxWithTitle:@"启用辅助码" target:self action:@selector(helpcodeChanged:)];
     _helpcodeButton.translatesAutoresizingMaskIntoConstraints = NO;
 
+    _chinesePunctuationButton = [NSButton checkboxWithTitle:@"使用中文标点" target:self action:@selector(chinesePunctuationChanged:)];
+    _chinesePunctuationButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     NSTextField *statusLabel = [NSTextField labelWithString:@"输入方案会保存到当前用户设置，并在下一次输入会话中生效。"];
     statusLabel.textColor = [NSColor secondaryLabelColor];
     statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -140,6 +158,7 @@ NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
     [contentView addSubview:_schemeButton];
     [contentView addSubview:_autocorrectButton];
     [contentView addSubview:_helpcodeButton];
+    [contentView addSubview:_chinesePunctuationButton];
     [contentView addSubview:statusLabel];
     [contentView addSubview:closeButton];
 
@@ -160,7 +179,9 @@ NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
         [_autocorrectButton.topAnchor constraintEqualToAnchor:_schemeButton.bottomAnchor constant:16.0],
         [_helpcodeButton.leadingAnchor constraintEqualToAnchor:_schemeButton.leadingAnchor],
         [_helpcodeButton.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:10.0],
-        [statusLabel.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:12.0],
+        [_chinesePunctuationButton.leadingAnchor constraintEqualToAnchor:_schemeButton.leadingAnchor],
+        [_chinesePunctuationButton.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:10.0],
+        [statusLabel.topAnchor constraintEqualToAnchor:_chinesePunctuationButton.bottomAnchor constant:12.0],
         [statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
         [closeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
@@ -175,6 +196,7 @@ NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
     [_schemeButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedScheme]];
     _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+    _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     [self showWindow:nil];
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
@@ -191,6 +213,12 @@ NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
 {
     NSButton *button = (NSButton *)sender;
     [MetasequoiaPreferencesWindowController setHelpcodeEnabled:button.state == NSControlStateValueOn];
+}
+
+- (void)chinesePunctuationChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:button.state == NSControlStateValueOn];
 }
 
 - (void)schemeChanged:(id)sender
