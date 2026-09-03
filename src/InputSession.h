@@ -50,5 +50,7 @@ class InputSession
     bool quanpin_autocorrect_enabled_ = true;
     bool helpcode_enabled_ = true;
     bool chinese_punctuation_enabled_ = true;
+    bool next_double_quote_is_opening_ = true;
+    bool next_single_quote_is_opening_ = true;
 };
 } // namespace metasequoia::mac

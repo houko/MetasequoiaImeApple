@@ -134,7 +134,11 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         if (characters.length == 1)
         {
             const unichar character = [characters characterAtIndex:0];
-            if ((character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') || character == '\'')
+            if ((character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z'))
+            {
+                result = _session->handle_character(static_cast<char>(character));
+            }
+            else if (character == '\'' && _session->has_composition())
             {
                 result = _session->handle_character(static_cast<char>(character));
             }
@@ -147,7 +151,9 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
                 }
             }
             else if (character == ',' || character == '.' || character == '?' || character == '!' ||
-                     character == ';' || character == ':')
+                     character == ';' || character == ':' || character == '"' || character == '\'' ||
+                     character == '(' || character == ')' || character == '[' || character == ']' ||
+                     character == '<' || character == '>' || character == '\\')
             {
                 result = _session->handle_punctuation(static_cast<char>(character));
             }

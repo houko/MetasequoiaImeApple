@@ -21,6 +21,10 @@ KeyResult InputSession::handle_character(char character)
     {
         return {};
     }
+    if (character == '\'' && !has_composition())
+    {
+        return {};
+    }
 
     const auto unsigned_character = static_cast<unsigned char>(character);
     const ImeKeyCode key_code = character == '\'' ? ImeKey::Apostrophe : static_cast<ImeKeyCode>(std::toupper(unsigned_character));
@@ -64,6 +68,35 @@ KeyResult InputSession::handle_punctuation(char character)
         break;
     case ':':
         punctuation = "：";
+        break;
+    case '"':
+        punctuation = next_double_quote_is_opening_ ? "“" : "”";
+        next_double_quote_is_opening_ = !next_double_quote_is_opening_;
+        break;
+    case '\'':
+        punctuation = next_single_quote_is_opening_ ? "‘" : "’";
+        next_single_quote_is_opening_ = !next_single_quote_is_opening_;
+        break;
+    case '(':
+        punctuation = "（";
+        break;
+    case ')':
+        punctuation = "）";
+        break;
+    case '[':
+        punctuation = "【";
+        break;
+    case ']':
+        punctuation = "】";
+        break;
+    case '<':
+        punctuation = "《";
+        break;
+    case '>':
+        punctuation = "》";
+        break;
+    case '\\':
+        punctuation = "、";
         break;
     default:
         return {};
