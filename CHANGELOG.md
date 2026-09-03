@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.7](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.6...v0.20.7) (2026-09-03)
+
+
+### Bug Fixes
+
+* **dictionary:** verify bundled database fingerprint ([#106](https://github.com/houko/MetasequoiaImeMac/issues/106)) ([b72e920](https://github.com/houko/MetasequoiaImeMac/commit/b72e9201972c595ae4d4f9b952693926888f13d3))
+
 ## [0.20.6](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.5...v0.20.6) (2026-09-03)
 
 
