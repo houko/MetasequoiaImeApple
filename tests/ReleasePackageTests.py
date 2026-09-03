@@ -50,6 +50,9 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertIn(f"{package_root}MetasequoiaIME.app/Contents/Info.plist", names)
                 self.assertIn(f"{package_root}Install.command", names)
                 self.assertFalse(any(name.endswith("register_input_source.swift") for name in names))
+                install_command = release_zip.read(f"{package_root}Install.command").decode()
+                self.assertIn("spctl --assess --type execute", install_command)
+                self.assertNotIn("xattr", install_command)
 
             installer_package = output / f"MetasequoiaIME-v{version}-macos-universal.pkg"
             installer_checksum = installer_package.with_suffix(f"{installer_package.suffix}.sha256")

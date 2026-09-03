@@ -11,12 +11,8 @@ if [[ ! -d "$source_bundle" ]]; then
     exit 1
 fi
 
-if xattr -p com.apple.quarantine "$source_bundle" >/dev/null 2>&1; then
-    print -u2 "This alpha release is not notarized and the app is quarantined. Verify the release checksum, remove quarantine from the extracted release directory, and run Install.command again."
-    exit 1
-fi
-
 codesign --verify --deep --strict --verbose=2 "$source_bundle"
+spctl --assess --type execute --verbose=2 "$source_bundle"
 mkdir -p "$destination_root"
 staging_root=$(mktemp -d "$destination_root/.MetasequoiaIME.installing.XXXXXX")
 backup_root=$(mktemp -d "$destination_root/.MetasequoiaIME.backup.XXXXXX")
@@ -41,6 +37,7 @@ cleanup() {
 trap cleanup EXIT
 ditto "$source_bundle" "$staging_bundle"
 codesign --verify --deep --strict --verbose=2 "$staging_bundle"
+spctl --assess --type execute --verbose=2 "$staging_bundle"
 pkill -x MetasequoiaIME 2>/dev/null || true
 if [[ -e "$destination_bundle" ]]; then
     mv "$destination_bundle" "$backup_bundle"
@@ -49,6 +46,7 @@ fi
 mv "$staging_bundle" "$destination_bundle"
 moved_new=true
 codesign --verify --deep --strict --verbose=2 "$destination_bundle"
+spctl --assess --type execute --verbose=2 "$destination_bundle"
 install_complete=true
 print "Installed $destination_bundle"
 print "Log out and back in, then enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit."

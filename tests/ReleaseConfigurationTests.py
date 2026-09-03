@@ -89,6 +89,9 @@ class ReleaseConfigurationTests(unittest.TestCase):
 
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
         self.assertNotIn("xcrun", release_installer)
+        self.assertNotIn("xattr", release_installer)
+        self.assertIn("spctl --assess --type execute", release_installer)
+        self.assertNotIn("xattr -dr com.apple.quarantine", readme)
         self.assertNotIn("swift", release_installer.lower())
         install_script = (PROJECT_ROOT / "scripts/install.sh").read_text()
         self.assertIn("staging_root=$(mktemp -d", install_script)
