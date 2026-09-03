@@ -78,6 +78,7 @@ installer_checksum_path="$installer_path.sha256"
 component_package="$staging_root/MetasequoiaIME.pkg"
 distribution_file="$staging_root/Distribution.xml"
 installer_resources="$staging_root/InstallerResources"
+installer_readme="$installer_resources/InstallerReadMe.txt"
 
 mkdir -p "$package_root"
 ditto "$source_bundle" "$package_root/MetasequoiaIME.app"
@@ -108,6 +109,29 @@ sed "s/@VERSION@/$version/g" "$project_root/resources/InstallerDistribution.xml.
 mkdir -p "$installer_resources"
 ditto "$project_root/LICENSE" "$installer_resources/LICENSE"
 ditto "$project_root/THIRD_PARTY_NOTICES.txt" "$installer_resources/THIRD_PARTY_NOTICES.txt"
+if [[ "$asset_suffix" == -unsigned ]]; then
+    printf '%s\n' \
+        'UNSIGNED TEST BUILD' \
+        '' \
+        'This package is not Developer ID signed or notarized. Before installing, verify the downloaded .pkg SHA-256 checksum against the companion .sha256 file and install only if you trust the source.' \
+        '' \
+        'macOS may block this installer until you explicitly allow it in System Settings > Privacy & Security.' \
+        > "$installer_readme"
+else
+    printf '%s\n' \
+        'SIGNED RELEASE' \
+        '' \
+        'This package is Developer ID signed and notarized for distribution outside the Mac App Store.' \
+        > "$installer_readme"
+fi
+printf '%s\n' \
+    '' \
+    'Installation scope: current user (~/Library/Input Methods).' \
+    '' \
+    'Third-party notices' \
+    '-------------------' \
+    >> "$installer_readme"
+command cat "$project_root/THIRD_PARTY_NOTICES.txt" >> "$installer_readme"
 productbuild --distribution "$distribution_file" --package-path "$staging_root" --resources "$installer_resources" "$installer_path"
 if [[ -n "$installer_identity" ]]; then
     signed_installer="$staging_root/MetasequoiaIME-signed.pkg"
