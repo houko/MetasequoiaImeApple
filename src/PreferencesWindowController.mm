@@ -1,5 +1,7 @@
 #import "PreferencesWindowController.h"
 
+#import "DictionaryInstaller.h"
+
 namespace
 {
 constexpr CGFloat kWindowWidth = 480.0;
@@ -16,6 +18,7 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     NSButton *_autocorrectButton;
     NSButton *_helpcodeButton;
     NSButton *_chinesePunctuationButton;
+    NSTextField *_statusLabel;
 }
 
 + (instancetype)sharedController
@@ -143,9 +146,10 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     _chinesePunctuationButton = [NSButton checkboxWithTitle:@"使用中文标点" target:self action:@selector(chinesePunctuationChanged:)];
     _chinesePunctuationButton.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSTextField *statusLabel = [NSTextField labelWithString:@"设置会保存到当前用户，并在下次激活水杉输入法时生效。"];
-    statusLabel.textColor = [NSColor secondaryLabelColor];
-    statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    _statusLabel = [NSTextField labelWithString:@"检查词库状态…"];
+    _statusLabel.accessibilityLabel = @"词库状态";
+    _statusLabel.textColor = [NSColor secondaryLabelColor];
+    _statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSButton *restoreButton = [NSButton buttonWithTitle:@"恢复默认设置" target:self action:@selector(restoreDefaults:)];
     restoreButton.bezelStyle = NSBezelStyleRounded;
@@ -170,7 +174,7 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     [contentView addSubview:_autocorrectButton];
     [contentView addSubview:_helpcodeButton];
     [contentView addSubview:_chinesePunctuationButton];
-    [contentView addSubview:statusLabel];
+    [contentView addSubview:_statusLabel];
     [contentView addSubview:restoreButton];
     [contentView addSubview:versionLabel];
     [contentView addSubview:closeButton];
@@ -194,9 +198,9 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
         [_helpcodeButton.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:10.0],
         [_chinesePunctuationButton.leadingAnchor constraintEqualToAnchor:_schemeButton.leadingAnchor],
         [_chinesePunctuationButton.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:10.0],
-        [statusLabel.topAnchor constraintEqualToAnchor:_chinesePunctuationButton.bottomAnchor constant:12.0],
-        [statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
+        [_statusLabel.topAnchor constraintEqualToAnchor:_chinesePunctuationButton.bottomAnchor constant:12.0],
+        [_statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
+        [_statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
         [restoreButton.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:32.0],
         [restoreButton.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor constant:-24.0],
         [versionLabel.centerXAnchor constraintEqualToAnchor:contentView.centerXAnchor],
@@ -216,9 +220,26 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
 }
 
+- (void)refreshDictionaryStatus
+{
+    NSError *error = nil;
+    if (EnsureMetasequoiaDictionary(&error))
+    {
+        _statusLabel.stringValue = @"词库已就绪；设置将在下次激活时生效。";
+        _statusLabel.textColor = [NSColor secondaryLabelColor];
+        _statusLabel.toolTip = nil;
+        return;
+    }
+
+    _statusLabel.stringValue = @"词库不可用，请重新安装水杉输入法。";
+    _statusLabel.textColor = [NSColor systemRedColor];
+    _statusLabel.toolTip = error.localizedDescription;
+}
+
 - (void)showAndActivate
 {
     [self refreshControls];
+    [self refreshDictionaryStatus];
     [self showWindow:nil];
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
