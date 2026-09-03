@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/houko/MetasequoiaImeMac/compare/v0.7.2...v0.7.3) (2026-09-03)
+
+
+### Bug Fixes
+
+* **input:** preserve shifted key characters ([80f0dc8](https://github.com/houko/MetasequoiaImeMac/commit/80f0dc8bb44f1f08baa985691afac05675f68f0a))
+
 ## [0.7.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.7.1...v0.7.2) (2026-09-03)
 
 
