@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.8.0...v0.9.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** show dictionary health ([aec4cfc](https://github.com/houko/MetasequoiaImeMac/commit/aec4cfce7796e70ba01bdbdec3995ba967adb489))
+
+
+### Bug Fixes
+
+* **release:** run automation with bash ([69b0a5a](https://github.com/houko/MetasequoiaImeMac/commit/69b0a5a49e1588a771f8c9ee4a62a9ff652615aa))
+
 ## [0.8.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.7.3...v0.8.0) (2026-09-03)
 
 
