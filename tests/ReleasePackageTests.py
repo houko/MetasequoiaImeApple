@@ -89,6 +89,9 @@ class ReleasePackageTests(unittest.TestCase):
             fake_pkill = fake_bin / "pkill"
             fake_pkill.write_text("#!/bin/sh\nexit 0\n")
             fake_pkill.chmod(0o755)
+            fake_pgrep = fake_bin / "pgrep"
+            fake_pgrep.write_text("#!/bin/sh\nexit 1\n")
+            fake_pgrep.chmod(0o755)
             fake_xcrun = fake_bin / "xcrun"
             fake_xcrun.write_text("#!/bin/sh\nexit 47\n")
             fake_xcrun.chmod(0o755)
@@ -182,6 +185,81 @@ class ReleasePackageTests(unittest.TestCase):
                         any(destination_root.glob(".MetasequoiaIME.backup.*")),
                         result.stderr,
                     )
+
+    def test_installers_leave_previous_bundle_when_input_method_does_not_stop(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            fake_bin = temporary / "bin"
+            fake_bin.mkdir()
+            pkill_log = temporary / "pkill.log"
+            pgrep_log = temporary / "pgrep.log"
+            fake_pkill = fake_bin / "pkill"
+            fake_pkill.write_text(
+                "#!/bin/sh\n"
+                "printf '%s\\n' \"$*\" >> \"$FAKE_PKILL_LOG\"\n"
+                "exit 0\n"
+            )
+            fake_pkill.chmod(0o755)
+            fake_pgrep = fake_bin / "pgrep"
+            fake_pgrep.write_text(
+                "#!/bin/sh\n"
+                "printf '%s\\n' \"$*\" >> \"$FAKE_PGREP_LOG\"\n"
+                "exit \"$FAKE_PGREP_STATUS\"\n"
+            )
+            fake_pgrep.chmod(0o755)
+            for command_name, exit_status in (
+                ("sleep", 0),
+                ("codesign", 0),
+                ("spctl", 0),
+                ("xcrun", 0),
+            ):
+                command = fake_bin / command_name
+                command.write_text(f"#!/bin/sh\nexit {exit_status}\n")
+                command.chmod(0o755)
+
+            release_root = temporary / "release"
+            release_root.mkdir()
+            release_installer = release_root / "Install.command"
+            shutil.copy2(PROJECT_ROOT / "scripts/install-release.sh", release_installer)
+            (release_root / "MetasequoiaIME.app").mkdir()
+
+            installers = (PROJECT_ROOT / "scripts/install.sh", release_installer)
+            scenarios = ((0, "did not stop in time"), (2, "Could not verify"))
+            for index, (installer, (pgrep_status, expected_error)) in enumerate(
+                (installer, scenario)
+                for installer in installers
+                for scenario in scenarios
+            ):
+                with self.subTest(installer=installer.name, pgrep_status=pgrep_status):
+                    test_home = (temporary / f"home-{index}").resolve()
+                    destination = test_home / "Library/Input Methods/MetasequoiaIME.app"
+                    previous_marker = destination / "Contents/previous-installation.txt"
+                    previous_marker.parent.mkdir(parents=True)
+                    previous_marker.write_text("previous installation\n")
+                    environment = os.environ.copy()
+                    environment["HOME"] = str(test_home)
+                    environment["PATH"] = f"{fake_bin}:{environment['PATH']}"
+                    environment["FAKE_PKILL_LOG"] = str(pkill_log)
+                    environment["FAKE_PGREP_LOG"] = str(pgrep_log)
+                    environment["FAKE_PGREP_STATUS"] = str(pgrep_status)
+
+                    result = subprocess.run(
+                        ["/bin/zsh", installer],
+                        capture_output=True,
+                        text=True,
+                        env=environment,
+                    )
+
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(expected_error, result.stderr)
+                    self.assertEqual(previous_marker.read_text(), "previous installation\n")
+                    self.assertFalse(any(destination.parent.glob(".MetasequoiaIME.installing.*")))
+                    self.assertFalse(any(destination.parent.glob(".MetasequoiaIME.backup.*")))
+
+            for arguments in pkill_log.read_text().splitlines():
+                self.assertEqual(arguments, f"-TERM -x -u {os.geteuid()} MetasequoiaIME")
+            for arguments in pgrep_log.read_text().splitlines():
+                self.assertEqual(arguments, f"-x -u {os.geteuid()} MetasequoiaIME")
 
     def test_signed_packaging_exercises_signing_notarization_and_gatekeeper(self):
         bundle = Path(sys.argv[1]).resolve()
@@ -339,6 +417,9 @@ class ReleasePackageTests(unittest.TestCase):
             fake_pkill = fake_bin / "pkill"
             fake_pkill.write_text("#!/bin/sh\nexit 0\n")
             fake_pkill.chmod(0o755)
+            fake_pgrep = fake_bin / "pgrep"
+            fake_pgrep.write_text("#!/bin/sh\nexit 1\n")
+            fake_pgrep.chmod(0o755)
             install_home = (temporary / "signed-install-home").resolve()
             install_environment = environment.copy()
             install_environment["HOME"] = str(install_home)
