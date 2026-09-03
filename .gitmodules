@@ -1,6 +1,7 @@
 [submodule "vendor/MetasequoiaImeEngine"]
 	path = vendor/MetasequoiaImeEngine
 	url = https://github.com/houko/MetasequoiaImeEngine.git
+	branch = feat/macos-portability
 [submodule "vendor/MetasequoiaImeDict"]
 	path = vendor/MetasequoiaImeDict
 	url = https://github.com/metasequoiaime/MetasequoiaImeDict.git
