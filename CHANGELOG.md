@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.5](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.4...v0.20.5) (2026-09-03)
+
+
+### Bug Fixes
+
+* **uninstall:** reject unsafe home directories ([#102](https://github.com/houko/MetasequoiaImeMac/issues/102)) ([337e6d8](https://github.com/houko/MetasequoiaImeMac/commit/337e6d83acbb9617310b8d4702a8593635df6a6f))
+
 ## [0.20.4](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.3...v0.20.4) (2026-09-03)
 
 
