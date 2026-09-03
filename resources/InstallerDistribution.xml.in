@@ -2,7 +2,7 @@
 <installer-gui-script minSpecVersion="2">
     <title>Metasequoia IME</title>
     <license file="LICENSE"/>
-    <readme file="THIRD_PARTY_NOTICES.txt"/>
+    <readme file="InstallerReadMe.txt"/>
     <options customize="never" require-scripts="false" hostArchitectures="arm64,x86_64"/>
     <domains enable_localSystem="false" enable_anywhere="false" enable_currentUserHome="true"/>
     <volume-check>
