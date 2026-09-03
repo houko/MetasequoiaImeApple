@@ -12,5 +12,7 @@
 + (void)setHelpcodeEnabled:(BOOL)enabled;
 + (BOOL)storedChinesePunctuationEnabled;
 + (void)setChinesePunctuationEnabled:(BOOL)enabled;
++ (NSInteger)storedCandidatePanelStyle;
++ (void)setCandidatePanelStyle:(NSInteger)style;
 - (void)showAndActivate;
 @end
