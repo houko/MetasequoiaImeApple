@@ -196,6 +196,22 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("googlepinyinime-rev", notices)
         self.assertIn("utfcpp", notices)
         self.assertIn("THIRD_PARTY_NOTICES.txt", package_script)
+        privacy = (PROJECT_ROOT / "PRIVACY.md").read_text()
+        security = (PROJECT_ROOT / "SECURITY.md").read_text()
+        self.assertIn("~/Library/Application Support/metasequoiaime/", privacy)
+        self.assertIn("does not send typed text", privacy)
+        self.assertIn("does not sell or share personal data", privacy)
+        self.assertIn(
+            "If learning is disabled while a composition is active, that composition keeps the setting it started "
+            "with; after it is committed or cancelled, newly started compositions do not update word frequencies.",
+            privacy,
+        )
+        self.assertIn("SECURITY.md", privacy)
+        self.assertIn("latest published version", security)
+        self.assertIn("Do not open a public issue", security)
+        self.assertIn("MetasequoiaImeMac security report", security)
+        self.assertIn("PRIVACY.md", readme)
+        self.assertIn("SECURITY.md", readme)
 
     def test_release_scripts_have_valid_zsh_syntax(self):
         for relative_path in ("scripts/install-release.sh", "scripts/package_release.sh"):
