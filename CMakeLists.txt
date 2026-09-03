@@ -44,7 +44,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
     configure_file(resources/Info.plist ${CMAKE_CURRENT_BINARY_DIR}/MetasequoiaIME-Info.plist @ONLY)
 
     set(METASEQUOIA_IME_LOCALIZATIONS resources/en.lproj/InfoPlist.strings resources/zh-Hans.lproj/InfoPlist.strings)
-    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/MetasequoiaInputController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_LOCALIZATIONS})
+    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/MetasequoiaInputController.mm src/PreferencesWindowController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_LOCALIZATIONS})
     set_source_files_properties(${METASEQUOIA_IME_DICTIONARY} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(resources/en.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/en.lproj)
     set_source_files_properties(resources/zh-Hans.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/zh-Hans.lproj)
