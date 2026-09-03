@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum supported macOS version")
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS target architectures")
 
-project(MetasequoiaImeMac VERSION 0.1.0 LANGUAGES CXX OBJCXX)
+project(MetasequoiaImeMac VERSION 0.1.0 LANGUAGES CXX OBJCXX) # x-release-please-version
 
 include(CTest)
 
@@ -19,10 +19,12 @@ target_link_libraries(MetasequoiaImeMacCore PUBLIC MetasequoiaIme::Engine)
 target_compile_options(MetasequoiaImeMacCore PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 if(BUILD_TESTING)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
     add_executable(MetasequoiaImeMacTests tests/InputSessionTests.cpp)
     target_link_libraries(MetasequoiaImeMacTests PRIVATE MetasequoiaImeMacCore)
     target_compile_options(MetasequoiaImeMacTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
     add_test(NAME input_session COMMAND MetasequoiaImeMacTests)
+    add_test(NAME release_configuration COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/ReleaseConfigurationTests.py)
 endif()
 
 option(METASEQUOIA_IME_BUILD_INPUT_METHOD "Build the InputMethodKit bundle" ON)
@@ -50,4 +52,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
     target_compile_options(MetasequoiaIME PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(MetasequoiaIME PRIVATE MetasequoiaImeMacCore ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
     add_custom_target(MetasequoiaIMESign ALL COMMAND /usr/bin/codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:MetasequoiaIME>" DEPENDS MetasequoiaIME VERBATIM)
+    if(BUILD_TESTING)
+        add_test(NAME release_package COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/ReleasePackageTests.py $<TARGET_BUNDLE_DIR:MetasequoiaIME>)
+    endif()
 endif()

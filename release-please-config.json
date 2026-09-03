@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "MetasequoiaImeMac",
+      "include-v-in-tag": true,
+      "version-file": "version.txt",
+      "draft": true,
+      "force-tag-creation": true,
+      "pull-request-header": "This PR prepares the next Metasequoia IME for macOS release.",
+      "pull-request-footer": "Merge after CI passes to create the tag and build release assets.",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "CMakeLists.txt"
+        }
+      ]
+    }
+  }
+}

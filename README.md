@@ -41,3 +41,23 @@ ctest --test-dir build-test --output-on-failure --timeout 20
 ```
 
 The test suite uses real SQLite tables and the production engine path; it does not substitute fake candidates.
+
+## Releases
+
+Merges to `main` update a Release Please pull request from conventional commit history. Merging that release pull request bumps `version.txt`, `CMakeLists.txt`, and `CHANGELOG.md`, creates the matching `vX.Y.Z` tag, builds and tests the universal input method bundle, and publishes a GitHub Release with these assets:
+
+- `MetasequoiaIME-vX.Y.Z-macos-universal.zip`
+- `MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256`
+
+Verify the checksum before extracting the archive:
+
+```sh
+shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256
+```
+
+The current alpha uses an ad-hoc application signature and is not Developer ID signed or notarized. After verifying the checksum, remove the download quarantine from the extracted release directory, run the installer, then log out and back in so macOS refreshes its input source cache:
+
+```sh
+xattr -dr com.apple.quarantine MetasequoiaIME-vX.Y.Z
+./MetasequoiaIME-vX.Y.Z/Install.command
+```

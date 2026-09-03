@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag to build and publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare release metadata
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      should_publish: ${{ github.event_name == 'workflow_dispatch' || steps.release.outputs.release_created == 'true' }}
+      tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || steps.release.outputs.tag_name }}
+    steps:
+      - name: Prepare release
+        if: ${{ github.event_name == 'push' }}
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run CI for release pull request
+        if: ${{ github.event_name == 'push' && steps.release.outputs.prs_created == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_PR: ${{ steps.release.outputs.pr }}
+        run: |
+          head_branch=$(jq -er .headBranchName <<< "$RELEASE_PR")
+          gh workflow run ci.yml --repo "$GH_REPO" --ref "$head_branch"
+      - name: Validate requested draft release
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ inputs.tag }}
+        run: |
+          if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag must use the vMAJOR.MINOR.PATCH format." >&2
+            exit 1
+          fi
+          is_draft=$(gh release view "$TAG_NAME" --json isDraft --jq .isDraft)
+          if [[ "$is_draft" != true ]]; then
+            echo "Release $TAG_NAME is not an unpublished draft." >&2
+            exit 1
+          fi
+
+  publish:
+    name: Build and publish release
+    needs: prepare
+    if: ${{ needs.prepare.outputs.should_publish == 'true' }}
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.prepare.outputs.tag_name }}
+          submodules: recursive
+          persist-credentials: false
+      - name: Remove unused runner taps
+        run: if brew tap | grep -Fxq aws/tap; then brew untap aws/tap; fi
+      - name: Install dependencies
+        run: brew install boost fmt spdlog
+      - name: Build dictionary
+        run: python3 scripts/build_dictionary.py
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix)"
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --timeout 20
+      - name: Verify input method bundle
+        env:
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+        run: |
+          codesign --verify --deep --strict --verbose=2 build/MetasequoiaIME.app
+          lipo build/MetasequoiaIME.app/Contents/MacOS/MetasequoiaIME -verify_arch arm64 x86_64
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/MetasequoiaIME.app/Contents/Info.plist)" = "${TAG_NAME#v}"
+      - name: Package release
+        env:
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+        run: scripts/package_release.sh "$TAG_NAME" build/MetasequoiaIME.app dist
+      - name: Upload and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+        run: |
+          archive="dist/MetasequoiaIME-$TAG_NAME-macos-universal.zip"
+          gh release upload "$TAG_NAME" "$archive" "$archive.sha256" --clobber
+          gh release edit "$TAG_NAME" --draft=false
