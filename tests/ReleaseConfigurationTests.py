@@ -46,10 +46,13 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("timeout-minutes: 30", workflow)
         self.assertIn("gh release upload", workflow)
         self.assertIn("gh release edit", workflow)
+        self.assertIn("METASEQUOIA_REQUIRE_RELEASE_SIGNING", workflow)
+        self.assertIn("security import", workflow)
+        self.assertIn("notarytool store-credentials", workflow)
+        self.assertIn("Developer ID Application", readme)
+        self.assertIn("notarized", readme.lower())
         self.assertIn("全拼 or 小鹤双拼", readme)
         self.assertIn("enable full-pinyin autocorrection", readme)
-        self.assertIn("Open Anyway", readme)
-        self.assertIn("Privacy & Security", readme)
         self.assertIn("native 水杉输入法设置 panel", readme)
         self.assertIn("system-wide", readme)
         self.assertIn("/Library/Input Methods", readme)
@@ -78,6 +81,10 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("backup_root=$(mktemp -d", install_script)
         self.assertIn("install_complete=false", install_script)
         self.assertIn("TISRegisterInputSource", (PROJECT_ROOT / "scripts/register_input_source.swift").read_text())
+        package_script = (PROJECT_ROOT / "scripts/package_release.sh").read_text()
+        self.assertIn("productsign", package_script)
+        self.assertIn("notarytool", package_script)
+        self.assertIn("Commercial release signing requires", package_script)
 
     def test_release_scripts_have_valid_zsh_syntax(self):
         for relative_path in ("scripts/install-release.sh", "scripts/package_release.sh"):

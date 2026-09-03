@@ -14,6 +14,17 @@ fi
 source_bundle=${source_bundle:A}
 output_dir=${output_dir:A}
 version=${tag_name#v}
+require_release_signing=${METASEQUOIA_REQUIRE_RELEASE_SIGNING:-false}
+application_identity=${METASEQUOIA_DEVELOPER_ID_APPLICATION:-}
+installer_identity=${METASEQUOIA_DEVELOPER_ID_INSTALLER:-}
+notary_profile=${METASEQUOIA_NOTARY_PROFILE:-}
+
+if [[ "$require_release_signing" == true ]]; then
+    if [[ -z "$application_identity" || -z "$installer_identity" || -z "$notary_profile" ]]; then
+        print -u2 "Commercial release signing requires METASEQUOIA_DEVELOPER_ID_APPLICATION, METASEQUOIA_DEVELOPER_ID_INSTALLER, and METASEQUOIA_NOTARY_PROFILE."
+        exit 1
+    fi
+fi
 
 if [[ ! -d "$source_bundle" ]]; then
     print -u2 "Input method bundle not found at $source_bundle"
@@ -26,6 +37,9 @@ if [[ "$bundle_version" != "$version" ]]; then
     exit 1
 fi
 
+if [[ -n "$application_identity" ]]; then
+    codesign --force --deep --options runtime --timestamp --sign "$application_identity" "$source_bundle"
+fi
 codesign --verify --deep --strict --verbose=2 "$source_bundle"
 mkdir -p "$output_dir"
 staging_root=$(mktemp -d "$output_dir/.package.XXXXXX")
@@ -43,11 +57,28 @@ ditto "$source_bundle" "$package_root/MetasequoiaIME.app"
 ditto "$project_root/scripts/install-release.sh" "$package_root/Install.command"
 chmod +x "$package_root/Install.command"
 rm -f "$archive_path" "$checksum_path" "$installer_path" "$installer_checksum_path"
+if [[ -n "$notary_profile" ]]; then
+    notary_input="$staging_root/MetasequoiaIME-notary.zip"
+    ditto -c -k --keepParent "$package_root/MetasequoiaIME.app" "$notary_input"
+    xcrun notarytool submit "$notary_input" --keychain-profile "$notary_profile" --wait
+    xcrun stapler staple "$package_root/MetasequoiaIME.app"
+    xcrun stapler validate "$package_root/MetasequoiaIME.app"
+fi
 ditto -c -k --keepParent "$package_root" "$archive_path"
 (cd "$output_dir" && shasum -a 256 "${archive_path:t}") > "$checksum_path"
-pkgbuild --component "$source_bundle" --identifier com.houko.inputmethod.MetasequoiaIME.pkg --version "$version" --install-location "Library/Input Methods" "$component_package"
+pkgbuild --component "$package_root/MetasequoiaIME.app" --identifier com.houko.inputmethod.MetasequoiaIME.pkg --version "$version" --install-location "Library/Input Methods" "$component_package"
 sed "s/@VERSION@/$version/g" "$project_root/resources/InstallerDistribution.xml.in" > "$distribution_file"
 productbuild --distribution "$distribution_file" --package-path "$staging_root" "$installer_path"
+if [[ -n "$installer_identity" ]]; then
+    signed_installer="$staging_root/MetasequoiaIME-signed.pkg"
+    productsign --sign "$installer_identity" "$installer_path" "$signed_installer"
+    mv "$signed_installer" "$installer_path"
+fi
+if [[ -n "$notary_profile" ]]; then
+    xcrun notarytool submit "$installer_path" --keychain-profile "$notary_profile" --wait
+    xcrun stapler staple "$installer_path"
+    xcrun stapler validate "$installer_path"
+fi
 (cd "$output_dir" && shasum -a 256 "${installer_path:t}") > "$installer_checksum_path"
 print "$archive_path"
 print "$checksum_path"
