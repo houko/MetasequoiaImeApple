@@ -61,7 +61,7 @@ Download the `.pkg` and its checksum, verify it, then double-click the package t
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
 ```
 
-The current alpha uses an ad-hoc application signature and the package is not Developer ID signed or notarized. Gatekeeper may block the first double-click as expected. After verifying the checksum, try opening the package once, then open System Settings > Privacy & Security, scroll to Security, click Open Anyway, confirm Open, and return to the Installer. The Open Anyway button is available for about one hour after the blocked launch. After installation and logout, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
+Release builds are signed with a Developer ID Application identity, signed as an installer with a Developer ID Installer identity, and notarized before publication. The release workflow requires the corresponding certificate and App Store Connect credentials to be configured as repository secrets; it fails closed when they are missing. Local development builds remain ad-hoc signed. After installation and logout, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
 
 The ZIP remains the no-administrator option: it installs the signed bundle for the current user in `~/Library/Input Methods` via `Install.command`.
 

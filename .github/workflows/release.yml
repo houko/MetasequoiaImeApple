@@ -82,6 +82,32 @@ jobs:
         run: if brew tap | grep -Fxq aws/tap; then brew untap aws/tap; fi
       - name: Install dependencies
         run: brew install boost fmt spdlog
+      - name: Import Developer ID signing certificates
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_SIGNING_KEYCHAIN_PASSWORD }}
+          NOTARY_APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
+          NOTARY_PASSWORD: ${{ secrets.MACOS_NOTARY_APP_SPECIFIC_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for required in CERTIFICATE_BASE64 CERTIFICATE_PASSWORD KEYCHAIN_PASSWORD NOTARY_APPLE_ID NOTARY_TEAM_ID NOTARY_PASSWORD; do
+            if [[ -z "${!required}" ]]; then
+              echo "Missing required release signing secret: $required" >&2
+              exit 1
+            fi
+          done
+          keychain="$RUNNER_TEMP/metasequoia-signing.keychain-db"
+          certificate="$RUNNER_TEMP/metasequoia-developer-id.p12"
+          echo "$CERTIFICATE_BASE64" | base64 -D > "$certificate"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security import "$certificate" -k "$keychain" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/productsign
+          security list-keychains -d user -s "$keychain"
+          security default-keychain -s "$keychain"
+          xcrun notarytool store-credentials metasequoia-notary --keychain "$keychain" --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD"
       - name: Build dictionary
         run: python3 scripts/build_dictionary.py
       - name: Configure
@@ -100,6 +126,10 @@ jobs:
       - name: Package release
         env:
           TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+          METASEQUOIA_REQUIRE_RELEASE_SIGNING: true
+          METASEQUOIA_DEVELOPER_ID_APPLICATION: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
+          METASEQUOIA_DEVELOPER_ID_INSTALLER: ${{ secrets.MACOS_DEVELOPER_ID_INSTALLER }}
+          METASEQUOIA_NOTARY_PROFILE: metasequoia-notary
         run: scripts/package_release.sh "$TAG_NAME" build/MetasequoiaIME.app dist
       - name: Upload and publish release
         env:
