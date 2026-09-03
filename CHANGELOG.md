@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.9](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.8...v0.20.9) (2026-09-03)
+
+
+### Bug Fixes
+
+* **install:** wait for input method shutdown ([#110](https://github.com/houko/MetasequoiaImeMac/issues/110)) ([278707d](https://github.com/houko/MetasequoiaImeMac/commit/278707d490f4f1a186b5c3da4dad0b814c499423))
+
 ## [0.20.8](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.7...v0.20.8) (2026-09-03)
 
 
