@@ -49,7 +49,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RELEASE_PR: ${{ steps.release.outputs.pr }}
-        run: scripts/merge-release-pr.sh
+        run: bash scripts/merge-release-pr.sh
       - name: Finalize automated release
         if: ${{ github.event_name == 'push' && steps.merge_release_pr.outputs.merged == 'true' }}
         id: finalized_release

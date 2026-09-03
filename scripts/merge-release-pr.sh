@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
 : "${GH_REPO:?GH_REPO is required}"
@@ -6,14 +6,14 @@ set -euo pipefail
 
 write_output() {
     if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-        print -r -- "$1" >> "$GITHUB_OUTPUT"
+        printf '%s\n' "$1" >> "$GITHUB_OUTPUT"
     fi
 }
 
 pr_number=$(jq -er '.number | select(type == "number")' <<< "$RELEASE_PR")
 expected_head_branch=$(jq -er '.headBranchName | select(type == "string" and length > 0)' <<< "$RELEASE_PR")
 if [[ "$expected_head_branch" != release-please--* ]]; then
-    print -u2 -- "Refusing to merge a non-Release-Please branch: $expected_head_branch"
+    printf '%s\n' "Refusing to merge a non-Release-Please branch: $expected_head_branch" >&2
     exit 1
 fi
 
@@ -28,11 +28,11 @@ base_sha=$(jq -er .baseRefOid <<< "$pr_json")
 title=$(jq -er .title <<< "$pr_json")
 
 if [[ "$state" != OPEN || "$is_draft" != false || "$head_branch" != "$expected_head_branch" || "$base_branch" != main ]]; then
-    print -u2 -- "Release PR #$pr_number is not an open, mergeable Release Please PR against main."
+    printf '%s\n' "Release PR #$pr_number is not an open, mergeable Release Please PR against main." >&2
     exit 1
 fi
 if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ || ! "$base_sha" =~ ^[0-9a-f]{40}$ ]]; then
-    print -u2 -- "Release PR #$pr_number returned invalid commit metadata."
+    printf '%s\n' "Release PR #$pr_number returned invalid commit metadata." >&2
     exit 1
 fi
 
@@ -51,7 +51,7 @@ for ((attempt = 1; attempt <= max_polls; ++attempt)); do
     sleep "$poll_interval"
 done
 if [[ -z "$run_id" ]]; then
-    print -u2 -- "Timed out waiting for CI to start for release PR #$pr_number at $head_sha."
+    printf '%s\n' "Timed out waiting for CI to start for release PR #$pr_number at $head_sha." >&2
     exit 1
 fi
 
@@ -59,7 +59,7 @@ gh run watch "$run_id" --repo "$GH_REPO" --exit-status --interval 10
 
 current_base_sha=$(gh api "repos/$GH_REPO/git/ref/heads/$base_branch" --jq .object.sha)
 if [[ "$current_base_sha" != "$base_sha" ]]; then
-    print -- "main advanced while release PR #$pr_number was being tested; leaving it open for the next release run."
+    printf '%s\n' "main advanced while release PR #$pr_number was being tested; leaving it open for the next release run."
     write_output "merged=false"
     exit 0
 fi
@@ -71,7 +71,7 @@ if [[ "$(jq -er .state <<< "$current_pr_json")" != OPEN || \
       "$(jq -er .headRefName <<< "$current_pr_json")" != "$head_branch" || \
       "$(jq -er .headRefOid <<< "$current_pr_json")" != "$head_sha" || \
       "$(jq -er .baseRefName <<< "$current_pr_json")" != "$base_branch" ]]; then
-    print -u2 -- "Release PR #$pr_number changed after CI completed; refusing to merge it."
+    printf '%s\n' "Release PR #$pr_number changed after CI completed; refusing to merge it." >&2
     exit 1
 fi
 
