@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.4](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.3...v0.9.4) (2026-09-03)
+
+
+### Bug Fixes
+
+* **settings:** apply preferences on the next input ([#48](https://github.com/houko/MetasequoiaImeMac/issues/48)) ([26a222f](https://github.com/houko/MetasequoiaImeMac/commit/26a222fe1258ef0f9a1cb237dcb7d6e2860165bf))
+
 ## [0.9.3](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.2...v0.9.3) (2026-09-03)
 
 
