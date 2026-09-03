@@ -113,7 +113,27 @@ if ! verify_bundle "$staging_bundle"; then
     print -u2 "Staged release bundle verification failed."
     exit 1
 fi
-pkill -x MetasequoiaIME 2>/dev/null || true
+pkill -TERM -x -u "$EUID" MetasequoiaIME 2>/dev/null || true
+process_stopped=false
+for attempt in {1..50}; do
+    process_status=0
+    pgrep -x -u "$EUID" MetasequoiaIME >/dev/null 2>&1 || process_status=$?
+    if (( process_status == 1 )); then
+        process_stopped=true
+        break
+    fi
+    if (( process_status != 0 )); then
+        print -u2 "Could not verify whether MetasequoiaIME stopped; no files were changed."
+        exit 1
+    fi
+    if (( attempt < 50 )); then
+        sleep 0.1
+    fi
+done
+if [[ "$process_stopped" != true ]]; then
+    print -u2 "MetasequoiaIME did not stop in time; no files were changed."
+    exit 1
+fi
 if [[ -e "$destination_bundle" ]]; then
     had_previous=true
     mv "$destination_bundle" "$backup_bundle"
