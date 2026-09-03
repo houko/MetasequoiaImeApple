@@ -211,6 +211,121 @@ class ReleasePackageTests(unittest.TestCase):
                 ).is_file()
             )
 
+            asset_names = (
+                f"MetasequoiaIME-v{version}-macos-universal-unsigned.zip",
+                f"MetasequoiaIME-v{version}-macos-universal-unsigned.zip.sha256",
+                f"MetasequoiaIME-v{version}-macos-universal-unsigned.pkg",
+                f"MetasequoiaIME-v{version}-macos-universal-unsigned.pkg.sha256",
+            )
+
+            cleanup_failure_output = Path(temporary_directory) / "cleanup-failure-output"
+            cleanup_failure_output.mkdir()
+            cleanup_failing_bin = Path(temporary_directory) / "cleanup-failing-bin"
+            cleanup_failing_bin.mkdir()
+            failing_rm = cleanup_failing_bin / "rm"
+            failing_rm.write_text(
+                "#!/bin/sh\n"
+                "target=\n"
+                "for argument in \"$@\"; do target=$argument; done\n"
+                "case $target in\n"
+                "  */.package.*) exit 44 ;;\n"
+                "esac\n"
+                "exec /bin/rm \"$@\"\n"
+            )
+            failing_rm.chmod(0o755)
+            cleanup_failure_environment = environment.copy()
+            cleanup_failure_environment["PATH"] = (
+                f"{cleanup_failing_bin}:{cleanup_failure_environment['PATH']}"
+            )
+            failed_cleanup = subprocess.run(
+                [trusted_packager, f"v{version}", bundle, cleanup_failure_output],
+                capture_output=True,
+                text=True,
+                env=cleanup_failure_environment,
+            )
+            self.assertNotEqual(failed_cleanup.returncode, 0)
+            for asset_name in asset_names:
+                self.assertTrue((cleanup_failure_output / asset_name).is_file())
+            self.assertEqual(len(list(cleanup_failure_output.glob(".package.*"))), 1)
+            self.assertIn("cleanup was incomplete", failed_cleanup.stderr)
+
+            failure_output = Path(temporary_directory) / "failure-output"
+            failure_output.mkdir()
+            previous_contents = b"previous complete release asset\n"
+            for asset_name in asset_names:
+                (failure_output / asset_name).write_bytes(previous_contents)
+
+            failing_bin = Path(temporary_directory) / "failing-bin"
+            failing_bin.mkdir()
+            failing_mv = failing_bin / "mv"
+            failing_mv.write_text(
+                "#!/bin/sh\n"
+                "source_path=\n"
+                "for argument in \"$@\"; do\n"
+                "  case $argument in -*) ;; *) source_path=$argument; break ;; esac\n"
+                "done\n"
+                "case $source_path in\n"
+                "  */PreviousAssets/*)\n"
+                "    if test \"${FAIL_ROLLBACK:-false}\" = true && test ! -f \"$ROLLBACK_FAILURE_FILE\"; then\n"
+                "      printf '%s\\n' failed > \"$ROLLBACK_FAILURE_FILE\"\n"
+                "      exit 43\n"
+                "    fi\n"
+                "    ;;\n"
+                "  */.package.*/MetasequoiaIME-v*-macos-universal*)\n"
+                "    count=0\n"
+                "    test ! -f \"$MV_COUNT_FILE\" || count=$(cat \"$MV_COUNT_FILE\")\n"
+                "    count=$((count + 1))\n"
+                "    printf '%s\\n' \"$count\" > \"$MV_COUNT_FILE\"\n"
+                "    test \"$count\" -ne 2 || exit 42\n"
+                "    ;;\n"
+                "esac\n"
+                "exec /bin/mv \"$@\"\n"
+            )
+            failing_mv.chmod(0o755)
+            failure_environment = environment.copy()
+            failure_environment["PATH"] = f"{failing_bin}:{failure_environment['PATH']}"
+            failure_environment["MV_COUNT_FILE"] = str(Path(temporary_directory) / "mv-count")
+            failed_package = subprocess.run(
+                [trusted_packager, f"v{version}", bundle, failure_output],
+                capture_output=True,
+                text=True,
+                env=failure_environment,
+            )
+            self.assertNotEqual(failed_package.returncode, 0)
+            for asset_name in asset_names:
+                self.assertEqual((failure_output / asset_name).read_bytes(), previous_contents)
+            self.assertFalse(any(failure_output.glob(".package.*")))
+
+            rollback_failure_output = Path(temporary_directory) / "rollback-failure-output"
+            rollback_failure_output.mkdir()
+            for asset_name in asset_names:
+                (rollback_failure_output / asset_name).write_bytes(previous_contents)
+            rollback_failure_environment = failure_environment.copy()
+            rollback_failure_environment["MV_COUNT_FILE"] = str(
+                Path(temporary_directory) / "rollback-mv-count"
+            )
+            rollback_failure_environment["FAIL_ROLLBACK"] = "true"
+            rollback_failure_environment["ROLLBACK_FAILURE_FILE"] = str(
+                Path(temporary_directory) / "rollback-failed"
+            )
+            failed_rollback = subprocess.run(
+                [trusted_packager, f"v{version}", bundle, rollback_failure_output],
+                capture_output=True,
+                text=True,
+                env=rollback_failure_environment,
+            )
+            self.assertNotEqual(failed_rollback.returncode, 0)
+            preserved_staging = list(rollback_failure_output.glob(".package.*"))
+            self.assertEqual(len(preserved_staging), 1)
+            preserved_backup = preserved_staging[0] / "PreviousAssets"
+            for asset_name in asset_names:
+                final_asset = rollback_failure_output / asset_name
+                backup_asset = preserved_backup / asset_name
+                self.assertTrue(final_asset.exists() or backup_asset.exists())
+                preserved_asset = final_asset if final_asset.exists() else backup_asset
+                self.assertEqual(preserved_asset.read_bytes(), previous_contents)
+            self.assertIn("PreviousAssets", failed_rollback.stderr)
+
 
 if __name__ == "__main__":
     unittest.main(argv=[sys.argv[0]])

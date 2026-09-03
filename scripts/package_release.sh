@@ -69,16 +69,58 @@ fi
 codesign --verify --deep --strict --verbose=2 "$source_bundle"
 mkdir -p "$output_dir"
 staging_root=$(mktemp -d "$output_dir/.package.XXXXXX")
-trap 'rm -rf "$staging_root"' EXIT
 package_root="$staging_root/MetasequoiaIME-$tag_name"
-archive_path="$output_dir/MetasequoiaIME-$tag_name-macos-universal$asset_suffix.zip"
+archive_name="MetasequoiaIME-$tag_name-macos-universal$asset_suffix.zip"
+installer_name="MetasequoiaIME-$tag_name-macos-universal$asset_suffix.pkg"
+archive_path="$staging_root/$archive_name"
 checksum_path="$archive_path.sha256"
-installer_path="$output_dir/MetasequoiaIME-$tag_name-macos-universal$asset_suffix.pkg"
+installer_path="$staging_root/$installer_name"
 installer_checksum_path="$installer_path.sha256"
+final_archive_path="$output_dir/$archive_name"
+final_checksum_path="$final_archive_path.sha256"
+final_installer_path="$output_dir/$installer_name"
+final_installer_checksum_path="$final_installer_path.sha256"
 component_package="$staging_root/MetasequoiaIME.pkg"
 distribution_file="$staging_root/Distribution.xml"
 installer_resources="$staging_root/InstallerResources"
 installer_readme="$installer_resources/InstallerReadMe.txt"
+backup_root="$staging_root/PreviousAssets"
+publish_started=false
+publish_complete=false
+staged_assets=("$archive_path" "$checksum_path" "$installer_path" "$installer_checksum_path")
+final_assets=("$final_archive_path" "$final_checksum_path" "$final_installer_path" "$final_installer_checksum_path")
+backup_assets=("$backup_root/$archive_name" "$backup_root/$archive_name.sha256" "$backup_root/$installer_name" "$backup_root/$installer_name.sha256")
+
+cleanup() {
+    local exit_status=$?
+    trap - EXIT HUP INT TERM
+    local rollback_failed=false
+    local index
+    if [[ "$publish_started" == true && "$publish_complete" != true ]]; then
+        for index in 1 2 3 4; do
+            if [[ ! -e "${staged_assets[$index]}" && -e "${final_assets[$index]}" ]] &&
+                ! rm -f -- "${final_assets[$index]}"; then
+                rollback_failed=true
+            fi
+            if [[ -e "${backup_assets[$index]}" ]] &&
+                ! mv -f -- "${backup_assets[$index]}" "${final_assets[$index]}"; then
+                rollback_failed=true
+            fi
+        done
+    fi
+    if [[ "$rollback_failed" == true ]]; then
+        print -u2 "Release packaging rollback was incomplete. PreviousAssets are preserved at: $backup_root"
+        exit 1
+    fi
+    if ! rm -rf -- "$staging_root"; then
+        print -u2 "Release packaging cleanup was incomplete: $staging_root"
+        exit 1
+    fi
+    exit "$exit_status"
+}
+
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
 
 mkdir -p "$package_root"
 ditto "$source_bundle" "$package_root/MetasequoiaIME.app"
@@ -94,7 +136,6 @@ if [[ "$asset_suffix" == -unsigned ]]; then
         > "$package_root/UNSIGNED_BUILD.txt"
 fi
 chmod +x "$package_root/Install.command"
-rm -f "$archive_path" "$checksum_path" "$installer_path" "$installer_checksum_path"
 if [[ -n "$notary_profile" ]]; then
     notary_input="$staging_root/MetasequoiaIME-notary.zip"
     ditto -c -k --keepParent "$package_root/MetasequoiaIME.app" "$notary_input"
@@ -103,7 +144,7 @@ if [[ -n "$notary_profile" ]]; then
     xcrun stapler validate "$package_root/MetasequoiaIME.app"
 fi
 ditto -c -k --keepParent "$package_root" "$archive_path"
-(cd "$output_dir" && shasum -a 256 "${archive_path:t}") > "$checksum_path"
+(cd "$staging_root" && shasum -a 256 "$archive_name") > "$checksum_path"
 pkgbuild --component "$package_root/MetasequoiaIME.app" --identifier com.houko.inputmethod.MetasequoiaIME.pkg --version "$version" --install-location "Library/Input Methods" "$component_package"
 sed "s/@VERSION@/$version/g" "$project_root/resources/InstallerDistribution.xml.in" > "$distribution_file"
 mkdir -p "$installer_resources"
@@ -143,8 +184,19 @@ if [[ -n "$notary_profile" ]]; then
     xcrun stapler staple "$installer_path"
     xcrun stapler validate "$installer_path"
 fi
-(cd "$output_dir" && shasum -a 256 "${installer_path:t}") > "$installer_checksum_path"
-print "$archive_path"
-print "$checksum_path"
-print "$installer_path"
-print "$installer_checksum_path"
+(cd "$staging_root" && shasum -a 256 "$installer_name") > "$installer_checksum_path"
+mkdir -p "$backup_root"
+publish_started=true
+for index in 1 2 3 4; do
+    if [[ -e "${final_assets[$index]}" ]]; then
+        mv "${final_assets[$index]}" "${backup_assets[$index]}"
+    fi
+done
+for index in 1 2 3 4; do
+    mv -f "${staged_assets[$index]}" "${final_assets[$index]}"
+done
+publish_complete=true
+print "$final_archive_path"
+print "$final_checksum_path"
+print "$final_installer_path"
+print "$final_installer_checksum_path"
