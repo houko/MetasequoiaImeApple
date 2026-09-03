@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.12.0...v0.13.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** configure candidate page size ([#58](https://github.com/houko/MetasequoiaImeMac/issues/58)) ([a78b32d](https://github.com/houko/MetasequoiaImeMac/commit/a78b32d4ed9a82dbf402103c9b4122c1900aee4e))
+
 ## [0.12.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.11.0...v0.12.0) (2026-09-03)
 
 
