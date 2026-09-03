@@ -30,6 +30,7 @@ struct SessionPreferences
     bool chinesePunctuationEnabled;
     metasequoia::mac::CandidatePanelStyle candidatePanelStyle;
     size_t candidatePageSize;
+    bool candidateLearningEnabled;
 };
 
 SessionPreferences ReadSessionPreferences()
@@ -44,6 +45,7 @@ SessionPreferences ReadSessionPreferences()
             [MetasequoiaPreferencesWindowController storedCandidatePanelStyle]),
         metasequoia::mac::NormalizeCandidatePageSize(
             static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidatePageSize])),
+        [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] == YES,
     };
 }
 
@@ -52,7 +54,8 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     return session.scheme_type() == preferences.scheme &&
            session.quanpin_autocorrect_enabled() == preferences.autocorrectEnabled &&
            session.helpcode_enabled() == preferences.helpcodeEnabled &&
-           session.chinese_punctuation_enabled() == preferences.chinesePunctuationEnabled;
+           session.chinese_punctuation_enabled() == preferences.chinesePunctuationEnabled &&
+           session.candidate_learning_enabled() == preferences.candidateLearningEnabled;
 }
 } // namespace
 
@@ -97,7 +100,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     }
     _session = std::make_unique<metasequoia::mac::InputSession>(
         preferences.scheme, preferences.autocorrectEnabled, preferences.helpcodeEnabled,
-        preferences.chinesePunctuationEnabled);
+        preferences.chinesePunctuationEnabled, preferences.candidateLearningEnabled);
     _candidateSelection.reset();
     _candidateHighlightedIndex = 0;
     _candidatePageStart = 0;

@@ -79,11 +79,15 @@ int main()
         database.execute("CREATE TABLE tbl_2_n(key TEXT, jp TEXT, value TEXT, weight INTEGER)");
         database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '你好', 200)");
         database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '拟好', 100)");
+        database.execute("CREATE TABLE tbl_2_b(key TEXT, jp TEXT, value TEXT, weight INTEGER)");
+        database.execute("INSERT INTO tbl_2_b VALUES('bu''hao', 'bh', '不好', 200)");
+        database.execute("INSERT INTO tbl_2_b VALUES('bu''hao', 'bh', '补好', 100)");
 
         metasequoia::mac::InputSession default_session;
         require(default_session.scheme_type() == SchemeType::Quanpin, "The default input scheme should be full pinyin.");
         require(default_session.quanpin_autocorrect_enabled(), "Pinyin autocorrect should be enabled by default.");
         require(default_session.helpcode_enabled(), "Helpcode should be enabled by default.");
+        require(default_session.candidate_learning_enabled(), "Candidate learning should be enabled by default.");
         metasequoia::mac::InputSession shuangpin_session(SchemeType::Shuangpin);
         require(shuangpin_session.scheme_type() == SchemeType::Shuangpin, "The requested double-pinyin scheme was not retained.");
         metasequoia::mac::InputSession no_autocorrect_session(SchemeType::Quanpin, false);
@@ -93,6 +97,18 @@ int main()
         metasequoia::mac::InputSession ascii_punctuation_session(SchemeType::Quanpin, true, true, false);
         require(!ascii_punctuation_session.chinese_punctuation_enabled(), "The requested punctuation setting was not retained.");
         require(!ascii_punctuation_session.handle_punctuation('.').handled, "Disabled Chinese punctuation swallowed ASCII punctuation.");
+        metasequoia::mac::InputSession no_learning_session(SchemeType::Quanpin, true, true, true, false);
+        require(!no_learning_session.candidate_learning_enabled(), "The requested candidate-learning setting was not retained.");
+        type(no_learning_session, "buhao");
+        require(no_learning_session.candidates().size() >= 2 && no_learning_session.candidates().front().word == "不好",
+                "The learning test dictionary did not preserve its initial order.");
+        const auto unlearned_selection = no_learning_session.select_candidate(1);
+        require(unlearned_selection.handled && unlearned_selection.commit == "补好",
+                "Candidate selection failed while learning was disabled.");
+        metasequoia::mac::InputSession verify_unlearned_session;
+        type(verify_unlearned_session, "buhao");
+        require(!verify_unlearned_session.candidates().empty() && verify_unlearned_session.candidates().front().word == "不好",
+                "A selected candidate was learned while candidate learning was disabled.");
 
         metasequoia::mac::InputSession uppercase_session;
         require(!uppercase_session.handle_character('N').handled,

@@ -25,7 +25,8 @@ class InputSession
 {
   public:
     explicit InputSession(SchemeType scheme_type = SchemeType::Quanpin, bool quanpin_autocorrect_enabled = true,
-                          bool helpcode_enabled = true, bool chinese_punctuation_enabled = true);
+                          bool helpcode_enabled = true, bool chinese_punctuation_enabled = true,
+                          bool candidate_learning_enabled = true);
 
     KeyResult handle_character(char character);
     KeyResult handle_candidate_key(char character);
@@ -38,6 +39,7 @@ class InputSession
     bool quanpin_autocorrect_enabled() const;
     bool helpcode_enabled() const;
     bool chinese_punctuation_enabled() const;
+    bool candidate_learning_enabled() const;
     bool has_composition() const;
     const std::string &preedit() const;
     const std::vector<WordItem> &candidates() const;
@@ -50,6 +52,7 @@ class InputSession
     bool quanpin_autocorrect_enabled_ = true;
     bool helpcode_enabled_ = true;
     bool chinese_punctuation_enabled_ = true;
+    bool candidate_learning_enabled_ = true;
     bool next_double_quote_is_opening_ = true;
     bool next_single_quote_is_opening_ = true;
 };

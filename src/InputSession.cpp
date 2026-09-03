@@ -6,9 +6,9 @@
 namespace metasequoia::mac
 {
 InputSession::InputSession(SchemeType scheme_type, bool quanpin_autocorrect_enabled, bool helpcode_enabled,
-                           bool chinese_punctuation_enabled)
+                           bool chinese_punctuation_enabled, bool candidate_learning_enabled)
     : engine_(scheme_type), quanpin_autocorrect_enabled_(quanpin_autocorrect_enabled), helpcode_enabled_(helpcode_enabled),
-      chinese_punctuation_enabled_(chinese_punctuation_enabled)
+      chinese_punctuation_enabled_(chinese_punctuation_enabled), candidate_learning_enabled_(candidate_learning_enabled)
 {
     engine_.set_quanpin_autocorrect_enabled(quanpin_autocorrect_enabled_);
     engine_.set_quanpin_helpcode_enabled(helpcode_enabled_);
@@ -187,6 +187,11 @@ bool InputSession::chinese_punctuation_enabled() const
     return chinese_punctuation_enabled_;
 }
 
+bool InputSession::candidate_learning_enabled() const
+{
+    return candidate_learning_enabled_;
+}
+
 bool InputSession::has_composition() const
 {
     return !preedit().empty();
@@ -220,6 +225,10 @@ KeyResult InputSession::commit(size_t index)
 
 void InputSession::learn_candidate(const WordItem &candidate)
 {
+    if (!candidate_learning_enabled_)
+    {
+        return;
+    }
     if (candidate.source != CandidateSource::Database && candidate.source != CandidateSource::UserDatabase)
     {
         return;

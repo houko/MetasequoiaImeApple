@@ -16,5 +16,7 @@
 + (void)setCandidatePanelStyle:(NSInteger)style;
 + (NSInteger)storedCandidatePageSize;
 + (void)setCandidatePageSize:(NSInteger)pageSize;
++ (BOOL)storedCandidateLearningEnabled;
++ (void)setCandidateLearningEnabled:(BOOL)enabled;
 - (void)showAndActivate;
 @end
