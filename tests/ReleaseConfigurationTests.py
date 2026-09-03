@@ -62,6 +62,9 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("storedAutocorrectEnabled", preferences_controller)
         self.assertIn("setAutocorrectEnabled", preferences_controller)
         self.assertIn("启用全拼自动纠错", preferences_controller)
+        self.assertIn("storedHelpcodeEnabled", preferences_controller)
+        self.assertIn("setHelpcodeEnabled", preferences_controller)
+        self.assertIn("启用辅助码", preferences_controller)
 
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
         self.assertNotIn("xcrun", release_installer)
