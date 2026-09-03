@@ -1,5 +1,7 @@
 #import "../src/DictionaryInstaller.h"
 
+#import <CommonCrypto/CommonDigest.h>
+
 #include "../vendor/MetasequoiaImeEngine/user_dictionary/user_dictionary_journal.h"
 
 #include <sqlite3.h>
@@ -31,6 +33,22 @@ std::string ReadString(NSURL *url)
     NSString *value = [NSString stringWithContentsOfURL:url encoding:NSUTF8StringEncoding error:&error];
     Require(value != nil, error.localizedDescription.UTF8String);
     return value.UTF8String;
+}
+
+NSString *SHA256Fingerprint(NSURL *url)
+{
+    NSError *error = nil;
+    NSData *data = [NSData dataWithContentsOfURL:url options:0 error:&error];
+    Require(data != nil, error.localizedDescription.UTF8String);
+    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+    Require(CC_SHA256(data.bytes, static_cast<CC_LONG>(data.length), digest) != nullptr,
+            "Failed to hash test dictionary.");
+    NSMutableString *fingerprint = [NSMutableString stringWithCapacity:CC_SHA256_DIGEST_LENGTH * 2];
+    for (unsigned char byte : digest)
+    {
+        [fingerprint appendFormat:@"%02x", byte];
+    }
+    return fingerprint;
 }
 
 void ExecuteSql(NSURL *url, const char *sql)
@@ -143,17 +161,104 @@ int main()
         Require([[fileManager attributesOfItemAtPath:sameSizeSource.path error:&error] fileSize] ==
                     [[fileManager attributesOfItemAtPath:sameSizeDestination.path error:&error] fileSize],
                 "The same-size update fixture dictionaries have different sizes.");
-        Require(InstallMetasequoiaDictionary(sameSizeSource, sameSizeDirectory, @"new-fingerprint", &error),
+        NSString *sameSizeFingerprint = SHA256Fingerprint(sameSizeSource);
+        Require(InstallMetasequoiaDictionary(sameSizeSource, sameSizeDirectory, sameSizeFingerprint, &error),
                 error.localizedDescription.UTF8String);
         Require(ReadWeight(sameSizeDestination, "拟好") == 100,
                 "A same-size dictionary update was incorrectly skipped.");
 
         ExecuteSql(sameSizeDestination, "UPDATE tbl_2_n SET weight=999 WHERE value='拟好';");
         WriteString(@"unused corrupt source", sameSizeSource);
-        Require(InstallMetasequoiaDictionary(sameSizeSource, sameSizeDirectory, @"new-fingerprint", &error),
+        Require(InstallMetasequoiaDictionary(sameSizeSource, sameSizeDirectory, sameSizeFingerprint, &error),
                 "A matching dictionary fingerprint did not use the no-update fast path.");
         Require(ReadWeight(sameSizeDestination, "拟好") == 999,
                 "A matching dictionary fingerprint overwrote learned data.");
+
+        NSURL *firstInstallDirectory = CreateDirectory(root, @"first-install");
+        NSURL *largeSource = [root URLByAppendingPathComponent:@"large-source.db"];
+        ExecuteSql(largeSource,
+                   "CREATE TABLE tbl_2_n(key TEXT, jp TEXT, value TEXT, weight INTEGER);"
+                   "INSERT INTO tbl_2_n VALUES('ni''hao','nh','首次安装',111);"
+                   "CREATE TABLE hash_stream_padding(value BLOB);"
+                   "INSERT INTO hash_stream_padding VALUES(zeroblob(131072));");
+        Require([[fileManager attributesOfItemAtPath:largeSource.path error:&error] fileSize] > 64 * 1024,
+                "The fingerprint stream fixture does not span multiple reads.");
+        NSString *largeSourceFingerprint = SHA256Fingerprint(largeSource);
+        Require(InstallMetasequoiaDictionary(largeSource, firstInstallDirectory,
+                                             largeSourceFingerprint, &error),
+                error.localizedDescription.UTF8String);
+        NSURL *firstInstallDestination =
+            [firstInstallDirectory URLByAppendingPathComponent:@"msime.db"];
+        Require(ReadWeight(firstInstallDestination, "首次安装") == 111 &&
+                    ReadString([firstInstallDirectory URLByAppendingPathComponent:@"msime.db.sha256"]) ==
+                        largeSourceFingerprint.UTF8String,
+                "A valid multi-read dictionary did not install with its fingerprint.");
+
+        NSURL *firstInstallMismatchDirectory = CreateDirectory(root, @"first-install-mismatch");
+        error = nil;
+        Require(!InstallMetasequoiaDictionary(
+                    largeSource, firstInstallMismatchDirectory,
+                    @"0000000000000000000000000000000000000000000000000000000000000000", &error),
+                "A first-install dictionary with a mismatched fingerprint unexpectedly installed.");
+        Require(error != nil &&
+                    ![fileManager fileExistsAtPath:
+                                      [firstInstallMismatchDirectory URLByAppendingPathComponent:@"msime.db"].path] &&
+                    ![fileManager fileExistsAtPath:
+                                      [firstInstallMismatchDirectory URLByAppendingPathComponent:
+                                                                         @"msime.db.sha256"].path],
+                "A rejected first-install dictionary left persistent files behind.");
+        NSArray<NSURL *> *firstInstallMismatchContents =
+            [fileManager contentsOfDirectoryAtURL:firstInstallMismatchDirectory
+                       includingPropertiesForKeys:nil
+                                          options:0
+                                            error:&error];
+        Require(firstInstallMismatchContents.count == 0,
+                "A rejected first-install dictionary left a temporary file behind.");
+
+        NSURL *partialCopySource = CreateDirectory(root, @"partial-copy-source.db");
+        NSURL *unreadableCopySource = [partialCopySource URLByAppendingPathComponent:@"unreadable"];
+        WriteString(@"cannot-copy", unreadableCopySource);
+        Require([fileManager setAttributes:@{NSFilePosixPermissions: @0}
+                                    ofItemAtPath:unreadableCopySource.path
+                                           error:&error],
+                error.localizedDescription.UTF8String);
+        NSURL *partialInstallDirectory = CreateDirectory(root, @"partial-install");
+        error = nil;
+        Require(!InstallMetasequoiaDictionary(partialCopySource, partialInstallDirectory,
+                                              largeSourceFingerprint, &error),
+                "A partially copied dictionary unexpectedly installed.");
+        NSArray<NSURL *> *partialInstallContents =
+            [fileManager contentsOfDirectoryAtURL:partialInstallDirectory
+                       includingPropertiesForKeys:nil
+                                          options:0
+                                            error:&error];
+        Require(partialInstallContents != nil, error.localizedDescription.UTF8String);
+        for (NSURL *remainingFile in partialInstallContents)
+        {
+            Require(![remainingFile.lastPathComponent hasPrefix:@".msime.db.installing."],
+                    "A failed dictionary copy left a partial install file behind.");
+        }
+
+        NSURL *partialResetDirectory = CreateDirectory(root, @"partial-reset");
+        error = nil;
+        Require(!ResetMetasequoiaLearnedData(partialCopySource, partialResetDirectory,
+                                             largeSourceFingerprint, &error),
+                "A partially copied dictionary unexpectedly reset learned data.");
+        NSArray<NSURL *> *partialResetContents =
+            [fileManager contentsOfDirectoryAtURL:partialResetDirectory
+                       includingPropertiesForKeys:nil
+                                          options:0
+                                            error:&error];
+        Require(partialResetContents != nil, error.localizedDescription.UTF8String);
+        for (NSURL *remainingFile in partialResetContents)
+        {
+            Require(![remainingFile.lastPathComponent hasPrefix:@".msime.db.resetting."],
+                    "A failed dictionary copy left a partial reset file behind.");
+        }
+        Require([fileManager setAttributes:@{NSFilePosixPermissions: @0600}
+                                    ofItemAtPath:unreadableCopySource.path
+                                           error:&error],
+                error.localizedDescription.UTF8String);
 
         NSURL *replayDirectory = CreateDirectory(root, @"replay");
         NSURL *replaySource = [root URLByAppendingPathComponent:@"replay-source.db"];
@@ -172,7 +277,8 @@ int main()
                                                "拟好", 999),
                 "Failed to create the user dictionary journal fixture.");
         WriteString(@"old-fingerprint", [replayDirectory URLByAppendingPathComponent:@"msime.db.sha256"]);
-        Require(InstallMetasequoiaDictionary(replaySource, replayDirectory, @"new-fingerprint", &error),
+        Require(InstallMetasequoiaDictionary(replaySource, replayDirectory,
+                                             SHA256Fingerprint(replaySource), &error),
                 error.localizedDescription.UTF8String);
         Require(ReadWeight(replayDestination, "拟好") == 999,
                 "The user dictionary journal was not replayed onto the upgraded dictionary.");
@@ -200,12 +306,13 @@ int main()
         WriteString(@"english", [resetDirectory URLByAppendingPathComponent:@"msime_english.db"]);
         WriteString(@"decoder-learning", [resetDirectory URLByAppendingPathComponent:@"user_dict.dat"]);
         error = nil;
-        Require(ResetMetasequoiaLearnedData(resetSource, resetDirectory, @"reset-fingerprint", &error),
+        NSString *resetFingerprint = SHA256Fingerprint(resetSource);
+        Require(ResetMetasequoiaLearnedData(resetSource, resetDirectory, resetFingerprint, &error),
                 error.localizedDescription.UTF8String);
         Require(ReadWeight(resetDestination, "拟好") == 100,
                 "Resetting learned data did not restore the bundled candidate weight.");
         Require(ReadString([resetDirectory URLByAppendingPathComponent:@"msime.db.sha256"]) ==
-                    "reset-fingerprint",
+                    resetFingerprint.UTF8String,
                 "Resetting learned data did not install the bundled dictionary fingerprint.");
         for (NSString *learnedFile in @[@"msime_user.db", @"msime_user.db-wal", @"msime_user.db-journal",
                                         @"msime_english.db", @"user_dict.dat"])
@@ -410,8 +517,8 @@ int main()
         NSURL *invalidResetSource = [root URLByAppendingPathComponent:@"invalid-reset-source.db"];
         WriteString(@"not-a-dictionary", invalidResetSource);
         error = nil;
-        Require(!ResetMetasequoiaLearnedData(invalidResetSource, resetFailureDirectory, @"new-fingerprint",
-                                             &error),
+        Require(!ResetMetasequoiaLearnedData(invalidResetSource, resetFailureDirectory,
+                                             SHA256Fingerprint(invalidResetSource), &error),
                 "A corrupt bundled dictionary unexpectedly reset learned data.");
         Require(error != nil, "A rejected learned-data reset did not return an error.");
         Require(ReadWeight(resetFailureDestination, "拟好") == 321,
@@ -419,6 +526,15 @@ int main()
         Require(ReadString(resetFailureJournal) == "keep-journal" &&
                     ReadString(resetFailureFingerprint) == "keep-fingerprint",
                 "A failed learned-data reset removed persistent learning metadata.");
+        error = nil;
+        Require(!ResetMetasequoiaLearnedData(
+                    resetSource, resetFailureDirectory,
+                    @"0000000000000000000000000000000000000000000000000000000000000000", &error),
+                "A fingerprint-mismatched bundled dictionary unexpectedly reset learned data.");
+        Require(error != nil && ReadWeight(resetFailureDestination, "拟好") == 321 &&
+                    ReadString(resetFailureJournal) == "keep-journal" &&
+                    ReadString(resetFailureFingerprint) == "keep-fingerprint",
+                "A fingerprint-mismatched learned-data reset changed persistent data.");
 
         NSURL *rollbackDirectory = CreateDirectory(root, @"reset-learning-rollback");
         NSURL *rollbackDestination = [rollbackDirectory URLByAppendingPathComponent:@"msime.db"];
@@ -434,7 +550,7 @@ int main()
                                            error:&error],
                 error.localizedDescription.UTF8String);
         error = nil;
-        Require(!ResetMetasequoiaLearnedData(resetSource, rollbackDirectory, @"new-fingerprint", &error),
+        Require(!ResetMetasequoiaLearnedData(resetSource, rollbackDirectory, resetFingerprint, &error),
                 "A learned-data reset unexpectedly ignored an immutable journal.");
         Require([fileManager setAttributes:@{NSFileImmutable: @NO}
                                     ofItemAtPath:immutableJournal.path
@@ -470,7 +586,7 @@ int main()
                     [corruptSourceDirectory URLByAppendingPathComponent:@"msime.db.sha256"]);
         error = nil;
         Require(!InstallMetasequoiaDictionary(corruptSource, corruptSourceDirectory,
-                                              @"new-fingerprint", &error),
+                                              SHA256Fingerprint(corruptSource), &error),
                 "A nonempty corrupt bundled dictionary unexpectedly replaced the working dictionary.");
         Require(ReadWeight(preservedDestination, "你好") == 321,
                 "A corrupt bundled dictionary damaged the working dictionary.");
@@ -481,6 +597,26 @@ int main()
         Require(error == nil, "A successful corrupt-source fallback leaked the validation error.");
         Require(ReadWeight(preservedDestination, "你好") == 321,
                 "Corrupt-source fallback did not preserve the working dictionary.");
+
+        NSURL *fingerprintMismatchDirectory = CreateDirectory(root, @"fingerprint-mismatch");
+        NSURL *fingerprintMismatchSource = [root URLByAppendingPathComponent:@"fingerprint-mismatch-source.db"];
+        NSURL *fingerprintMismatchDestination =
+            [fingerprintMismatchDirectory URLByAppendingPathComponent:@"msime.db"];
+        ExecuteSql(fingerprintMismatchSource,
+                   "CREATE TABLE tbl_2_n(key TEXT, jp TEXT, value TEXT, weight INTEGER);"
+                   "INSERT INTO tbl_2_n VALUES('ni''hao','nh','替换内容',100);");
+        ExecuteSql(fingerprintMismatchDestination,
+                   "CREATE TABLE tbl_2_n(key TEXT, jp TEXT, value TEXT, weight INTEGER);"
+                   "INSERT INTO tbl_2_n VALUES('ni''hao','nh','保留内容',456);");
+        WriteString(@"old-fingerprint",
+                    [fingerprintMismatchDirectory URLByAppendingPathComponent:@"msime.db.sha256"]);
+        error = nil;
+        Require(!InstallMetasequoiaDictionary(
+                    fingerprintMismatchSource, fingerprintMismatchDirectory,
+                    @"0000000000000000000000000000000000000000000000000000000000000000", &error),
+                "A bundled dictionary with mismatched content fingerprint unexpectedly installed.");
+        Require(ReadWeight(fingerprintMismatchDestination, "保留内容") == 456,
+                "A fingerprint-mismatched bundled dictionary replaced the working dictionary.");
 
         NSURL *replayFailureDirectory = CreateDirectory(root, @"replay-failure");
         NSURL *replayFailureSource = [root URLByAppendingPathComponent:@"replay-failure-source.db"];
@@ -497,14 +633,15 @@ int main()
                                                "wo'ai", "我爱", 999),
                 "Failed to create the invalid replay fixture.");
         error = nil;
-        Require(!InstallMetasequoiaDictionary(replayFailureSource, replayFailureDirectory, @"new-fingerprint",
-                                              &error),
+        NSString *replayFailureFingerprint = SHA256Fingerprint(replayFailureSource);
+        Require(!InstallMetasequoiaDictionary(replayFailureSource, replayFailureDirectory,
+                                              replayFailureFingerprint, &error),
                 "An invalid user dictionary replay unexpectedly succeeded.");
         Require(ReadWeight(replayFailureDestination, "你好") == 321,
                 "A failed journal replay replaced the working dictionary.");
         error = nil;
-        Require(PrepareMetasequoiaDictionary(replayFailureSource, replayFailureDirectory, @"new-fingerprint",
-                                             &error),
+        Require(PrepareMetasequoiaDictionary(replayFailureSource, replayFailureDirectory,
+                                             replayFailureFingerprint, &error),
                 "A valid existing dictionary was not used after an update failure.");
         Require(error == nil, "A successful dictionary fallback leaked the update error.");
         Require(ReadWeight(replayFailureDestination, "你好") == 321,
