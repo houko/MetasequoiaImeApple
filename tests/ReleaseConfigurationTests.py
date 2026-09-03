@@ -30,6 +30,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertNotIn("generated", (package["pull-request-header"] + package["pull-request-footer"]).lower())
         self.assertTrue(package["draft"])
         self.assertTrue(package["force-tag-creation"])
+        self.assertFalse(package.get("include-component-in-tag", True))
         self.assertIn("googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7", workflow)
         self.assertIn("actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803", workflow)
         self.assertIn("steps.release.outputs.release_created", workflow)
