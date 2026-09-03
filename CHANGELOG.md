@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.3](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.2...v0.19.3) (2026-09-03)
+
+
+### Bug Fixes
+
+* **input:** tolerate invalid candidate text ([#76](https://github.com/houko/MetasequoiaImeMac/issues/76)) ([c670839](https://github.com/houko/MetasequoiaImeMac/commit/c670839c81687de4f1aebc6bd524801feae12e81))
+
 ## [0.19.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.1...v0.19.2) (2026-09-03)
 
 
