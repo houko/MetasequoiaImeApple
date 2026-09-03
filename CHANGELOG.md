@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.2...v0.9.3) (2026-09-03)
+
+
+### Bug Fixes
+
+* **input:** map candidate numbers to the visible page ([#46](https://github.com/houko/MetasequoiaImeMac/issues/46)) ([b109eef](https://github.com/houko/MetasequoiaImeMac/commit/b109eef41ab3c7822562989623540a6e48d6a7cc))
+
 ## [0.9.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.1...v0.9.2) (2026-09-03)
 
 
