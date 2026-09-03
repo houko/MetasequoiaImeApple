@@ -5,7 +5,7 @@
 
 namespace metasequoia::mac
 {
-InputSession::InputSession() : engine_(SchemeType::Quanpin)
+InputSession::InputSession(SchemeType scheme_type) : engine_(scheme_type)
 {
 }
 
@@ -66,6 +66,11 @@ KeyResult InputSession::select_candidate(const std::string &candidate)
         return {};
     }
     return commit(static_cast<size_t>(std::distance(candidates().begin(), found)));
+}
+
+SchemeType InputSession::scheme_type() const
+{
+    return engine_.current_scheme_type();
 }
 
 bool InputSession::has_composition() const

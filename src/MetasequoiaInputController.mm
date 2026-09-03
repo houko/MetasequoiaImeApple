@@ -34,7 +34,9 @@ NSString *StringFromUtf8(const std::string &value)
             NSLog(@"Failed to prepare the Metasequoia dictionary: %@", error.localizedDescription);
             return self;
         }
-        _session = std::make_unique<metasequoia::mac::InputSession>();
+        const NSInteger storedScheme = [MetasequoiaPreferencesWindowController storedScheme];
+        const SchemeType scheme = storedScheme == 1 ? SchemeType::Shuangpin : SchemeType::Quanpin;
+        _session = std::make_unique<metasequoia::mac::InputSession>(scheme);
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
         [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @NO}];
     }
