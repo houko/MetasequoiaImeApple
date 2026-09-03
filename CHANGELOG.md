@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.1...v0.20.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **release:** verify artifacts before publishing ([#96](https://github.com/houko/MetasequoiaImeMac/issues/96)) ([3d4ae70](https://github.com/houko/MetasequoiaImeMac/commit/3d4ae70e619e461e52400207f78bd065835a89b6))
+
 ## [0.20.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.0...v0.20.1) (2026-09-03)
 
 
