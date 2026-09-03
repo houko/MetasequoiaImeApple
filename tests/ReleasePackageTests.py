@@ -1,4 +1,5 @@
 import hashlib
+import plistlib
 import subprocess
 import sys
 import tempfile
@@ -11,10 +12,23 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 class ReleasePackageTests(unittest.TestCase):
     def test_package_is_portable_and_self_contained(self):
         bundle = Path(sys.argv[1]).resolve()
         version = subprocess.run(["/usr/libexec/PlistBuddy", "-c", "Print :CFBundleShortVersionString", bundle / "Contents/Info.plist"], check=True, capture_output=True, text=True).stdout.strip()
+        dictionary = bundle / "Contents/Resources/msime.db"
+        with (bundle / "Contents/Info.plist").open("rb") as info_file:
+            dictionary_fingerprint = plistlib.load(info_file)["MetasequoiaDictionarySHA256"]
+        self.assertTrue(dictionary.is_file())
+        self.assertEqual(dictionary_fingerprint, sha256_file(dictionary))
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             output = Path(temporary_directory) / "output"

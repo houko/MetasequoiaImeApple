@@ -59,6 +59,8 @@
     <string>MetasequoiaPreferencesWindowController</string>
     <key>LSBackgroundOnly</key>
     <true/>
+    <key>MetasequoiaDictionarySHA256</key>
+    <string>@METASEQUOIA_IME_DICTIONARY_SHA256@</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>TISInputSourceID</key>
