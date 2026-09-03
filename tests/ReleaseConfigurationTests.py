@@ -47,6 +47,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("gh release upload", workflow)
         self.assertIn("gh release edit", workflow)
         self.assertIn("全拼 or 小鹤双拼", readme)
+        self.assertIn("enable full-pinyin autocorrection", readme)
         self.assertIn("Open Anyway", readme)
         self.assertIn("Privacy & Security", readme)
         self.assertIn("native 水杉输入法设置 panel", readme)
@@ -58,6 +59,9 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("storedScheme", preferences_controller)
         self.assertIn("setStoredScheme", preferences_controller)
         self.assertIn("小鹤双拼", preferences_controller)
+        self.assertIn("storedAutocorrectEnabled", preferences_controller)
+        self.assertIn("setAutocorrectEnabled", preferences_controller)
+        self.assertIn("启用全拼自动纠错", preferences_controller)
 
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
         self.assertNotIn("xcrun", release_installer)

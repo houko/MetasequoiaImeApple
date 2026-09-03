@@ -24,7 +24,7 @@ struct KeyResult
 class InputSession
 {
   public:
-    explicit InputSession(SchemeType scheme_type = SchemeType::Quanpin);
+    explicit InputSession(SchemeType scheme_type = SchemeType::Quanpin, bool quanpin_autocorrect_enabled = true);
 
     KeyResult handle_character(char character);
     KeyResult handle_command(Command command);
@@ -32,6 +32,7 @@ class InputSession
     KeyResult select_candidate(const std::string &candidate);
 
     SchemeType scheme_type() const;
+    bool quanpin_autocorrect_enabled() const;
     bool has_composition() const;
     const std::string &preedit() const;
     const std::vector<WordItem> &candidates() const;
@@ -40,5 +41,6 @@ class InputSession
     KeyResult commit(size_t index);
 
     ImeSession engine_;
+    bool quanpin_autocorrect_enabled_ = true;
 };
 } // namespace metasequoia::mac

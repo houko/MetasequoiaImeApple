@@ -81,8 +81,11 @@ int main()
 
         metasequoia::mac::InputSession default_session;
         require(default_session.scheme_type() == SchemeType::Quanpin, "The default input scheme should be full pinyin.");
+        require(default_session.quanpin_autocorrect_enabled(), "Pinyin autocorrect should be enabled by default.");
         metasequoia::mac::InputSession shuangpin_session(SchemeType::Shuangpin);
         require(shuangpin_session.scheme_type() == SchemeType::Shuangpin, "The requested double-pinyin scheme was not retained.");
+        metasequoia::mac::InputSession no_autocorrect_session(SchemeType::Quanpin, false);
+        require(!no_autocorrect_session.quanpin_autocorrect_enabled(), "The requested pinyin autocorrect setting was not retained.");
 
         metasequoia::mac::InputSession session;
         type(session, "nihao");
