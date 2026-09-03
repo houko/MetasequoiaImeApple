@@ -63,6 +63,14 @@ if [[ "$confirmation" != "REMOVE METASEQUOIAIME" ]]; then
     exit 1
 fi
 
+operation_lock_root="$home_directory/Library/Input Methods"
+mkdir -p "$operation_lock_root"
+exec {operation_lock_fd}>> "$operation_lock_root/.MetasequoiaIME.install.lock"
+if ! /usr/bin/lockf -s -t 0 "$operation_lock_fd"; then
+    print -u2 "Another MetasequoiaIME installation or uninstallation is already running, or the operation lock could not be acquired."
+    exit 1
+fi
+
 pkill -TERM -x -u "$EUID" MetasequoiaIME 2>/dev/null || true
 process_stopped=false
 for attempt in {1..50}; do

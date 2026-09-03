@@ -1,6 +1,7 @@
 import os
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -230,6 +231,51 @@ exec /bin/mv "$@"
             self.assertIn("did not stop in time", result.stderr)
             pkill_arguments = (home.parent / "pkill.log").read_text()
             self.assertIn(f"-u {os.geteuid()}", pkill_arguments)
+
+    def test_concurrent_installation_lock_leaves_everything_untouched(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            home = (temporary / "home").resolve()
+            application, user_data, preferences = self.create_installation(home)
+            lock_path = home / "Library/Input Methods/.MetasequoiaIME.install.lock"
+            held_marker = temporary / "lock-held"
+            release_marker = temporary / "release-lock"
+            holder = subprocess.Popen(
+                [
+                    "/bin/zsh",
+                    "-c",
+                    """exec {lock_fd}>> "$1"
+/usr/bin/lockf -s -t 0 "$lock_fd"
+: > "$2"
+while [[ ! -e "$3" ]]; do /bin/sleep 0.02; done
+""",
+                    "lock-holder",
+                    str(lock_path),
+                    str(held_marker),
+                    str(release_marker),
+                ]
+            )
+
+            try:
+                deadline = time.monotonic() + 5
+                while not held_marker.exists() and holder.poll() is None:
+                    if time.monotonic() >= deadline:
+                        self.fail("Timed out waiting for the installation lock holder.")
+                    time.sleep(0.02)
+                self.assertIsNone(holder.poll(), "The installation lock holder exited early.")
+
+                result = self.run_uninstaller(home, ("--remove-user-data",))
+            finally:
+                release_marker.touch()
+                holder.communicate(timeout=5)
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("already running", result.stderr)
+            self.assertEqual((application / "installed.txt").read_text(), "installed\n")
+            self.assertEqual((user_data / "learned.txt").read_text(), "learned\n")
+            self.assertEqual(preferences.read_text(), "preferences\n")
+            self.assertFalse((home.parent / "pkill.log").exists())
+            self.assertFalse((home / ".Trash").exists())
 
     def test_preferences_inspection_failure_changes_no_files(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
