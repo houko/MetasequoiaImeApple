@@ -36,8 +36,20 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertTrue(package["draft"])
         self.assertTrue(package["force-tag-creation"])
         self.assertFalse(package.get("include-component-in-tag", True))
-        self.assertIn("googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7", workflow)
-        self.assertIn("actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803", workflow)
+        ci_workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text()
+        allowed_actions = {"actions/checkout", "googleapis/release-please-action"}
+        used_actions = set()
+        for workflow_source in (workflow, ci_workflow):
+            uses_lines = [line.strip() for line in workflow_source.splitlines() if line.strip().startswith("uses:")]
+            self.assertGreater(len(uses_lines), 0)
+            for uses_line in uses_lines:
+                action_reference = uses_line.removeprefix("uses:").strip().split()[0]
+                action, separator, revision = action_reference.partition("@")
+                self.assertEqual(separator, "@")
+                self.assertIn(action, allowed_actions)
+                self.assertRegex(revision, r"^[0-9a-f]{40}$")
+                used_actions.add(action)
+        self.assertEqual(used_actions, allowed_actions)
         self.assertIn("steps.release.outputs.release_created", workflow)
         self.assertIn("run: bash scripts/merge-release-pr.sh", workflow)
         self.assertIn("id: merge_release_pr", workflow)
@@ -57,7 +69,6 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("macos-universal$ASSET_SUFFIX.pkg", release_publisher)
         self.assertIn("asset_suffix=-unsigned", signing_detector)
         self.assertIn("timeout-minutes: 30", workflow)
-        ci_workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text()
         self.assertIn(
             """        include:
           - runner: macos-15
@@ -216,6 +227,30 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("MetasequoiaImeMac security report", security)
         self.assertIn("PRIVACY.md", readme)
         self.assertIn("SECURITY.md", readme)
+
+    def test_dependabot_tracks_actions_and_expected_submodule_branches(self):
+        dependabot = (PROJECT_ROOT / ".github/dependabot.yml").read_text()
+        gitmodules = PROJECT_ROOT / ".gitmodules"
+
+        def submodule_value(name, key):
+            result = subprocess.run(
+                ["git", "config", "-f", str(gitmodules), "--get", f"submodule.{name}.{key}"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            return result.stdout.strip()
+
+        self.assertEqual(dependabot.count('package-ecosystem: "github-actions"'), 1)
+        self.assertEqual(dependabot.count('package-ecosystem: "gitsubmodule"'), 1)
+        self.assertEqual(dependabot.count('interval: "monthly"'), 2)
+        self.assertEqual(dependabot.count('prefix: "chore(deps)"'), 2)
+        self.assertEqual(submodule_value("vendor/MetasequoiaImeEngine", "path"), "vendor/MetasequoiaImeEngine")
+        self.assertEqual(
+            submodule_value("vendor/MetasequoiaImeEngine", "url"),
+            "https://github.com/houko/MetasequoiaImeEngine.git",
+        )
+        self.assertEqual(submodule_value("vendor/MetasequoiaImeEngine", "branch"), "feat/macos-portability")
 
     def test_release_scripts_have_valid_zsh_syntax(self):
         for relative_path in ("scripts/install-release.sh", "scripts/package_release.sh"):
