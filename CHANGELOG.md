@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.4](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.3...v0.19.4) (2026-09-03)
+
+
+### Bug Fixes
+
+* **input:** stop swallowing rejected characters ([#78](https://github.com/houko/MetasequoiaImeMac/issues/78)) ([4f2de4c](https://github.com/houko/MetasequoiaImeMac/commit/4f2de4c15213f05eb3f614b08b72f0b5aef5b267))
+
 ## [0.19.3](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.2...v0.19.3) (2026-09-03)
 
 
