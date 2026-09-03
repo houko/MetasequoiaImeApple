@@ -12,6 +12,8 @@
 
 namespace
 {
+constexpr NSTimeInterval kDictionaryRetryDelay = 2.0;
+
 NSString *StringFromUtf8(const std::string &value)
 {
     return [[NSString alloc] initWithBytes:value.data() length:value.size() encoding:NSUTF8StringEncoding];
@@ -51,6 +53,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     metasequoia::mac::CandidateSelectionState _candidateSelection;
     IMKCandidates *_candidatePanel;
     NSArray *_candidateData;
+    NSTimeInterval _dictionaryRetryAfter;
 }
 
 - (instancetype)initWithServer:(IMKServer *)server delegate:(id)delegate client:(id)inputClient
@@ -61,54 +64,80 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
         [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @YES}];
 
-        NSError *error = nil;
-        if (!EnsureMetasequoiaDictionary(&error))
-        {
-            NSLog(@"Failed to prepare the Metasequoia dictionary: %@", error.localizedDescription);
-            return self;
-        }
-        [self reloadSessionFromPreferences];
+        [self prepareSessionIfNeeded];
     }
     return self;
 }
 
 - (void)reloadSessionFromPreferences
 {
+    if (_session != nullptr && _session->has_composition())
+    {
+        return;
+    }
+
     const SessionPreferences preferences = ReadSessionPreferences();
-    if (_session != nullptr &&
-        (_session->has_composition() || SessionMatchesPreferences(*_session, preferences)))
+    if (_session != nullptr && SessionMatchesPreferences(*_session, preferences))
     {
         return;
     }
     _session = std::make_unique<metasequoia::mac::InputSession>(
         preferences.scheme, preferences.autocorrectEnabled, preferences.helpcodeEnabled,
         preferences.chinesePunctuationEnabled);
+    _candidateSelection.reset();
     _candidateData = @[];
     [_candidatePanel setCandidateData:_candidateData];
+    [_candidatePanel hide];
+}
+
+- (BOOL)prepareSessionIfNeeded
+{
+    if (_session != nullptr)
+    {
+        return YES;
+    }
+
+    const NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+    if (now < _dictionaryRetryAfter)
+    {
+        return NO;
+    }
+
+    NSError *error = nil;
+    if (!EnsureMetasequoiaDictionary(&error))
+    {
+        _dictionaryRetryAfter = now + kDictionaryRetryDelay;
+        NSLog(@"Failed to prepare the Metasequoia dictionary: %@", error.localizedDescription);
+        return NO;
+    }
+
+    _dictionaryRetryAfter = 0.0;
+    [self reloadSessionFromPreferences];
+    return _session != nullptr;
 }
 
 - (void)activateServer:(id)sender
 {
     [super activateServer:sender];
-    if (_session == nullptr)
+    _dictionaryRetryAfter = 0.0;
+    if ([self prepareSessionIfNeeded])
     {
-        NSError *error = nil;
-        if (!EnsureMetasequoiaDictionary(&error))
-        {
-            NSLog(@"Failed to prepare the Metasequoia dictionary: %@", error.localizedDescription);
-            return;
-        }
+        [self reloadSessionFromPreferences];
     }
-    [self reloadSessionFromPreferences];
 }
 
 - (BOOL)handleEvent:(NSEvent *)event client:(id)sender
 {
-    if (event.type != NSEventTypeKeyDown || _session == nullptr)
+    if (event.type != NSEventTypeKeyDown)
+    {
+        return NO;
+    }
+    if (![self prepareSessionIfNeeded])
     {
         return NO;
     }
 
+    [self reloadSessionFromPreferences];
     const NSEventModifierFlags modifiers = event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
     if ((modifiers & (NSEventModifierFlagCommand | NSEventModifierFlagControl | NSEventModifierFlagOption)) != 0)
     {

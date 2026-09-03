@@ -95,16 +95,38 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("refreshDictionaryStatus", preferences_controller)
         self.assertIn("EnsureMetasequoiaDictionary", preferences_controller)
         self.assertIn("词库已就绪", preferences_controller)
+        self.assertIn("当前输入结束后的下一次按键生效", preferences_controller)
         self.assertIn("词库不可用，请重新安装水杉输入法", preferences_controller)
         input_controller = (PROJECT_ROOT / "src/MetasequoiaInputController.mm").read_text()
         self.assertIn("reloadSessionFromPreferences", input_controller)
+        self.assertIn("prepareSessionIfNeeded", input_controller)
+        self.assertIn("kDictionaryRetryDelay", input_controller)
         self.assertIn("- (void)activateServer:(id)sender", input_controller)
+        handle_event = input_controller.split("- (BOOL)handleEvent:(NSEvent *)event client:(id)sender", 1)[1].split(
+            "- (void)commitLeadingCandidate:(id)sender", 1
+        )[0]
+        self.assertIn("[self prepareSessionIfNeeded]", handle_event)
+        self.assertIn("[self reloadSessionFromPreferences];", handle_event)
+        self.assertLess(
+            handle_event.index("[self prepareSessionIfNeeded]"),
+            handle_event.index("[self reloadSessionFromPreferences];"),
+        )
+        self.assertLess(
+            handle_event.index("[self reloadSessionFromPreferences];"),
+            handle_event.index("const NSEventModifierFlags modifiers"),
+        )
+        reload_session = input_controller.split("- (void)reloadSessionFromPreferences", 1)[1].split(
+            "- (BOOL)prepareSessionIfNeeded", 1
+        )[0]
+        self.assertLess(reload_session.index("_session->has_composition()"), reload_session.index("ReadSessionPreferences()"))
+        self.assertIn("_candidateSelection.reset();", reload_session)
+        self.assertIn("[_candidatePanel hide];", reload_session)
         controller_initialization = input_controller.split("- (instancetype)initWithServer:", 1)[1].split(
             "- (void)reloadSessionFromPreferences", 1
         )[0]
         self.assertLess(
             controller_initialization.index("_candidatePanel ="),
-            controller_initialization.index("EnsureMetasequoiaDictionary"),
+            controller_initialization.index("prepareSessionIfNeeded"),
         )
         self.assertIn("NSString *characters = event.characters;", input_controller)
         self.assertNotIn("charactersIgnoringModifiers", input_controller)
@@ -113,7 +135,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         )[0]
         self.assertIn("commitLeadingCandidate", commit_composition)
         self.assertNotIn("Command::CommitRaw", commit_composition)
-        self.assertIn("next input-method activation", readme)
+        self.assertIn("next key event when no composition is active", readme)
 
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
         self.assertNotIn("xcrun", release_installer)
