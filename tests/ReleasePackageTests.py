@@ -29,6 +29,38 @@ def sha256_file(path):
 
 
 class ReleasePackageTests(unittest.TestCase):
+    def test_development_install_restores_previous_bundle_when_registration_fails(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            fake_bin = Path(temporary_directory) / "bin"
+            fake_bin.mkdir()
+            fake_pkill = fake_bin / "pkill"
+            fake_pkill.write_text("#!/bin/sh\nexit 0\n")
+            fake_pkill.chmod(0o755)
+            fake_xcrun = fake_bin / "xcrun"
+            fake_xcrun.write_text("#!/bin/sh\nexit 47\n")
+            fake_xcrun.chmod(0o755)
+
+            test_home = Path(temporary_directory) / "home"
+            destination = test_home / "Library/Input Methods/MetasequoiaIME.app"
+            previous_marker = destination / "Contents/previous-installation.txt"
+            previous_marker.parent.mkdir(parents=True)
+            previous_marker.write_text("previous installation\n")
+            environment = os.environ.copy()
+            environment["HOME"] = str(test_home)
+            environment["PATH"] = f"{fake_bin}:{environment['PATH']}"
+
+            result = subprocess.run(
+                [PROJECT_ROOT / "scripts/install.sh"],
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(previous_marker.read_text(), "previous installation\n")
+            self.assertFalse(any(destination.parent.glob(".MetasequoiaIME.installing.*")))
+            self.assertFalse(any(destination.parent.glob(".MetasequoiaIME.backup.*")))
+
     def test_package_is_portable_and_self_contained(self):
         bundle = Path(sys.argv[1]).resolve()
         version = subprocess.run(["/usr/libexec/PlistBuddy", "-c", "Print :CFBundleShortVersionString", bundle / "Contents/Info.plist"], check=True, capture_output=True, text=True).stdout.strip()
@@ -160,6 +192,108 @@ class ReleasePackageTests(unittest.TestCase):
                     (test_home / "Library/Input Methods/MetasequoiaIME.app/Contents/Info.plist").is_file()
                 )
 
+                fake_codesign = fake_bin / "codesign"
+                fake_codesign.write_text(
+                    "#!/bin/sh\n"
+                    "target=\n"
+                    "for argument in \"$@\"; do target=$argument; done\n"
+                    "if test -n \"${FAIL_CODESIGN_PATH:-}\" && test \"$target\" = \"$FAIL_CODESIGN_PATH\"; then\n"
+                    "  exit 45\n"
+                    "fi\n"
+                    "exec /usr/bin/codesign \"$@\"\n"
+                )
+                fake_codesign.chmod(0o755)
+                fake_mv = fake_bin / "mv"
+                fake_mv.write_text(
+                    "#!/bin/sh\n"
+                    "source_path=\n"
+                    "for argument in \"$@\"; do\n"
+                    "  case $argument in -*) ;; *) source_path=$argument; break ;; esac\n"
+                    "done\n"
+                    "if test \"${INTERRUPT_AFTER_MOVE:-false}\" = true && "
+                    "test \"$source_path\" = \"$INTERRUPT_MOVE_SOURCE\"; then\n"
+                    "  /bin/mv \"$@\"\n"
+                    "  kill -TERM \"$PPID\"\n"
+                    "  exit 0\n"
+                    "fi\n"
+                    "case $source_path in\n"
+                    "  */.MetasequoiaIME.backup.*/MetasequoiaIME.app)\n"
+                    "    test \"${FAIL_ROLLBACK:-false}\" != true || exit 46\n"
+                    "    ;;\n"
+                    "esac\n"
+                    "exec /bin/mv \"$@\"\n"
+                )
+                fake_mv.chmod(0o755)
+
+                interrupted_home = Path(temporary_directory) / "interrupted-home"
+                interrupted_destination = interrupted_home / "Library/Input Methods/MetasequoiaIME.app"
+                interrupted_marker = interrupted_destination / "Contents/previous-installation.txt"
+                interrupted_marker.parent.mkdir(parents=True)
+                interrupted_marker.write_text("previous installation\n")
+                interrupted_environment = install_environment.copy()
+                interrupted_environment["HOME"] = str(interrupted_home)
+                interrupted_environment["INTERRUPT_AFTER_MOVE"] = "true"
+                interrupted_environment["INTERRUPT_MOVE_SOURCE"] = str(interrupted_destination)
+                interrupted_install = subprocess.run(
+                    ["zsh", extracted / package_root / "Install.command"],
+                    input="I UNDERSTAND\n",
+                    capture_output=True,
+                    text=True,
+                    env=interrupted_environment,
+                )
+                self.assertNotEqual(interrupted_install.returncode, 0)
+                self.assertEqual(interrupted_marker.read_text(), "previous installation\n")
+                self.assertFalse(any(interrupted_destination.parent.glob(".MetasequoiaIME.installing.*")))
+                self.assertFalse(any(interrupted_destination.parent.glob(".MetasequoiaIME.backup.*")))
+
+                restored_home = Path(temporary_directory) / "restored-home"
+                restored_destination = restored_home / "Library/Input Methods/MetasequoiaIME.app"
+                restored_marker = restored_destination / "Contents/previous-installation.txt"
+                restored_marker.parent.mkdir(parents=True)
+                restored_marker.write_text("previous installation\n")
+                restored_environment = install_environment.copy()
+                restored_environment["HOME"] = str(restored_home)
+                restored_environment["FAIL_CODESIGN_PATH"] = str(restored_destination)
+                failed_install = subprocess.run(
+                    ["zsh", extracted / package_root / "Install.command"],
+                    input="I UNDERSTAND\n",
+                    capture_output=True,
+                    text=True,
+                    env=restored_environment,
+                )
+                self.assertNotEqual(failed_install.returncode, 0)
+                self.assertEqual(restored_marker.read_text(), "previous installation\n")
+                self.assertFalse(any(restored_destination.parent.glob(".MetasequoiaIME.installing.*")))
+                self.assertFalse(any(restored_destination.parent.glob(".MetasequoiaIME.backup.*")))
+                self.assertIn("restoring the previous installation", failed_install.stderr)
+
+                rollback_home = Path(temporary_directory) / "rollback-home"
+                rollback_destination = rollback_home / "Library/Input Methods/MetasequoiaIME.app"
+                previous_marker = rollback_destination / "Contents/previous-installation.txt"
+                previous_marker.parent.mkdir(parents=True)
+                previous_marker.write_text("previous installation\n")
+                rollback_environment = install_environment.copy()
+                rollback_environment["HOME"] = str(rollback_home)
+                rollback_environment["FAIL_CODESIGN_PATH"] = str(rollback_destination)
+                rollback_environment["FAIL_ROLLBACK"] = "true"
+                failed_rollback = subprocess.run(
+                    ["zsh", extracted / package_root / "Install.command"],
+                    input="I UNDERSTAND\n",
+                    capture_output=True,
+                    text=True,
+                    env=rollback_environment,
+                )
+                self.assertNotEqual(failed_rollback.returncode, 0)
+                preserved_backups = list(
+                    rollback_destination.parent.glob(".MetasequoiaIME.backup.*/MetasequoiaIME.app")
+                )
+                self.assertEqual(len(preserved_backups), 1)
+                self.assertEqual(
+                    (preserved_backups[0] / "Contents/previous-installation.txt").read_text(),
+                    "previous installation\n",
+                )
+                self.assertIn("Previous installation is preserved at", failed_rollback.stderr)
+
             installer_package = output / f"MetasequoiaIME-v{version}-macos-universal-unsigned.pkg"
             installer_checksum = installer_package.with_suffix(f"{installer_package.suffix}.sha256")
             self.assertTrue(installer_package.is_file())
@@ -245,7 +379,10 @@ class ReleasePackageTests(unittest.TestCase):
             )
             self.assertNotEqual(failed_cleanup.returncode, 0)
             for asset_name in asset_names:
-                self.assertTrue((cleanup_failure_output / asset_name).is_file())
+                self.assertTrue(
+                    (cleanup_failure_output / asset_name).is_file(),
+                    f"Missing {asset_name}\nstdout:\n{failed_cleanup.stdout}\nstderr:\n{failed_cleanup.stderr}",
+                )
             self.assertEqual(len(list(cleanup_failure_output.glob(".package.*"))), 1)
             self.assertIn("cleanup was incomplete", failed_cleanup.stderr)
 
