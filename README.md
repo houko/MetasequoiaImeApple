@@ -2,7 +2,7 @@
 
 This repository contains the native macOS frontend for Metasequoia IME. It uses InputMethodKit and AppKit, embeds the shared C++ engine directly, and does not port the Windows TSF or WebView2 host.
 
-The current alpha supports full-pinyin composition, live candidates from the official Metasequoia dictionary, candidate selection through the native candidate panel, Space to commit the leading candidate, Return to commit raw input, Backspace, Escape, and composition commit on focus changes.
+The current alpha supports full-pinyin composition, live candidates from the official Metasequoia dictionary, candidate selection through the native candidate panel or number keys 1–9, Space to commit the leading candidate, Return to commit raw input, Backspace, Escape, and composition commit on focus changes.
 
 ## Requirements
 

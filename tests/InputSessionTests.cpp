@@ -104,6 +104,18 @@ int main()
         require(space.handled && space.commit == "你好", "Space did not commit the leading candidate.");
 
         type(session, "nihao");
+        const auto digit = session.handle_candidate_key('2');
+        require(digit.handled && digit.commit == "拟好", "The 2 key did not commit the second candidate.");
+
+        type(session, "nihao");
+        const auto out_of_range_digit = session.handle_candidate_key('9');
+        require(!out_of_range_digit.handled && session.preedit() == "nihao", "An out-of-range candidate key changed composition.");
+        session.handle_command(metasequoia::mac::Command::Cancel);
+
+        const auto idle_digit = session.handle_candidate_key('1');
+        require(!idle_digit.handled, "A candidate key was swallowed while no composition was active.");
+
+        type(session, "nihao");
         session.handle_command(metasequoia::mac::Command::Backspace);
         require(session.preedit() == "niha", "Backspace did not remove the last pinyin character.");
         const auto raw = session.handle_command(metasequoia::mac::Command::CommitRaw);
