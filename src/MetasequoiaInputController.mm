@@ -7,6 +7,7 @@
 #import "InputMenu.h"
 #include "InputModeRouting.h"
 #import "PreferencesWindowController.h"
+#include "StringConversion.h"
 #include "CandidateSelectionState.h"
 #include "InputControllerKeyRouting.h"
 #include "InputSession.h"
@@ -18,11 +19,6 @@
 namespace
 {
 constexpr NSTimeInterval kDictionaryRetryDelay = 2.0;
-
-NSString *StringFromUtf8(const std::string &value)
-{
-    return [[NSString alloc] initWithBytes:value.data() length:value.size() encoding:NSUTF8StringEncoding];
-}
 
 struct SessionPreferences
 {
@@ -185,20 +181,15 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 
 - (void)trackCandidateAtIndex:(NSUInteger)index
 {
-    if (index >= _candidateData.count)
+    if (_session == nullptr || index >= _candidateData.count || index >= _session->candidates().size())
     {
         return;
     }
 
-    NSString *candidate = _candidateData[index];
-    const char *utf8 = candidate.UTF8String;
-    if (utf8 != nullptr)
-    {
-        _candidateSelection.update(static_cast<size_t>(index), utf8);
-        _candidateHighlightedIndex = index;
-        _candidatePageStart = metasequoia::mac::CandidatePageStart(
-            index, _candidateData.count, _candidatePanel.selectionKeys.count);
-    }
+    _candidateSelection.update(static_cast<size_t>(index), _session->candidates()[index].word);
+    _candidateHighlightedIndex = index;
+    _candidatePageStart = metasequoia::mac::CandidatePageStart(
+        index, _candidateData.count, _candidatePanel.selectionKeys.count);
 }
 
 - (BOOL)selectCandidateAtIndex:(NSUInteger)index pageStart:(NSUInteger)pageStart
@@ -452,13 +443,13 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     const NSRange replacementRange = NSMakeRange(NSNotFound, NSNotFound);
     if (result.commit.has_value())
     {
-        [client insertText:StringFromUtf8(*result.commit) replacementRange:replacementRange];
+        [client insertText:MetasequoiaStringFromUtf8(*result.commit) replacementRange:replacementRange];
         _candidateSelection.reset();
         [_candidatePanel hide];
         return;
     }
 
-    NSString *preedit = StringFromUtf8(_session->preedit());
+    NSString *preedit = MetasequoiaStringFromUtf8(_session->preedit());
     [client setMarkedText:preedit selectionRange:NSMakeRange(preedit.length, 0) replacementRange:replacementRange];
     [self updateCandidatePanel];
 }
@@ -472,7 +463,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     NSMutableArray *data = [NSMutableArray arrayWithCapacity:_session->candidates().size()];
     for (const WordItem &candidate : _session->candidates())
     {
-        [data addObject:StringFromUtf8(candidate.word)];
+        [data addObject:MetasequoiaStringFromUtf8(candidate.word)];
     }
     _candidateData = [data copy];
     [_candidatePanel setCandidateData:_candidateData];
@@ -510,12 +501,14 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     {
         return;
     }
-    const char *utf8 = candidateString.string.UTF8String;
-    if (utf8 == nullptr)
+    // InputMethodKit reports the selected display string rather than its index. Refuse an ambiguous
+    // callback instead of committing the wrong engine candidate after invalid UTF-8 was replaced.
+    const NSUInteger index = MetasequoiaUniqueStringIndex(_candidateData, candidateString.string);
+    if (index == NSNotFound || index >= _session->candidates().size())
     {
         return;
     }
-    const auto result = _session->select_candidate(utf8);
+    const auto result = _session->select_candidate(static_cast<size_t>(index));
     if (result.handled)
     {
         [self applyResult:result client:self.client];
@@ -525,13 +518,13 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 - (id)composedString:(id)sender
 {
     (void)sender;
-    return _session == nullptr ? @"" : StringFromUtf8(_session->preedit());
+    return _session == nullptr ? @"" : MetasequoiaStringFromUtf8(_session->preedit());
 }
 
 - (NSAttributedString *)originalString:(id)sender
 {
     (void)sender;
-    NSString *raw = _session == nullptr ? @"" : StringFromUtf8(_session->preedit());
+    NSString *raw = _session == nullptr ? @"" : MetasequoiaStringFromUtf8(_session->preedit());
     return [[NSAttributedString alloc] initWithString:raw];
 }
 

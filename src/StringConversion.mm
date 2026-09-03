@@ -1,0 +1,41 @@
+#include "StringConversion.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcharacter-conversion"
+#include "../vendor/MetasequoiaImeEngine/utfcpp/source/utf8.h"
+#pragma clang diagnostic pop
+
+NSString *MetasequoiaStringFromUtf8(const std::string &value)
+{
+    NSString *decoded = [[NSString alloc] initWithBytes:value.data()
+                                                 length:value.size()
+                                               encoding:NSUTF8StringEncoding];
+    if (decoded != nil)
+    {
+        return decoded;
+    }
+
+    const std::string sanitized = utf8::replace_invalid(value);
+    decoded = [[NSString alloc] initWithBytes:sanitized.data()
+                                      length:sanitized.size()
+                                    encoding:NSUTF8StringEncoding];
+    return decoded != nil ? decoded : @"�";
+}
+
+NSUInteger MetasequoiaUniqueStringIndex(NSArray<NSString *> *values, NSString *target)
+{
+    NSUInteger match = NSNotFound;
+    for (NSUInteger index = 0; index < values.count; ++index)
+    {
+        if (![values[index] isEqualToString:target])
+        {
+            continue;
+        }
+        if (match != NSNotFound)
+        {
+            return NSNotFound;
+        }
+        match = index;
+    }
+    return match;
+}
