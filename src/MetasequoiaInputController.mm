@@ -1,6 +1,7 @@
 #import "MetasequoiaInputController.h"
 
 #import "DictionaryInstaller.h"
+#import "PreferencesWindowController.h"
 #include "InputSession.h"
 
 #import <Carbon/Carbon.h>
@@ -197,6 +198,12 @@ NSString *StringFromUtf8(const std::string &value)
     [self commitComposition:sender];
     [_candidatePanel hide];
     [super deactivateServer:sender];
+}
+
+- (void)showPreferences:(id)sender
+{
+    (void)sender;
+    [[MetasequoiaPreferencesWindowController sharedController] showAndActivate];
 }
 
 - (NSUInteger)recognizedEvents:(id)sender

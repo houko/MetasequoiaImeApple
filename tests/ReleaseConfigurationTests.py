@@ -24,6 +24,9 @@ class ReleaseConfigurationTests(unittest.TestCase):
         config = json.loads((PROJECT_ROOT / "release-please-config.json").read_text())
         package = config["packages"]["."]
         workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text()
+        readme = (PROJECT_ROOT / "README.md").read_text()
+        info_plist = (PROJECT_ROOT / "resources/Info.plist").read_text()
+        cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
 
         self.assertEqual(package["release-type"], "simple")
         self.assertIn({"type": "generic", "path": "CMakeLists.txt"}, package["extra-files"])
@@ -41,6 +44,12 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("scripts/package_release.sh", workflow)
         self.assertIn("gh release upload", workflow)
         self.assertIn("gh release edit", workflow)
+        self.assertIn("native 水杉输入法设置 panel", readme)
+        self.assertIn("InputMethodServerPreferencesWindowControllerClass", info_plist)
+        self.assertIn("PreferencesWindowController.mm", cmake)
+        preferences_controller = (PROJECT_ROOT / "src/PreferencesWindowController.mm").read_text()
+        self.assertIn("initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner", preferences_controller)
+        self.assertIn("showAndActivate", preferences_controller)
 
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
         self.assertNotIn("xcrun", release_installer)

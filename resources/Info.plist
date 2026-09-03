@@ -55,6 +55,8 @@
     <string>MetasequoiaInputController</string>
     <key>InputMethodServerDelegateClass</key>
     <string>MetasequoiaInputController</string>
+    <key>InputMethodServerPreferencesWindowControllerClass</key>
+    <string>MetasequoiaPreferencesWindowController</string>
     <key>LSBackgroundOnly</key>
     <true/>
     <key>NSPrincipalClass</key>
