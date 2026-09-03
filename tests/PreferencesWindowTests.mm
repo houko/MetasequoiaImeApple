@@ -43,12 +43,15 @@ int main()
         [NSApplication sharedApplication];
         [MetasequoiaPreferencesWindowController setCandidatePanelStyle:1];
         [MetasequoiaPreferencesWindowController setCandidatePageSize:5];
+        [MetasequoiaPreferencesWindowController setCandidateFontSize:16];
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         require([MetasequoiaPreferencesWindowController storedCandidatePanelStyle] == 1,
                 "The vertical candidate layout preference was not stored.");
         require([MetasequoiaPreferencesWindowController storedCandidatePageSize] == 5,
                 "The five-candidate page-size preference was not stored.");
+        require([MetasequoiaPreferencesWindowController storedCandidateFontSize] == 16,
+                "The small candidate font-size preference was not stored.");
         require(![MetasequoiaPreferencesWindowController storedCandidateLearningEnabled],
                 "The disabled candidate-learning preference was not stored.");
         require([MetasequoiaPreferencesWindowController storedEnglishInputMode],
@@ -80,6 +83,18 @@ int main()
         require(pageSizeButton.indexOfSelectedItem == 0,
                 "The candidate page-size control did not reflect the stored value.");
 
+        NSView *fontSizeView = FindViewWithAccessibilityLabel(controller.window.contentView, @"候选字号");
+        require([fontSizeView isKindOfClass:[NSPopUpButton class]],
+                "The settings window did not expose the candidate font-size control.");
+        NSPopUpButton *fontSizeButton = (NSPopUpButton *)fontSizeView;
+        require(fontSizeButton.numberOfItems == 3 &&
+                    [[fontSizeButton itemTitleAtIndex:0] isEqualToString:@"小（16 pt）"] &&
+                    [[fontSizeButton itemTitleAtIndex:1] isEqualToString:@"标准（18 pt）"] &&
+                    [[fontSizeButton itemTitleAtIndex:2] isEqualToString:@"大（20 pt）"],
+                "The candidate font-size control did not contain all supported values.");
+        require(fontSizeButton.indexOfSelectedItem == 0,
+                "The candidate font-size control did not reflect the stored value.");
+
         NSView *learningView = FindViewWithAccessibilityLabel(controller.window.contentView, @"记住候选词频");
         require([learningView isKindOfClass:[NSButton class]],
                 "The settings window did not expose the candidate-learning control.");
@@ -99,6 +114,12 @@ int main()
         require([MetasequoiaPreferencesWindowController storedCandidatePageSize] == 7,
                 "The candidate page-size control did not store the selected value.");
 
+        [fontSizeButton selectItemAtIndex:2];
+        require([NSApp sendAction:fontSizeButton.action to:fontSizeButton.target from:fontSizeButton],
+                "The candidate font-size control did not dispatch its action.");
+        require([MetasequoiaPreferencesWindowController storedCandidateFontSize] == 20,
+                "The candidate font-size control did not store the selected value.");
+
         learningButton.state = NSControlStateValueOn;
         require([NSApp sendAction:learningButton.action to:learningButton.target from:learningButton],
                 "The candidate-learning control did not dispatch its action.");
@@ -111,6 +132,9 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidatePageSize:99];
         require([MetasequoiaPreferencesWindowController storedCandidatePageSize] == 9,
                 "An unsupported candidate page size was not normalized safely.");
+        [MetasequoiaPreferencesWindowController setCandidateFontSize:99];
+        require([MetasequoiaPreferencesWindowController storedCandidateFontSize] == 18,
+                "An unsupported candidate font size was not normalized safely.");
         [MetasequoiaPreferencesWindowController setEnglishInputMode:NO];
         require(![MetasequoiaPreferencesWindowController storedEnglishInputMode],
                 "The Chinese input-mode state was not stored.");

@@ -1,5 +1,6 @@
 #import "PreferencesWindowController.h"
 
+#include "CandidateFontSize.h"
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
 #import "DictionaryInstaller.h"
@@ -7,13 +8,14 @@
 namespace
 {
 constexpr CGFloat kWindowWidth = 600.0;
-constexpr CGFloat kWindowHeight = 572.0;
+constexpr CGFloat kWindowHeight = 620.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
 NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunctuation";
 NSString * const kCandidatePanelStylePreferenceKey = @"MetasequoiaImeCandidatePanelStyle";
 NSString * const kCandidatePageSizePreferenceKey = @"MetasequoiaImeCandidatePageSize";
+NSString * const kCandidateFontSizePreferenceKey = @"MetasequoiaImeCandidateFontSize";
 NSString * const kCandidateLearningPreferenceKey = @"MetasequoiaImeCandidateLearning";
 NSString * const kEnglishInputModePreferenceKey = @"MetasequoiaImeEnglishInputMode";
 
@@ -49,6 +51,7 @@ void ConfigureCard(NSBox *card)
     NSButton *_chinesePunctuationButton;
     NSPopUpButton *_candidatePanelStyleButton;
     NSPopUpButton *_candidatePageSizeButton;
+    NSPopUpButton *_candidateFontSizeButton;
     NSButton *_candidateLearningButton;
     NSTextField *_statusLabel;
 }
@@ -144,6 +147,21 @@ void ConfigureCard(NSBox *card)
     [[NSUserDefaults standardUserDefaults] setInteger:normalizedPageSize forKey:kCandidatePageSizePreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaCandidatePageSizeDidChangeNotification"
                                                         object:@(normalizedPageSize)];
+}
+
++ (NSInteger)storedCandidateFontSize
+{
+    const NSInteger value = [[NSUserDefaults standardUserDefaults] integerForKey:kCandidateFontSizePreferenceKey];
+    return static_cast<NSInteger>(metasequoia::mac::NormalizeCandidateFontSize(static_cast<size_t>(value)));
+}
+
++ (void)setCandidateFontSize:(NSInteger)fontSize
+{
+    const NSInteger normalizedFontSize = static_cast<NSInteger>(
+        metasequoia::mac::NormalizeCandidateFontSize(static_cast<size_t>(fontSize)));
+    [[NSUserDefaults standardUserDefaults] setInteger:normalizedFontSize forKey:kCandidateFontSizePreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaCandidateFontSizeDidChangeNotification"
+                                                        object:@(normalizedFontSize)];
 }
 
 + (BOOL)storedCandidateLearningEnabled
@@ -295,6 +313,17 @@ void ConfigureCard(NSBox *card)
     _candidatePageSizeButton.accessibilityLabel = @"每页候选";
     _candidatePageSizeButton.translatesAutoresizingMaskIntoConstraints = NO;
 
+    NSTextField *candidateFontSizeLabel = [NSTextField labelWithString:@"候选字号"];
+    candidateFontSizeLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
+    candidateFontSizeLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _candidateFontSizeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_candidateFontSizeButton addItemsWithTitles:@[@"小（16 pt）", @"标准（18 pt）", @"大（20 pt）"]];
+    _candidateFontSizeButton.target = self;
+    _candidateFontSizeButton.action = @selector(candidateFontSizeChanged:);
+    _candidateFontSizeButton.accessibilityLabel = @"候选字号";
+    _candidateFontSizeButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     NSTextField *behaviorSectionLabel = [NSTextField labelWithString:@"输入行为"];
     behaviorSectionLabel.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
     behaviorSectionLabel.textColor = [NSColor secondaryLabelColor];
@@ -352,6 +381,8 @@ void ConfigureCard(NSBox *card)
     [inputCard addSubview:_candidatePanelStyleButton];
     [inputCard addSubview:candidatePageSizeLabel];
     [inputCard addSubview:_candidatePageSizeButton];
+    [inputCard addSubview:candidateFontSizeLabel];
+    [inputCard addSubview:_candidateFontSizeButton];
     [settingsPanel addSubview:behaviorSectionLabel];
     [settingsPanel addSubview:behaviorCard];
     [behaviorCard addSubview:_autocorrectButton];
@@ -396,7 +427,7 @@ void ConfigureCard(NSBox *card)
         [inputCard.topAnchor constraintEqualToAnchor:inputSectionLabel.bottomAnchor constant:8.0],
         [inputCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [inputCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [inputCard.heightAnchor constraintEqualToConstant:148.0],
+        [inputCard.heightAnchor constraintEqualToConstant:196.0],
         [schemeLabel.leadingAnchor constraintEqualToAnchor:inputCard.leadingAnchor constant:18.0],
         [schemeLabel.topAnchor constraintEqualToAnchor:inputCard.topAnchor constant:18.0],
         [_schemeButton.centerYAnchor constraintEqualToAnchor:schemeLabel.centerYAnchor],
@@ -412,6 +443,11 @@ void ConfigureCard(NSBox *card)
         [_candidatePageSizeButton.centerYAnchor constraintEqualToAnchor:candidatePageSizeLabel.centerYAnchor],
         [_candidatePageSizeButton.trailingAnchor constraintEqualToAnchor:_schemeButton.trailingAnchor],
         [_candidatePageSizeButton.widthAnchor constraintEqualToAnchor:_schemeButton.widthAnchor],
+        [candidateFontSizeLabel.leadingAnchor constraintEqualToAnchor:schemeLabel.leadingAnchor],
+        [candidateFontSizeLabel.topAnchor constraintEqualToAnchor:candidatePageSizeLabel.topAnchor constant:48.0],
+        [_candidateFontSizeButton.centerYAnchor constraintEqualToAnchor:candidateFontSizeLabel.centerYAnchor],
+        [_candidateFontSizeButton.trailingAnchor constraintEqualToAnchor:_schemeButton.trailingAnchor],
+        [_candidateFontSizeButton.widthAnchor constraintEqualToAnchor:_schemeButton.widthAnchor],
         [behaviorSectionLabel.topAnchor constraintEqualToAnchor:inputCard.bottomAnchor constant:18.0],
         [behaviorSectionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [behaviorCard.topAnchor constraintEqualToAnchor:behaviorSectionLabel.bottomAnchor constant:8.0],
@@ -449,6 +485,8 @@ void ConfigureCard(NSBox *card)
     [_candidatePanelStyleButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]];
     [_candidatePageSizeButton selectItemAtIndex:static_cast<NSInteger>(metasequoia::mac::CandidatePageSizeOptionIndex(
                                                         static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidatePageSize])))];
+    [_candidateFontSizeButton selectItemAtIndex:static_cast<NSInteger>(metasequoia::mac::CandidateFontSizeOptionIndex(
+                                                        static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidateFontSize])))];
     _candidateLearningButton.state = [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
 }
 
@@ -516,6 +554,14 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setCandidatePageSize:static_cast<NSInteger>(pageSize)];
 }
 
+- (void)candidateFontSizeChanged:(id)sender
+{
+    NSPopUpButton *fontSizeButton = (NSPopUpButton *)sender;
+    const size_t fontSize =
+        metasequoia::mac::CandidateFontSizeForOptionIndex(static_cast<size_t>(fontSizeButton.indexOfSelectedItem));
+    [MetasequoiaPreferencesWindowController setCandidateFontSize:static_cast<NSInteger>(fontSize)];
+}
+
 - (void)candidateLearningChanged:(id)sender
 {
     NSButton *button = (NSButton *)sender;
@@ -531,6 +577,7 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:YES];
     [MetasequoiaPreferencesWindowController setCandidatePanelStyle:0];
     [MetasequoiaPreferencesWindowController setCandidatePageSize:9];
+    [MetasequoiaPreferencesWindowController setCandidateFontSize:18];
     [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:YES];
     [self refreshControls];
 }

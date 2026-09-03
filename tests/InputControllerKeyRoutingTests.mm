@@ -1,6 +1,7 @@
 #include "../src/InputControllerKeyRouting.h"
 #include "../src/CandidatePanelStyle.h"
 #include "../src/CandidatePageSize.h"
+#include "../src/CandidateFontSize.h"
 #include "../src/InputModeRouting.h"
 
 #import <InputMethodKit/InputMethodKit.h>
@@ -74,6 +75,23 @@ int main()
                 CandidatePageSizeOptionIndex(5) == 0 && CandidatePageSizeOptionIndex(7) == 1 &&
                 CandidatePageSizeOptionIndex(9) == 2,
             "The candidate page-size options did not map to persisted values.");
+    require(metasequoia::mac::NormalizeCandidateFontSize(16) == 16 &&
+                metasequoia::mac::NormalizeCandidateFontSize(18) == 18 &&
+                metasequoia::mac::NormalizeCandidateFontSize(20) == 20 &&
+                metasequoia::mac::NormalizeCandidateFontSize(99) == 18,
+            "The stored candidate font size was not normalized safely.");
+    require(metasequoia::mac::CandidateFontSizeForOptionIndex(0) == 16 &&
+                metasequoia::mac::CandidateFontSizeForOptionIndex(1) == 18 &&
+                metasequoia::mac::CandidateFontSizeForOptionIndex(2) == 20 &&
+                metasequoia::mac::CandidateFontSizeOptionIndex(16) == 0 &&
+                metasequoia::mac::CandidateFontSizeOptionIndex(18) == 1 &&
+                metasequoia::mac::CandidateFontSizeOptionIndex(20) == 2,
+            "The candidate font-size options did not map to persisted values.");
+    NSDictionary *candidateAttributes = metasequoia::mac::CandidatePanelAttributes(20);
+    require([candidateAttributes[IMKCandidatesSendServerKeyEventFirst] boolValue] &&
+                [candidateAttributes[NSFontAttributeName] isKindOfClass:[NSFont class]] &&
+                [candidateAttributes[NSFontAttributeName] pointSize] == 20.0,
+            "The candidate font size did not map to InputMethodKit panel attributes.");
     NSArray<NSNumber *> *fiveSelectionKeys = CandidateSelectionKeys(5);
     NSArray<NSNumber *> *nineSelectionKeys = CandidateSelectionKeys(9);
     require(fiveSelectionKeys.count == 5 && nineSelectionKeys.count == 9 &&

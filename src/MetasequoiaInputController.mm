@@ -1,6 +1,7 @@
 #import "MetasequoiaInputController.h"
 
 #import "DictionaryInstaller.h"
+#include "CandidateFontSize.h"
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
 #import "InputMenu.h"
@@ -31,6 +32,7 @@ struct SessionPreferences
     bool chinesePunctuationEnabled;
     metasequoia::mac::CandidatePanelStyle candidatePanelStyle;
     size_t candidatePageSize;
+    size_t candidateFontSize;
     bool candidateLearningEnabled;
 };
 
@@ -46,6 +48,8 @@ SessionPreferences ReadSessionPreferences()
             [MetasequoiaPreferencesWindowController storedCandidatePanelStyle]),
         metasequoia::mac::NormalizeCandidatePageSize(
             static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidatePageSize])),
+        metasequoia::mac::NormalizeCandidateFontSize(
+            static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidateFontSize])),
         [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] == YES,
     };
 }
@@ -78,7 +82,8 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     if (self != nil)
     {
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
-        [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @YES}];
+        [_candidatePanel setAttributes:metasequoia::mac::CandidatePanelAttributes(
+                                           static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidateFontSize]))];
 
         if (metasequoia::mac::ShouldPrepareInputSession(
                 [MetasequoiaPreferencesWindowController storedEnglishInputMode]))
@@ -99,6 +104,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     const SessionPreferences preferences = ReadSessionPreferences();
     [_candidatePanel setPanelType:metasequoia::mac::CandidatePanelTypeForStyle(preferences.candidatePanelStyle)];
     [_candidatePanel setSelectionKeys:metasequoia::mac::CandidateSelectionKeys(preferences.candidatePageSize)];
+    [_candidatePanel setAttributes:metasequoia::mac::CandidatePanelAttributes(preferences.candidateFontSize)];
     if (_session != nullptr && SessionMatchesPreferences(*_session, preferences))
     {
         return;
