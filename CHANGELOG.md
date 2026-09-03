@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.10.1...v0.11.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** add input menu settings shortcut ([#54](https://github.com/houko/MetasequoiaImeMac/issues/54)) ([a184428](https://github.com/houko/MetasequoiaImeMac/commit/a1844283872c930f5b193d36ec074c19747a2ac7))
+
 ## [0.10.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.10.0...v0.10.1) (2026-09-03)
 
 
