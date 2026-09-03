@@ -734,3 +734,22 @@ BOOL EnsureMetasequoiaDictionary(NSError **error)
     NSString *fingerprint = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"MetasequoiaDictionarySHA256"];
     return PrepareMetasequoiaDictionary(source, dataDirectory, fingerprint, error);
 }
+
+BOOL ResetMetasequoiaLearnedDataForCurrentUser(NSError **error)
+{
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSURL *applicationSupport = [fileManager URLForDirectory:NSApplicationSupportDirectory
+                                                    inDomain:NSUserDomainMask
+                                           appropriateForURL:nil
+                                                      create:YES
+                                                       error:error];
+    if (applicationSupport == nil)
+    {
+        return NO;
+    }
+
+    NSURL *dataDirectory = [applicationSupport URLByAppendingPathComponent:@"metasequoiaime" isDirectory:YES];
+    NSURL *source = [[NSBundle mainBundle] URLForResource:@"msime" withExtension:@"db"];
+    NSString *fingerprint = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"MetasequoiaDictionarySHA256"];
+    return ResetMetasequoiaLearnedData(source, dataDirectory, fingerprint, error);
+}

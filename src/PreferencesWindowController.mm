@@ -5,10 +5,13 @@
 #include "CandidatePanelStyle.h"
 #import "DictionaryInstaller.h"
 
+NSNotificationName const MetasequoiaWillResetLearnedDataNotification =
+    @"MetasequoiaWillResetLearnedDataNotification";
+
 namespace
 {
 constexpr CGFloat kWindowWidth = 600.0;
-constexpr CGFloat kWindowHeight = 620.0;
+constexpr CGFloat kWindowHeight = 720.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
@@ -55,6 +58,7 @@ void ConfigureCard(NSBox *card)
     NSPopUpButton *_candidateFontSizeButton;
     NSButton *_candidateLearningButton;
     NSButton *_inputModeShortcutButton;
+    NSButton *_resetLearningButton;
     NSTextField *_statusLabel;
 }
 
@@ -66,6 +70,12 @@ void ConfigureCard(NSBox *card)
         controller = [[self alloc] init];
     });
     return controller;
+}
+
++ (void)prepareInputSessionsForLearnedDataReset
+{
+    [[NSNotificationCenter defaultCenter] postNotificationName:MetasequoiaWillResetLearnedDataNotification
+                                                        object:nil];
 }
 
 + (NSInteger)storedScheme
@@ -370,6 +380,32 @@ void ConfigureCard(NSBox *card)
     _statusLabel.textColor = [NSColor secondaryLabelColor];
     _statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
+    NSTextField *dataSectionLabel = [NSTextField labelWithString:@"数据与隐私"];
+    dataSectionLabel.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
+    dataSectionLabel.textColor = [NSColor secondaryLabelColor];
+    dataSectionLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSBox *dataCard = [[NSBox alloc] initWithFrame:NSZeroRect];
+    ConfigureCard(dataCard);
+
+    NSTextField *learningDataLabel = [NSTextField labelWithString:@"学习数据"];
+    learningDataLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
+    learningDataLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *learningDataDescription =
+        [NSTextField labelWithString:@"清除候选词频、用户词典与拼音学习记录。"];
+    learningDataDescription.font = [NSFont systemFontOfSize:11.0];
+    learningDataDescription.textColor = [NSColor secondaryLabelColor];
+    learningDataDescription.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _resetLearningButton = [NSButton buttonWithTitle:@"清除学习数据…"
+                                              target:self
+                                              action:@selector(confirmResetLearningData:)];
+    _resetLearningButton.bezelStyle = NSBezelStyleRounded;
+    _resetLearningButton.contentTintColor = [NSColor systemRedColor];
+    _resetLearningButton.accessibilityLabel = @"清除学习数据";
+    _resetLearningButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     NSButton *restoreButton = [NSButton buttonWithTitle:@"恢复默认设置" target:self action:@selector(restoreDefaults:)];
     restoreButton.bezelStyle = NSBezelStyleRounded;
     restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
@@ -412,6 +448,11 @@ void ConfigureCard(NSBox *card)
     [behaviorCard addSubview:_inputModeShortcutButton];
     [behaviorCard addSubview:_candidateLearningButton];
     [settingsPanel addSubview:_statusLabel];
+    [settingsPanel addSubview:dataSectionLabel];
+    [settingsPanel addSubview:dataCard];
+    [dataCard addSubview:learningDataLabel];
+    [dataCard addSubview:learningDataDescription];
+    [dataCard addSubview:_resetLearningButton];
     [settingsPanel addSubview:restoreButton];
     [settingsPanel addSubview:versionLabel];
     [settingsPanel addSubview:closeButton];
@@ -489,6 +530,23 @@ void ConfigureCard(NSBox *card)
         [_statusLabel.topAnchor constraintEqualToAnchor:behaviorCard.bottomAnchor constant:12.0],
         [_statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [_statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
+        [dataSectionLabel.topAnchor constraintEqualToAnchor:_statusLabel.bottomAnchor constant:16.0],
+        [dataSectionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
+        [dataCard.topAnchor constraintEqualToAnchor:dataSectionLabel.bottomAnchor constant:8.0],
+        [dataCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
+        [dataCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
+        [dataCard.heightAnchor constraintEqualToConstant:72.0],
+        [learningDataLabel.leadingAnchor constraintEqualToAnchor:dataCard.leadingAnchor constant:18.0],
+        [learningDataLabel.topAnchor constraintEqualToAnchor:dataCard.topAnchor constant:15.0],
+        [learningDataLabel.trailingAnchor constraintLessThanOrEqualToAnchor:_resetLearningButton.leadingAnchor
+                                                                   constant:-12.0],
+        [learningDataDescription.leadingAnchor constraintEqualToAnchor:learningDataLabel.leadingAnchor],
+        [learningDataDescription.topAnchor constraintEqualToAnchor:learningDataLabel.bottomAnchor constant:5.0],
+        [learningDataDescription.trailingAnchor constraintLessThanOrEqualToAnchor:_resetLearningButton.leadingAnchor
+                                                                         constant:-12.0],
+        [_resetLearningButton.trailingAnchor constraintEqualToAnchor:dataCard.trailingAnchor constant:-16.0],
+        [_resetLearningButton.centerYAnchor constraintEqualToAnchor:dataCard.centerYAnchor],
+        [_resetLearningButton.widthAnchor constraintGreaterThanOrEqualToConstant:118.0],
         [restoreButton.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [restoreButton.bottomAnchor constraintEqualToAnchor:settingsPanel.bottomAnchor constant:-20.0],
         [versionLabel.centerXAnchor constraintEqualToAnchor:settingsPanel.centerXAnchor],
@@ -597,6 +655,50 @@ void ConfigureCard(NSBox *card)
 {
     NSButton *button = (NSButton *)sender;
     [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:button.state == NSControlStateValueOn];
+}
+
+- (void)confirmResetLearningData:(id)sender
+{
+    (void)sender;
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.alertStyle = NSAlertStyleWarning;
+    alert.messageText = @"清除所有学习数据？";
+    alert.informativeText = @"候选词频、用户词典和拼音学习记录将永久删除。此操作无法撤销，输入方案等设置不会改变。";
+    [alert addButtonWithTitle:@"取消"];
+    [alert addButtonWithTitle:@"清除"];
+    alert.buttons[0].keyEquivalent = @"\r";
+    alert.buttons[1].keyEquivalent = @"";
+    alert.buttons[1].hasDestructiveAction = YES;
+    alert.buttons[1].accessibilityLabel = @"确认清除学习数据";
+    alert.window.defaultButtonCell = (NSButtonCell *)alert.buttons[0].cell;
+
+    [alert beginSheetModalForWindow:self.window completionHandler:^(NSModalResponse response) {
+        if (response != NSAlertSecondButtonReturn)
+        {
+            return;
+        }
+
+        self->_resetLearningButton.enabled = NO;
+        self->_statusLabel.stringValue = @"正在清除学习数据…";
+        self->_statusLabel.textColor = [NSColor secondaryLabelColor];
+        self->_statusLabel.toolTip = nil;
+        [MetasequoiaPreferencesWindowController prepareInputSessionsForLearnedDataReset];
+
+        NSError *error = nil;
+        if (ResetMetasequoiaLearnedDataForCurrentUser(&error))
+        {
+            self->_statusLabel.stringValue = @"学习数据已清除；新的输入将从默认词频开始。";
+            self->_statusLabel.textColor = [NSColor systemGreenColor];
+            self->_statusLabel.toolTip = nil;
+        }
+        else
+        {
+            self->_statusLabel.stringValue = @"学习数据未能清除，请稍后重试。";
+            self->_statusLabel.textColor = [NSColor systemRedColor];
+            self->_statusLabel.toolTip = error.localizedDescription;
+        }
+        self->_resetLearningButton.enabled = YES;
+    }];
 }
 
 - (void)restoreDefaults:(id)sender
