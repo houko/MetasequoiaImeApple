@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.7](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.6...v0.19.7) (2026-09-03)
+
+
+### Bug Fixes
+
+* **installer:** preserve previous bundle during rollback ([#85](https://github.com/houko/MetasequoiaImeMac/issues/85)) ([fc353b9](https://github.com/houko/MetasequoiaImeMac/commit/fc353b99129d7e2d8c4c613da218bd3bd7a0357f))
+
 ## [0.19.6](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.5...v0.19.6) (2026-09-03)
 
 
