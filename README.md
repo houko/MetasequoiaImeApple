@@ -2,7 +2,7 @@
 
 This repository contains the native macOS frontend for Metasequoia IME. It uses InputMethodKit and AppKit, embeds the shared C++ engine directly, and does not port the Windows TSF or WebView2 host.
 
-The current alpha supports full-pinyin composition, live candidates from the official Metasequoia dictionary, candidate selection through the native candidate panel or number keys 1–9, Space to commit the leading candidate, Return to commit raw input, Backspace, Escape, and composition commit on focus changes.
+The current alpha supports full-pinyin composition, live candidates from the official Metasequoia dictionary, candidate selection through the native candidate panel or number keys 1–9, Space to commit the leading candidate, Return to commit raw input, Backspace, Escape, composition commit on focus changes, and Shift+Space switching between Chinese and direct English input.
 
 ## Requirements
 
@@ -34,6 +34,8 @@ Then enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit. T
 ## Settings
 
 In System Settings > Keyboard > Text Input > Edit, select 水杉输入法 and choose its settings action to open the native 水杉输入法设置 panel. The panel lets you choose 全拼 or 小鹤双拼, switch the native candidate window between a horizontal row and vertical list, show 5, 7, or 9 candidates per page, enable full-pinyin autocorrection and auxiliary codes, switch Chinese punctuation conversion, and control whether selected candidates update learned word frequencies. These choices are saved for the current user and apply before the next key event when no composition is active; an active composition keeps its original settings until it is committed or cancelled. Additional input and candidate options will be added incrementally.
+
+The text input menu also shows whether 水杉 is in 中文输入 or 英文输入 mode. Choose either item directly, or press Shift+Space; switching to English commits the active Chinese composition before subsequent keys pass through unchanged.
 
 ## Development tests
 
