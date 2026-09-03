@@ -403,10 +403,10 @@ BOOL InstallMetasequoiaDictionary(NSURL *source, NSURL *dataDirectory, NSString 
             }
             return NO;
         }
-
         NSURL *destination = [dataDirectory URLByAppendingPathComponent:@"msime.db" isDirectory:NO];
         NSURL *fingerprintFile = [dataDirectory URLByAppendingPathComponent:@"msime.db.sha256" isDirectory:NO];
         const BOOL destinationExists = [fileManager fileExistsAtPath:destination.path];
+        NSString *installedFingerprint = nil;
         if (destinationExists)
         {
             NSDictionary<NSFileAttributeKey, id> *destinationAttributes =
@@ -416,20 +416,25 @@ BOOL InstallMetasequoiaDictionary(NSURL *source, NSURL *dataDirectory, NSString 
                 return NO;
             }
 
-            NSString *installedFingerprint =
+            installedFingerprint =
                 [NSString stringWithContentsOfURL:fingerprintFile encoding:NSUTF8StringEncoding error:nil];
             if (destinationAttributes.fileSize > 0 && [installedFingerprint isEqualToString:dictionaryFingerprint])
             {
                 return YES;
             }
+        }
 
-            if (installedFingerprint == nil && [fileManager contentsEqualAtPath:source.path andPath:destination.path])
-            {
-                return [dictionaryFingerprint writeToURL:fingerprintFile
-                                              atomically:YES
-                                                encoding:NSUTF8StringEncoding
-                                                   error:error];
-            }
+        if (!IsUsableDictionary(source))
+        {
+            return Fail(error, 2, @"The bundled msime.db dictionary is invalid.");
+        }
+        if (destinationExists && installedFingerprint == nil &&
+            [fileManager contentsEqualAtPath:source.path andPath:destination.path])
+        {
+            return [dictionaryFingerprint writeToURL:fingerprintFile
+                                          atomically:YES
+                                            encoding:NSUTF8StringEncoding
+                                               error:error];
         }
 
         NSString *temporaryName = [@".msime.db.installing." stringByAppendingString:NSUUID.UUID.UUIDString];
