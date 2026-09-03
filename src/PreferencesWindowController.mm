@@ -7,13 +7,14 @@
 namespace
 {
 constexpr CGFloat kWindowWidth = 600.0;
-constexpr CGFloat kWindowHeight = 540.0;
+constexpr CGFloat kWindowHeight = 572.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
 NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunctuation";
 NSString * const kCandidatePanelStylePreferenceKey = @"MetasequoiaImeCandidatePanelStyle";
 NSString * const kCandidatePageSizePreferenceKey = @"MetasequoiaImeCandidatePageSize";
+NSString * const kCandidateLearningPreferenceKey = @"MetasequoiaImeCandidateLearning";
 
 NSColor *MetasequoiaBrandColor()
 {
@@ -47,6 +48,7 @@ void ConfigureCard(NSBox *card)
     NSButton *_chinesePunctuationButton;
     NSPopUpButton *_candidatePanelStyleButton;
     NSPopUpButton *_candidatePageSizeButton;
+    NSButton *_candidateLearningButton;
     NSTextField *_statusLabel;
 }
 
@@ -141,6 +143,19 @@ void ConfigureCard(NSBox *card)
     [[NSUserDefaults standardUserDefaults] setInteger:normalizedPageSize forKey:kCandidatePageSizePreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaCandidatePageSizeDidChangeNotification"
                                                         object:@(normalizedPageSize)];
+}
+
++ (BOOL)storedCandidateLearningEnabled
+{
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:kCandidateLearningPreferenceKey];
+    return value == nil ? YES : [value boolValue];
+}
+
++ (void)setCandidateLearningEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kCandidateLearningPreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaCandidateLearningDidChangeNotification"
+                                                        object:@(enabled)];
 }
 
 - (instancetype)initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner
@@ -284,6 +299,9 @@ void ConfigureCard(NSBox *card)
     _chinesePunctuationButton = [NSButton checkboxWithTitle:@"使用中文标点" target:self action:@selector(chinesePunctuationChanged:)];
     _chinesePunctuationButton.translatesAutoresizingMaskIntoConstraints = NO;
 
+    _candidateLearningButton = [NSButton checkboxWithTitle:@"记住候选词频" target:self action:@selector(candidateLearningChanged:)];
+    _candidateLearningButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     _statusLabel = [NSTextField labelWithString:@"检查词库状态…"];
     _statusLabel.accessibilityLabel = @"词库状态";
     _statusLabel.textColor = [NSColor secondaryLabelColor];
@@ -326,6 +344,7 @@ void ConfigureCard(NSBox *card)
     [behaviorCard addSubview:_autocorrectButton];
     [behaviorCard addSubview:_helpcodeButton];
     [behaviorCard addSubview:_chinesePunctuationButton];
+    [behaviorCard addSubview:_candidateLearningButton];
     [settingsPanel addSubview:_statusLabel];
     [settingsPanel addSubview:restoreButton];
     [settingsPanel addSubview:versionLabel];
@@ -385,13 +404,15 @@ void ConfigureCard(NSBox *card)
         [behaviorCard.topAnchor constraintEqualToAnchor:behaviorSectionLabel.bottomAnchor constant:8.0],
         [behaviorCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [behaviorCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [behaviorCard.heightAnchor constraintEqualToConstant:116.0],
+        [behaviorCard.heightAnchor constraintEqualToConstant:148.0],
         [_autocorrectButton.leadingAnchor constraintEqualToAnchor:behaviorCard.leadingAnchor constant:18.0],
         [_autocorrectButton.topAnchor constraintEqualToAnchor:behaviorCard.topAnchor constant:16.0],
         [_helpcodeButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
         [_helpcodeButton.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:12.0],
         [_chinesePunctuationButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
         [_chinesePunctuationButton.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:12.0],
+        [_candidateLearningButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
+        [_candidateLearningButton.topAnchor constraintEqualToAnchor:_chinesePunctuationButton.bottomAnchor constant:12.0],
         [_statusLabel.topAnchor constraintEqualToAnchor:behaviorCard.bottomAnchor constant:12.0],
         [_statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [_statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
@@ -415,6 +436,7 @@ void ConfigureCard(NSBox *card)
     [_candidatePanelStyleButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]];
     [_candidatePageSizeButton selectItemAtIndex:static_cast<NSInteger>(metasequoia::mac::CandidatePageSizeOptionIndex(
                                                         static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidatePageSize])))];
+    _candidateLearningButton.state = [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
 }
 
 - (void)refreshDictionaryStatus
@@ -481,6 +503,12 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setCandidatePageSize:static_cast<NSInteger>(pageSize)];
 }
 
+- (void)candidateLearningChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:button.state == NSControlStateValueOn];
+}
+
 - (void)restoreDefaults:(id)sender
 {
     (void)sender;
@@ -490,6 +518,7 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:YES];
     [MetasequoiaPreferencesWindowController setCandidatePanelStyle:0];
     [MetasequoiaPreferencesWindowController setCandidatePageSize:9];
+    [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:YES];
     [self refreshControls];
 }
 
