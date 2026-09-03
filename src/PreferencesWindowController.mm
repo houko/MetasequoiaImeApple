@@ -5,11 +5,13 @@ namespace
 constexpr CGFloat kWindowWidth = 480.0;
 constexpr CGFloat kWindowHeight = 276.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
+NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 } // namespace
 
 @implementation MetasequoiaPreferencesWindowController
 {
     NSPopUpButton *_schemeButton;
+    NSButton *_autocorrectButton;
 }
 
 + (instancetype)sharedController
@@ -34,6 +36,19 @@ NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
     [[NSUserDefaults standardUserDefaults] setInteger:normalizedScheme forKey:kSchemePreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaInputSchemeDidChangeNotification"
                                                         object:@(normalizedScheme)];
+}
+
++ (BOOL)storedAutocorrectEnabled
+{
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:kAutocorrectPreferenceKey];
+    return value == nil ? YES : [value boolValue];
+}
+
++ (void)setAutocorrectEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kAutocorrectPreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaQuanpinAutocorrectDidChangeNotification"
+                                                        object:@(enabled)];
 }
 
 - (instancetype)initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner
@@ -89,6 +104,9 @@ NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
     _schemeButton.accessibilityLabel = @"输入方案";
     _schemeButton.translatesAutoresizingMaskIntoConstraints = NO;
 
+    _autocorrectButton = [NSButton checkboxWithTitle:@"启用全拼自动纠错" target:self action:@selector(autocorrectChanged:)];
+    _autocorrectButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     NSTextField *statusLabel = [NSTextField labelWithString:@"输入方案会保存到当前用户设置，并在下一次输入会话中生效。"];
     statusLabel.textColor = [NSColor secondaryLabelColor];
     statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -102,6 +120,7 @@ NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
     [contentView addSubview:descriptionLabel];
     [contentView addSubview:schemeLabel];
     [contentView addSubview:_schemeButton];
+    [contentView addSubview:_autocorrectButton];
     [contentView addSubview:statusLabel];
     [contentView addSubview:closeButton];
 
@@ -118,7 +137,9 @@ NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
         [_schemeButton.centerYAnchor constraintEqualToAnchor:schemeLabel.centerYAnchor],
         [_schemeButton.leadingAnchor constraintEqualToAnchor:schemeLabel.trailingAnchor constant:12.0],
         [_schemeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
-        [statusLabel.topAnchor constraintEqualToAnchor:_schemeButton.bottomAnchor constant:20.0],
+        [_autocorrectButton.leadingAnchor constraintEqualToAnchor:_schemeButton.leadingAnchor],
+        [_autocorrectButton.topAnchor constraintEqualToAnchor:_schemeButton.bottomAnchor constant:16.0],
+        [statusLabel.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:12.0],
         [statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
         [closeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
@@ -131,10 +152,17 @@ NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 - (void)showAndActivate
 {
     [_schemeButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedScheme]];
+    _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     [self showWindow:nil];
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
+}
+
+- (void)autocorrectChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setAutocorrectEnabled:button.state == NSControlStateValueOn];
 }
 
 - (void)schemeChanged:(id)sender
