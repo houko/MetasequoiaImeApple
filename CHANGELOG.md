@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.10](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.9...v0.20.10) (2026-09-03)
+
+
+### Bug Fixes
+
+* **install:** serialize concurrent upgrades ([#112](https://github.com/houko/MetasequoiaImeMac/issues/112)) ([37ab11b](https://github.com/houko/MetasequoiaImeMac/commit/37ab11bef185432c9f94a69edbb6446d811dfd74))
+
 ## [0.20.9](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.8...v0.20.9) (2026-09-03)
 
 
