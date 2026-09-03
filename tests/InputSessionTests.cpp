@@ -110,6 +110,29 @@ int main()
         require(!verify_unlearned_session.candidates().empty() && verify_unlearned_session.candidates().front().word == "不好",
                 "A selected candidate was learned while candidate learning was disabled.");
 
+        metasequoia::mac::InputSession wubi_session(SchemeType::Wubi);
+        require(!wubi_session.handle_character('z').handled && wubi_session.preedit().empty(),
+                "An unsupported Wubi letter was swallowed.");
+        type(wubi_session, "abcd");
+        require(!wubi_session.handle_character('e').handled && wubi_session.preedit() == "abcd",
+                "A Wubi letter beyond the four-code limit was swallowed.");
+        require(!wubi_session.handle_character('\'').handled && wubi_session.preedit() == "abcd",
+                "An unsupported Wubi apostrophe was swallowed.");
+
+        metasequoia::mac::InputSession shuangpin_character_session(SchemeType::Shuangpin);
+        require(shuangpin_character_session.handle_character('n').handled && shuangpin_character_session.preedit() == "n",
+                "A valid Shuangpin letter was rejected.");
+        metasequoia::mac::InputSession japanese_character_session(SchemeType::JapaneseRomaji);
+        require(japanese_character_session.handle_character('k').handled && japanese_character_session.preedit() == "k",
+                "A valid Japanese romaji letter was rejected.");
+        metasequoia::mac::InputSession duplicate_apostrophe_session;
+        type(duplicate_apostrophe_session, "ni");
+        require(duplicate_apostrophe_session.handle_character('\'').handled,
+                "The first Pinyin apostrophe was rejected.");
+        require(!duplicate_apostrophe_session.handle_character('\'').handled &&
+                    duplicate_apostrophe_session.preedit() == "ni'",
+                "A duplicate Pinyin apostrophe was swallowed.");
+
         metasequoia::mac::InputSession uppercase_session;
         require(!uppercase_session.handle_character('N').handled,
                 "An uppercase letter was swallowed while no composition was active.");
