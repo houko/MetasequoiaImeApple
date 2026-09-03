@@ -147,6 +147,17 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     statusLabel.textColor = [NSColor secondaryLabelColor];
     statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
+    NSButton *restoreButton = [NSButton buttonWithTitle:@"恢复默认设置" target:self action:@selector(restoreDefaults:)];
+    restoreButton.bezelStyle = NSBezelStyleRounded;
+    restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSString *version = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+    NSString *versionText = version.length == 0 ? @"开发版本" : [@"版本 " stringByAppendingString:version];
+    NSTextField *versionLabel = [NSTextField labelWithString:versionText];
+    versionLabel.font = [NSFont systemFontOfSize:11.0];
+    versionLabel.textColor = [NSColor tertiaryLabelColor];
+    versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
     NSButton *closeButton = [NSButton buttonWithTitle:@"关闭" target:self action:@selector(close:)];
     closeButton.bezelStyle = NSBezelStyleRounded;
     closeButton.keyEquivalent = @"\r";
@@ -160,6 +171,8 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     [contentView addSubview:_helpcodeButton];
     [contentView addSubview:_chinesePunctuationButton];
     [contentView addSubview:statusLabel];
+    [contentView addSubview:restoreButton];
+    [contentView addSubview:versionLabel];
     [contentView addSubview:closeButton];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -184,6 +197,10 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
         [statusLabel.topAnchor constraintEqualToAnchor:_chinesePunctuationButton.bottomAnchor constant:12.0],
         [statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
+        [restoreButton.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:32.0],
+        [restoreButton.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor constant:-24.0],
+        [versionLabel.centerXAnchor constraintEqualToAnchor:contentView.centerXAnchor],
+        [versionLabel.centerYAnchor constraintEqualToAnchor:restoreButton.centerYAnchor],
         [closeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
         [closeButton.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor constant:-24.0],
         [closeButton.widthAnchor constraintGreaterThanOrEqualToConstant:80.0],
@@ -191,12 +208,17 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     return self;
 }
 
-- (void)showAndActivate
+- (void)refreshControls
 {
     [_schemeButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedScheme]];
     _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+}
+
+- (void)showAndActivate
+{
+    [self refreshControls];
     [self showWindow:nil];
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
@@ -225,6 +247,16 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
 {
     NSPopUpButton *schemeButton = (NSPopUpButton *)sender;
     [MetasequoiaPreferencesWindowController setStoredScheme:schemeButton.indexOfSelectedItem];
+}
+
+- (void)restoreDefaults:(id)sender
+{
+    (void)sender;
+    [MetasequoiaPreferencesWindowController setStoredScheme:0];
+    [MetasequoiaPreferencesWindowController setAutocorrectEnabled:YES];
+    [MetasequoiaPreferencesWindowController setHelpcodeEnabled:YES];
+    [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:YES];
+    [self refreshControls];
 }
 
 - (void)close:(id)sender
