@@ -2,23 +2,46 @@
 
 #include <Carbon/Carbon.h>
 
+#include <algorithm>
+#include <cstddef>
+
 namespace metasequoia::mac
 {
 enum class ControllerKeyAction
 {
     Character,
-    ConsumeCandidateKey,
     MoveCandidateLeft,
     MoveCandidateRight,
     MoveCandidateUp,
     MoveCandidateDown,
     MoveCandidatePageUp,
     MoveCandidatePageDown,
+    MoveCandidateHome,
+    MoveCandidateEnd,
     Backspace,
     CommitRaw,
     Cancel,
     CommitCandidate,
 };
+
+constexpr size_t CandidatePageStart(size_t selectedIndex, size_t candidateCount, size_t pageSize)
+{
+    if (candidateCount == 0 || pageSize == 0)
+    {
+        return 0;
+    }
+    return std::min(selectedIndex, candidateCount - 1) / pageSize * pageSize;
+}
+
+constexpr size_t CandidatePageEnd(size_t selectedIndex, size_t candidateCount, size_t pageSize)
+{
+    if (candidateCount == 0 || pageSize == 0)
+    {
+        return 0;
+    }
+    return std::min(CandidatePageStart(selectedIndex, candidateCount, pageSize) + pageSize - 1,
+                    candidateCount - 1);
+}
 
 constexpr ControllerKeyAction ClassifyControllerKey(unsigned short keyCode, bool candidatePanelVisible)
 {
@@ -39,8 +62,9 @@ constexpr ControllerKeyAction ClassifyControllerKey(unsigned short keyCode, bool
         case kVK_PageDown:
             return ControllerKeyAction::MoveCandidatePageDown;
         case kVK_Home:
+            return ControllerKeyAction::MoveCandidateHome;
         case kVK_End:
-            return ControllerKeyAction::ConsumeCandidateKey;
+            return ControllerKeyAction::MoveCandidateEnd;
         default:
             break;
         }
