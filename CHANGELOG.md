@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.14.0...v0.15.0) (2026-09-03)
+
+
+### Features
+
+* **input:** switch between Chinese and English ([#62](https://github.com/houko/MetasequoiaImeMac/issues/62)) ([db5d105](https://github.com/houko/MetasequoiaImeMac/commit/db5d105275fad0c1670fa29c8512c053e54b024f))
+
 ## [0.14.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.13.0...v0.14.0) (2026-09-03)
 
 
