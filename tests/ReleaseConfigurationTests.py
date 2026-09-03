@@ -92,6 +92,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
             controller_initialization.index("_candidatePanel ="),
             controller_initialization.index("EnsureMetasequoiaDictionary"),
         )
+        self.assertIn("NSString *characters = event.characters;", input_controller)
+        self.assertNotIn("charactersIgnoringModifiers", input_controller)
         commit_composition = input_controller.split("- (void)commitComposition:(id)sender", 1)[1].split(
             "- (void)deactivateServer:(id)sender", 1
         )[0]
