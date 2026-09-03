@@ -24,6 +24,7 @@ if(BUILD_TESTING)
     target_link_libraries(MetasequoiaImeMacTests PRIVATE MetasequoiaImeMacCore)
     target_compile_options(MetasequoiaImeMacTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
     add_test(NAME input_session COMMAND MetasequoiaImeMacTests)
+    add_test(NAME release_automation COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/ReleaseAutomationTests.py)
     add_test(NAME release_configuration COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/ReleaseConfigurationTests.py)
 endif()
 
