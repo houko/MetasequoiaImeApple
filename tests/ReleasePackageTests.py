@@ -1,6 +1,7 @@
 import hashlib
 import os
 import plistlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -83,8 +84,14 @@ class ReleasePackageTests(unittest.TestCase):
             for variable in SIGNING_ENVIRONMENT:
                 environment.pop(variable, None)
             environment["METASEQUOIA_RELEASE_ASSET_SUFFIX"] = "-unsigned"
+            trusted_packager = Path(temporary_directory) / "package-release.sh"
+            shutil.copy2(PROJECT_ROOT / "scripts/package_release.sh", trusted_packager)
+            environment["METASEQUOIA_PROJECT_ROOT"] = str(PROJECT_ROOT)
+            environment["METASEQUOIA_RELEASE_INSTALL_SCRIPT"] = str(
+                PROJECT_ROOT / "scripts/install-release.sh"
+            )
             subprocess.run(
-                [PROJECT_ROOT / "scripts/package_release.sh", f"v{version}", bundle, output],
+                [trusted_packager, f"v{version}", bundle, output],
                 check=True,
                 env=environment,
             )
