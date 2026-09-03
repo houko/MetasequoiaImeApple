@@ -16,6 +16,8 @@
 + (void)setCandidatePanelStyle:(NSInteger)style;
 + (NSInteger)storedCandidatePageSize;
 + (void)setCandidatePageSize:(NSInteger)pageSize;
++ (NSInteger)storedCandidateFontSize;
++ (void)setCandidateFontSize:(NSInteger)fontSize;
 + (BOOL)storedCandidateLearningEnabled;
 + (void)setCandidateLearningEnabled:(BOOL)enabled;
 + (BOOL)storedEnglishInputMode;
