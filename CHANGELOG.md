@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.6.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.5.0...v0.6.0) (2026-09-03)
+
+
+### Features
+
+* **input:** expand Chinese punctuation ([377f7fb](https://github.com/houko/MetasequoiaImeMac/commit/377f7fb1509db6aaf3b1935231bbe1163545606a))
+* **input:** learn selected candidates ([b23fc5a](https://github.com/houko/MetasequoiaImeMac/commit/b23fc5a2d3f7139feb4f15c482017c8ccd488dcc))
+* **input:** support Chinese punctuation ([066b915](https://github.com/houko/MetasequoiaImeMac/commit/066b915c1149f853ce02062d2ae7b631a7e82f75))
+* **input:** support numbered candidate selection ([003c565](https://github.com/houko/MetasequoiaImeMac/commit/003c56509e3e85d99bae19a8d35598c78a361859))
+* **release:** require signed notarized artifacts ([f404125](https://github.com/houko/MetasequoiaImeMac/commit/f4041252d4ab62928500e7fc533500f2554ce958))
+* **settings:** refresh preferences on activation ([e7462b8](https://github.com/houko/MetasequoiaImeMac/commit/e7462b8cf774e8e50d9aaaad2e71f01d2333a1b8))
+
+
+### Bug Fixes
+
+* **dictionary:** preserve user data during upgrades ([78b6a24](https://github.com/houko/MetasequoiaImeMac/commit/78b6a243cf26eba4b7f05e187a498507d810acce))
+* **input:** commit candidate when composition ends ([b088d94](https://github.com/houko/MetasequoiaImeMac/commit/b088d94c65b5160a24b28048a3e8d41c984256a3))
+* **input:** pass through uppercase letters ([34cad90](https://github.com/houko/MetasequoiaImeMac/commit/34cad90737696fd58d9a427de7b808eb053051da))
+* **install:** make user install atomic ([3f7f4e1](https://github.com/houko/MetasequoiaImeMac/commit/3f7f4e1a58c27951969e9cc95370f3ddb0112567))
+* **release:** enforce Gatekeeper validation ([558f28d](https://github.com/houko/MetasequoiaImeMac/commit/558f28dce7243a9e115823924ce5759b33403c7d))
+
 ## [0.5.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.4.0...v0.5.0) (2026-09-03)
 
 
