@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.16.0...v0.17.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** configure input mode shortcut ([#66](https://github.com/houko/MetasequoiaImeMac/issues/66)) ([00e06a2](https://github.com/houko/MetasequoiaImeMac/commit/00e06a2d0a679f7d108811c0170d18391c765292))
+
 ## [0.16.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.15.0...v0.16.0) (2026-09-03)
 
 
