@@ -17,12 +17,12 @@ InputSession::InputSession(SchemeType scheme_type, bool quanpin_autocorrect_enab
 
 KeyResult InputSession::handle_character(char character)
 {
-    const auto unsigned_character = static_cast<unsigned char>(character);
-    if (!std::isalpha(unsigned_character) && character != '\'')
+    if ((character < 'a' || character > 'z') && character != '\'')
     {
         return {};
     }
 
+    const auto unsigned_character = static_cast<unsigned char>(character);
     const ImeKeyCode key_code = character == '\'' ? ImeKey::Apostrophe : static_cast<ImeKeyCode>(std::toupper(unsigned_character));
     engine_.handle_key(key_code, 0, static_cast<ImeCharacter>(unsigned_character));
     return {true, std::nullopt};
