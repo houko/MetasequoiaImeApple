@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.5](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.4...v0.19.5) (2026-09-03)
+
+
+### Bug Fixes
+
+* **release:** label unsigned installer internally ([#81](https://github.com/houko/MetasequoiaImeMac/issues/81)) ([a9bcfd2](https://github.com/houko/MetasequoiaImeMac/commit/a9bcfd24172041152ea0e15c4a5676f6c4ada804))
+
 ## [0.19.4](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.3...v0.19.4) (2026-09-03)
 
 
