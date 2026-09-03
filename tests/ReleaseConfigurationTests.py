@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 import unittest
@@ -51,16 +52,29 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("--match-head-commit", merge_release_pr)
         self.assertTrue(merge_release_pr.startswith("#!/usr/bin/env bash\n"))
         self.assertIn("scripts/package_release.sh", workflow)
-        self.assertIn("macos-universal.pkg", workflow)
+        signing_detector = (PROJECT_ROOT / "scripts/detect-release-signing.sh").read_text()
+        release_publisher = (PROJECT_ROOT / "scripts/publish-release.sh").read_text()
+        self.assertIn("macos-universal$ASSET_SUFFIX.pkg", release_publisher)
+        self.assertIn("asset_suffix=-unsigned", signing_detector)
         self.assertIn("timeout-minutes: 30", workflow)
-        self.assertIn("gh release upload", workflow)
-        self.assertIn("gh release edit", workflow)
+        self.assertIn("gh release upload", release_publisher)
+        self.assertIn("gh release edit", release_publisher)
         self.assertIn("METASEQUOIA_REQUIRE_RELEASE_SIGNING", workflow)
+        self.assertIn("scripts/detect-release-signing.sh", workflow)
+        self.assertIn("steps.signing.outputs.signing_enabled", workflow)
+        self.assertIn("steps.signing.outputs.asset_suffix", workflow)
+        self.assertIn("metasequoia-release-mode", release_publisher)
+        self.assertIn("ref: ${{ github.event.repository.default_branch }}", workflow)
+        self.assertNotIn("ref: ${{ github.sha }}", workflow)
+        self.assertIn("$RUNNER_TEMP/detect-release-signing.sh", workflow)
+        self.assertIn("$RUNNER_TEMP/publish-release.sh", workflow)
+        self.assertIn("git merge-base --is-ancestor HEAD refs/remotes/origin/main", workflow)
+        self.assertLess(workflow.index("name: Determine release signing mode"), workflow.index("name: Check out release tag"))
+        self.assertLess(workflow.index("name: Verify release tag provenance"), workflow.index("name: Import Developer ID signing certificates"))
         self.assertIn("security import", workflow)
         self.assertIn("notarytool store-credentials", workflow)
-        self.assertIn("name: Validate release credentials", workflow)
-        self.assertLess(workflow.index("name: Validate release credentials"), workflow.index("name: Install dependencies"))
-        self.assertIn("Missing required GitHub Actions secret: $required", workflow)
+        self.assertIn("name: Determine release signing mode", workflow)
+        self.assertLess(workflow.index("name: Determine release signing mode"), workflow.index("name: Install dependencies"))
         self.assertIn("Developer ID Application", readme)
         self.assertIn("notarized", readme.lower())
         self.assertIn("全拼 or 小鹤双拼", readme)
@@ -174,6 +188,32 @@ class ReleaseConfigurationTests(unittest.TestCase):
             ["bash", "-n", str(PROJECT_ROOT / "scripts/merge-release-pr.sh")], capture_output=True, text=True
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+        for relative_path in ("scripts/detect-release-signing.sh", "scripts/publish-release.sh"):
+            result = subprocess.run(
+                ["bash", "-n", str(PROJECT_ROOT / relative_path)], capture_output=True, text=True
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_package_script_refuses_ambiguously_named_unsigned_assets(self):
+        environment = os.environ.copy()
+        for variable in (
+            "METASEQUOIA_REQUIRE_RELEASE_SIGNING",
+            "METASEQUOIA_DEVELOPER_ID_APPLICATION",
+            "METASEQUOIA_DEVELOPER_ID_INSTALLER",
+            "METASEQUOIA_NOTARY_PROFILE",
+            "METASEQUOIA_RELEASE_ASSET_SUFFIX",
+        ):
+            environment.pop(variable, None)
+
+        result = subprocess.run(
+            [PROJECT_ROOT / "scripts/package_release.sh", "v1.2.3"],
+            capture_output=True,
+            text=True,
+            env=environment,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("require METASEQUOIA_RELEASE_ASSET_SUFFIX=-unsigned", result.stderr)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import hashlib
+import os
 import plistlib
 import subprocess
 import sys
@@ -10,6 +11,12 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SIGNING_ENVIRONMENT = (
+    "METASEQUOIA_REQUIRE_RELEASE_SIGNING",
+    "METASEQUOIA_DEVELOPER_ID_APPLICATION",
+    "METASEQUOIA_DEVELOPER_ID_INSTALLER",
+    "METASEQUOIA_NOTARY_PROFILE",
+)
 
 
 def sha256_file(path):
@@ -72,8 +79,16 @@ class ReleasePackageTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             output = Path(temporary_directory) / "output"
-            subprocess.run([PROJECT_ROOT / "scripts/package_release.sh", f"v{version}", bundle, output], check=True)
-            archive = output / f"MetasequoiaIME-v{version}-macos-universal.zip"
+            environment = os.environ.copy()
+            for variable in SIGNING_ENVIRONMENT:
+                environment.pop(variable, None)
+            environment["METASEQUOIA_RELEASE_ASSET_SUFFIX"] = "-unsigned"
+            subprocess.run(
+                [PROJECT_ROOT / "scripts/package_release.sh", f"v{version}", bundle, output],
+                check=True,
+                env=environment,
+            )
+            archive = output / f"MetasequoiaIME-v{version}-macos-universal-unsigned.zip"
             checksum = archive.with_suffix(f"{archive.suffix}.sha256")
             digest, filename = checksum.read_text().split()
             actual_digest = hashlib.sha256()
@@ -89,6 +104,7 @@ class ReleasePackageTests(unittest.TestCase):
                 package_root = f"MetasequoiaIME-v{version}/"
                 self.assertIn(f"{package_root}MetasequoiaIME.app/Contents/Info.plist", names)
                 self.assertIn(f"{package_root}Install.command", names)
+                self.assertIn(f"{package_root}UNSIGNED_BUILD.txt", names)
                 self.assertIn(f"{package_root}LICENSE", names)
                 self.assertIn(f"{package_root}THIRD_PARTY_NOTICES.txt", names)
                 self.assertIn(
@@ -100,9 +116,44 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertFalse(any(name.endswith("register_input_source.swift") for name in names))
                 install_command = release_zip.read(f"{package_root}Install.command").decode()
                 self.assertIn("spctl --assess --type execute", install_command)
+                self.assertIn("Type I UNDERSTAND", install_command)
                 self.assertNotIn("xattr", install_command)
 
-            installer_package = output / f"MetasequoiaIME-v{version}-macos-universal.pkg"
+                extracted = Path(temporary_directory) / "extracted"
+                subprocess.run(["ditto", "-x", "-k", archive, extracted], check=True)
+                fake_bin = Path(temporary_directory) / "bin"
+                fake_bin.mkdir()
+                fake_pkill = fake_bin / "pkill"
+                fake_pkill.write_text("#!/bin/sh\nexit 0\n")
+                fake_pkill.chmod(0o755)
+                test_home = Path(temporary_directory) / "home"
+                install_environment = os.environ.copy()
+                install_environment["HOME"] = str(test_home)
+                install_environment["PATH"] = f"{fake_bin}:{install_environment['PATH']}"
+                rejected_install = subprocess.run(
+                    ["zsh", extracted / package_root / "Install.command"],
+                    input="no\n",
+                    capture_output=True,
+                    text=True,
+                    env=install_environment,
+                )
+                self.assertNotEqual(rejected_install.returncode, 0)
+                self.assertIn("Unsigned installation cancelled", rejected_install.stderr)
+                self.assertFalse((test_home / "Library/Input Methods/MetasequoiaIME.app").exists())
+                install_result = subprocess.run(
+                    ["zsh", extracted / package_root / "Install.command"],
+                    input="I UNDERSTAND\n",
+                    capture_output=True,
+                    text=True,
+                    env=install_environment,
+                )
+                self.assertEqual(install_result.returncode, 0, install_result.stderr)
+                self.assertIn("not Developer ID signed or notarized", install_result.stderr)
+                self.assertTrue(
+                    (test_home / "Library/Input Methods/MetasequoiaIME.app/Contents/Info.plist").is_file()
+                )
+
+            installer_package = output / f"MetasequoiaIME-v{version}-macos-universal-unsigned.pkg"
             installer_checksum = installer_package.with_suffix(f"{installer_package.suffix}.sha256")
             self.assertTrue(installer_package.is_file())
             self.assertTrue(installer_checksum.is_file())

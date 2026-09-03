@@ -57,13 +57,15 @@ Merges to `main` update a Release Please pull request from conventional commit h
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip`
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256`
 
+When Apple release credentials are not configured, the workflow publishes the same four assets with `-unsigned` before the file extension and adds a warning to the GitHub Release. Unsigned artifacts are intended for testing and may require explicit approval in macOS privacy and security settings.
+
 Download the `.pkg` and its checksum, verify it, then double-click the package to open the native macOS Installer. The package installs the current user's copy in `~/Library/Input Methods` and does not require administrator privileges. Log out after installation so macOS refreshes its input source cache.
 
 ```sh
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
 ```
 
-Release builds are signed with a Developer ID Application identity, signed as an installer with a Developer ID Installer identity, and notarized before publication. The release workflow requires these repository secrets and fails before downloading build dependencies when any are missing:
+When all of the following repository secrets are configured, release builds are signed with a Developer ID Application identity, signed as an installer with a Developer ID Installer identity, and notarized before publication. With none configured, the workflow publishes clearly labeled unsigned artifacts. A partial configuration fails before downloading build dependencies so it cannot produce ambiguously labeled assets.
 
 - `MACOS_DEVELOPER_ID_CERTIFICATE_BASE64`
 - `MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD`

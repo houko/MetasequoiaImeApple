@@ -9,6 +9,16 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BASE_SHA = "1" * 40
 HEAD_SHA = "2" * 40
+SIGNING_SECRETS = (
+    "MACOS_DEVELOPER_ID_CERTIFICATE_BASE64",
+    "MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD",
+    "MACOS_SIGNING_KEYCHAIN_PASSWORD",
+    "MACOS_NOTARY_APPLE_ID",
+    "MACOS_NOTARY_TEAM_ID",
+    "MACOS_NOTARY_APP_SPECIFIC_PASSWORD",
+    "MACOS_DEVELOPER_ID_APPLICATION",
+    "MACOS_DEVELOPER_ID_INSTALLER",
+)
 
 
 class ReleaseAutomationTests(unittest.TestCase):
@@ -94,6 +104,151 @@ fi
         self.assertIn("run watch 9001", calls)
         self.assertNotIn("pr merge 42", calls)
         self.assertEqual(output, "")
+
+
+class ReleaseSigningModeTests(unittest.TestCase):
+    def run_detection(self, configured_secrets=()):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            output = temporary / "github-output"
+            summary = temporary / "github-summary"
+            environment = os.environ.copy()
+            for secret in SIGNING_SECRETS:
+                environment.pop(secret, None)
+            environment.update({secret: "configured" for secret in configured_secrets})
+            environment["GITHUB_OUTPUT"] = str(output)
+            environment["GITHUB_STEP_SUMMARY"] = str(summary)
+            result = subprocess.run(
+                [PROJECT_ROOT / "scripts/detect-release-signing.sh"],
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            return (
+                result,
+                output.read_text() if output.exists() else "",
+                summary.read_text() if summary.exists() else "",
+            )
+
+    def test_missing_credentials_selects_clearly_labeled_unsigned_release(self):
+        result, output, summary = self.run_detection()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output, "signing_enabled=false\nasset_suffix=-unsigned\n")
+        self.assertIn("unsigned", summary.lower())
+
+    def test_complete_credentials_selects_signed_and_notarized_release(self):
+        result, output, summary = self.run_detection(SIGNING_SECRETS)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output, "signing_enabled=true\nasset_suffix=\n")
+        self.assertIn("signed and notarized", summary.lower())
+
+    def test_partial_credentials_fail_instead_of_publishing_ambiguous_artifacts(self):
+        result, output, summary = self.run_detection(SIGNING_SECRETS[:2])
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(output, "")
+        self.assertEqual(summary, "")
+        self.assertIn("partially configured", result.stderr)
+        self.assertIn("MACOS_DEVELOPER_ID_APPLICATION", result.stderr)
+
+
+class ReleasePublicationTests(unittest.TestCase):
+    def run_publication(self, signing_enabled, asset_suffix, existing_notes=""):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            fake_bin = temporary / "bin"
+            fake_bin.mkdir()
+            log = temporary / "gh.log"
+            captured_notes = temporary / "notes.md"
+            fake_gh = fake_bin / "gh"
+            fake_gh.write_text(
+                """#!/bin/bash
+set -euo pipefail
+printf '%s\\n' "$*" >> "$FAKE_GH_LOG"
+if [[ "$1 $2" == "release view" ]]; then
+    printf '%s' "$FAKE_EXISTING_NOTES"
+elif [[ "$1 $2" == "release edit" && "$*" == *"--notes-file"* ]]; then
+    while (($#)); do
+        if [[ "$1" == "--notes-file" ]]; then
+            cp "$2" "$FAKE_CAPTURED_NOTES"
+            exit 0
+        fi
+        shift
+    done
+fi
+"""
+            )
+            fake_gh.chmod(0o755)
+            dist = temporary / "dist"
+            dist.mkdir()
+            stem = f"MetasequoiaIME-v1.2.3-macos-universal{asset_suffix}"
+            for extension in (".zip", ".zip.sha256", ".pkg", ".pkg.sha256"):
+                (dist / f"{stem}{extension}").touch()
+            environment = os.environ.copy()
+            environment.update(
+                {
+                    "PATH": f"{fake_bin}:{environment['PATH']}",
+                    "GH_REPO": "houko/MetasequoiaImeMac",
+                    "TAG_NAME": "v1.2.3",
+                    "ASSET_SUFFIX": asset_suffix,
+                    "SIGNING_ENABLED": signing_enabled,
+                    "DIST_DIR": str(dist),
+                    "RUNNER_TEMP": str(temporary),
+                    "FAKE_GH_LOG": str(log),
+                    "FAKE_EXISTING_NOTES": existing_notes,
+                    "FAKE_CAPTURED_NOTES": str(captured_notes),
+                }
+            )
+            result = subprocess.run(
+                [PROJECT_ROOT / "scripts/publish-release.sh"],
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            return (
+                result,
+                log.read_text() if log.exists() else "",
+                captured_notes.read_text() if captured_notes.exists() else "",
+            )
+
+    def test_unsigned_publication_records_mode_before_uploading_labeled_assets(self):
+        result, calls, notes = self.run_publication("false", "-unsigned", "Existing notes")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("metasequoia-release-mode:unsigned", notes)
+        self.assertIn("not Developer ID signed or notarized", notes)
+        self.assertLess(calls.index("--notes-file"), calls.index("release upload"))
+        self.assertIn("macos-universal-unsigned.pkg", calls)
+        self.assertIn("--draft=false", calls)
+
+    def test_same_mode_retry_keeps_notes_and_reuploads_with_clobber(self):
+        marker = "Existing notes\n\n<!-- metasequoia-release-mode:unsigned -->\n"
+        result, calls, notes = self.run_publication("false", "-unsigned", marker)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("--notes-file", calls)
+        self.assertIn("--clobber", calls)
+        self.assertEqual(notes, "")
+
+    def test_cross_mode_retry_is_rejected_before_assets_change(self):
+        marker = "<!-- metasequoia-release-mode:unsigned -->"
+        result, calls, notes = self.run_publication("true", "", marker)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("already locked to unsigned", result.stderr)
+        self.assertNotIn("release upload", calls)
+        self.assertNotIn("release edit", calls)
+        self.assertEqual(notes, "")
+
+    def test_signed_publication_records_signed_mode_without_unsigned_warning(self):
+        result, calls, notes = self.run_publication("true", "")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("metasequoia-release-mode:signed", notes)
+        self.assertNotIn("WARNING", notes)
+        self.assertIn("macos-universal.pkg", calls)
 
 
 if __name__ == "__main__":
