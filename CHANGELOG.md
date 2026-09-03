@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.1...v0.19.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **release:** package legacy drafts safely ([#74](https://github.com/houko/MetasequoiaImeMac/issues/74)) ([83a8420](https://github.com/houko/MetasequoiaImeMac/commit/83a8420783a93a71c97f43fd7ae5f6b82f5af21c))
+
 ## [0.19.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.0...v0.19.1) (2026-09-03)
 
 
