@@ -14,5 +14,7 @@
 + (void)setChinesePunctuationEnabled:(BOOL)enabled;
 + (NSInteger)storedCandidatePanelStyle;
 + (void)setCandidatePanelStyle:(NSInteger)style;
++ (NSInteger)storedCandidatePageSize;
++ (void)setCandidatePageSize:(NSInteger)pageSize;
 - (void)showAndActivate;
 @end

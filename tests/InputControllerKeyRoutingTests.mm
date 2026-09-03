@@ -1,5 +1,6 @@
 #include "../src/InputControllerKeyRouting.h"
 #include "../src/CandidatePanelStyle.h"
+#include "../src/CandidatePageSize.h"
 
 #import <InputMethodKit/InputMethodKit.h>
 
@@ -27,8 +28,12 @@ int main()
     using metasequoia::mac::CandidatePageStart;
     using metasequoia::mac::CandidatePanelStyle;
     using metasequoia::mac::CandidatePanelTypeForStyle;
+    using metasequoia::mac::CandidatePageSizeForOptionIndex;
+    using metasequoia::mac::CandidatePageSizeOptionIndex;
+    using metasequoia::mac::CandidateSelectionKeys;
     using metasequoia::mac::ClassifyControllerKey;
     using metasequoia::mac::IsPrimaryCandidateDirection;
+    using metasequoia::mac::NormalizeCandidatePageSize;
     using metasequoia::mac::NormalizeCandidatePanelStyle;
 
     require(NormalizeCandidatePanelStyle(0) == CandidatePanelStyle::Horizontal &&
@@ -48,6 +53,22 @@ int main()
                 IsPrimaryCandidateDirection(kVK_UpArrow, kIMKSingleColumnScrollingCandidatePanel) &&
                 IsPrimaryCandidateDirection(kVK_DownArrow, kIMKSingleColumnScrollingCandidatePanel),
             "The vertical candidate panel did not restrict navigation to its primary axis.");
+    require(NormalizeCandidatePageSize(5) == 5 && NormalizeCandidatePageSize(7) == 7 &&
+                NormalizeCandidatePageSize(9) == 9 && NormalizeCandidatePageSize(0) == 9 &&
+                NormalizeCandidatePageSize(99) == 9,
+            "The stored candidate page size was not normalized safely.");
+    require(CandidatePageSizeForOptionIndex(0) == 5 && CandidatePageSizeForOptionIndex(1) == 7 &&
+                CandidatePageSizeForOptionIndex(2) == 9 && CandidatePageSizeForOptionIndex(99) == 9 &&
+                CandidatePageSizeOptionIndex(5) == 0 && CandidatePageSizeOptionIndex(7) == 1 &&
+                CandidatePageSizeOptionIndex(9) == 2,
+            "The candidate page-size options did not map to persisted values.");
+    NSArray<NSNumber *> *fiveSelectionKeys = CandidateSelectionKeys(5);
+    NSArray<NSNumber *> *nineSelectionKeys = CandidateSelectionKeys(9);
+    require(fiveSelectionKeys.count == 5 && nineSelectionKeys.count == 9 &&
+                fiveSelectionKeys.firstObject.unsignedShortValue == kVK_ANSI_1 &&
+                fiveSelectionKeys.lastObject.unsignedShortValue == kVK_ANSI_5 &&
+                nineSelectionKeys.lastObject.unsignedShortValue == kVK_ANSI_9,
+            "The candidate page size did not produce the expected number-key mappings.");
 
     require(ClassifyControllerKey(kVK_Return, true) == ControllerKeyAction::CommitRaw,
             "Return did not remain a raw commit while candidates were visible.");
