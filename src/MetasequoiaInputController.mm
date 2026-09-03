@@ -1,6 +1,7 @@
 #import "MetasequoiaInputController.h"
 
 #import "DictionaryInstaller.h"
+#import "InputMenu.h"
 #import "PreferencesWindowController.h"
 #include "CandidateSelectionState.h"
 #include "InputControllerKeyRouting.h"
@@ -470,6 +471,11 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 {
     (void)sender;
     [[MetasequoiaPreferencesWindowController sharedController] showAndActivate];
+}
+
+- (NSMenu *)menu
+{
+    return CreateMetasequoiaInputMenu(self);
 }
 
 - (NSUInteger)recognizedEvents:(id)sender
