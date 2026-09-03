@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.1...v0.9.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **input:** commit the highlighted candidate with space ([#44](https://github.com/houko/MetasequoiaImeMac/issues/44)) ([e03d9b1](https://github.com/houko/MetasequoiaImeMac/commit/e03d9b13f5697cb8416fbf3f80cd54484cfbf1e9))
+
 ## [0.9.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.0...v0.9.1) (2026-09-03)
 
 
