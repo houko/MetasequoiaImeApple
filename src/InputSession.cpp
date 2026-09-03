@@ -26,10 +26,11 @@ KeyResult InputSession::handle_character(char character)
         return {};
     }
 
+    const std::string previous_preedit = preedit();
     const auto unsigned_character = static_cast<unsigned char>(character);
     const ImeKeyCode key_code = character == '\'' ? ImeKey::Apostrophe : static_cast<ImeKeyCode>(std::toupper(unsigned_character));
     engine_.handle_key(key_code, 0, static_cast<ImeCharacter>(unsigned_character));
-    return {true, std::nullopt};
+    return {preedit() != previous_preedit, std::nullopt};
 }
 
 KeyResult InputSession::handle_candidate_key(char character)
