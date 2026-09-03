@@ -68,6 +68,7 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.should_publish == 'true' }}
     runs-on: macos-15
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -106,5 +107,6 @@ jobs:
           TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
         run: |
           archive="dist/MetasequoiaIME-$TAG_NAME-macos-universal.zip"
-          gh release upload "$TAG_NAME" "$archive" "$archive.sha256" --clobber
+          installer="dist/MetasequoiaIME-$TAG_NAME-macos-universal.pkg"
+          gh release upload "$TAG_NAME" "$installer" "$installer.sha256" "$archive" "$archive.sha256" --clobber
           gh release edit "$TAG_NAME" --draft=false
