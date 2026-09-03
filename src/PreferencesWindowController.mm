@@ -143,7 +143,7 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     _chinesePunctuationButton = [NSButton checkboxWithTitle:@"使用中文标点" target:self action:@selector(chinesePunctuationChanged:)];
     _chinesePunctuationButton.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSTextField *statusLabel = [NSTextField labelWithString:@"输入方案会保存到当前用户设置，并在下一次输入会话中生效。"];
+    NSTextField *statusLabel = [NSTextField labelWithString:@"设置会保存到当前用户，并在下次激活水杉输入法时生效。"];
     statusLabel.textColor = [NSColor secondaryLabelColor];
     statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
 

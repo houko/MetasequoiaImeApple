@@ -77,6 +77,10 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("storedChinesePunctuationEnabled", preferences_controller)
         self.assertIn("setChinesePunctuationEnabled", preferences_controller)
         self.assertIn("使用中文标点", preferences_controller)
+        input_controller = (PROJECT_ROOT / "src/MetasequoiaInputController.mm").read_text()
+        self.assertIn("reloadSessionFromPreferences", input_controller)
+        self.assertIn("- (void)activateServer:(id)sender", input_controller)
+        self.assertIn("next input-method activation", readme)
 
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
         self.assertNotIn("xcrun", release_installer)
