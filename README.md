@@ -55,7 +55,7 @@ Merges to `main` update a Release Please pull request from conventional commit h
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip`
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256`
 
-Download the `.pkg` and its checksum, verify it, then double-click the package to open the native macOS Installer. The package installs the input method system-wide at `/Library/Input Methods` and requires administrator privileges. Log out after installation so macOS refreshes its input source cache.
+Download the `.pkg` and its checksum, verify it, then double-click the package to open the native macOS Installer. The package installs the current user's copy in `~/Library/Input Methods` and does not require administrator privileges. Log out after installation so macOS refreshes its input source cache.
 
 ```sh
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
@@ -63,7 +63,7 @@ shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
 
 Release builds are signed with a Developer ID Application identity, signed as an installer with a Developer ID Installer identity, and notarized before publication. The release workflow requires the corresponding certificate and App Store Connect credentials to be configured as repository secrets; it fails closed when they are missing. Local development builds remain ad-hoc signed. After installation and logout, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
 
-The ZIP remains the no-administrator option: it installs the signed and notarized bundle for the current user in `~/Library/Input Methods` via `Install.command`. The installer verifies both the code signature and Gatekeeper acceptance before replacing an existing installation.
+The ZIP provides the same current-user destination through `Install.command` when a command-line installation is preferred. The installer verifies both the code signature and Gatekeeper acceptance before replacing an existing installation.
 
 Verify the ZIP checksum, extract it, and run `Install.command`:
 
