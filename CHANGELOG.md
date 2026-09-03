@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.0...v0.20.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **release:** keep uninstaller after pkg install ([#94](https://github.com/houko/MetasequoiaImeMac/issues/94)) ([a1c95ca](https://github.com/houko/MetasequoiaImeMac/commit/a1c95cabcced14fc9b3355c063130475a287820b))
+
 ## [0.20.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.7...v0.20.0) (2026-09-03)
 
 
