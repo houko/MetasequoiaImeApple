@@ -290,6 +290,7 @@ class ReleasePackageTests(unittest.TestCase):
                 package_root = f"MetasequoiaIME-v{version}/"
                 self.assertIn(f"{package_root}MetasequoiaIME.app/Contents/Info.plist", names)
                 self.assertIn(f"{package_root}Install.command", names)
+                self.assertIn(f"{package_root}Uninstall.command", names)
                 self.assertIn(f"{package_root}UNSIGNED_BUILD.txt", names)
                 self.assertIn(f"{package_root}LICENSE", names)
                 self.assertIn(f"{package_root}THIRD_PARTY_NOTICES.txt", names)
@@ -301,9 +302,13 @@ class ReleasePackageTests(unittest.TestCase):
                 )
                 self.assertFalse(any(name.endswith("register_input_source.swift") for name in names))
                 install_command = release_zip.read(f"{package_root}Install.command").decode()
+                uninstall_command = release_zip.read(f"{package_root}Uninstall.command").decode()
                 self.assertIn("spctl --assess --type execute", install_command)
                 self.assertIn("Type I UNDERSTAND", install_command)
                 self.assertNotIn("xattr", install_command)
+                self.assertIn("Type REMOVE METASEQUOIAIME", uninstall_command)
+                self.assertIn("--remove-user-data", uninstall_command)
+                self.assertNotIn("rm -rf", uninstall_command)
 
                 extracted = Path(temporary_directory) / "extracted"
                 subprocess.run(["ditto", "-x", "-k", archive, extracted], check=True)
@@ -312,6 +317,9 @@ class ReleasePackageTests(unittest.TestCase):
                 fake_pkill = fake_bin / "pkill"
                 fake_pkill.write_text("#!/bin/sh\nexit 0\n")
                 fake_pkill.chmod(0o755)
+                fake_pgrep = fake_bin / "pgrep"
+                fake_pgrep.write_text("#!/bin/sh\nexit 1\n")
+                fake_pgrep.chmod(0o755)
                 test_home = Path(temporary_directory) / "home"
                 install_environment = os.environ.copy()
                 install_environment["HOME"] = str(test_home)
@@ -338,6 +346,16 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertTrue(
                     (test_home / "Library/Input Methods/MetasequoiaIME.app/Contents/Info.plist").is_file()
                 )
+                packaged_uninstall = subprocess.run(
+                    ["zsh", extracted / package_root / "Uninstall.command"],
+                    input="REMOVE METASEQUOIAIME\n",
+                    capture_output=True,
+                    text=True,
+                    env=install_environment,
+                )
+                self.assertEqual(packaged_uninstall.returncode, 0, packaged_uninstall.stderr)
+                self.assertFalse((test_home / "Library/Input Methods/MetasequoiaIME.app").exists())
+                self.assertEqual(len(list((test_home / ".Trash").glob("MetasequoiaIME-uninstall.*"))), 1)
 
                 fake_codesign = fake_bin / "codesign"
                 fake_codesign.write_text(
