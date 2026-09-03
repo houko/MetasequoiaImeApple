@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.7.0...v0.7.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **dictionary:** fall back to validated database ([c0f445b](https://github.com/houko/MetasequoiaImeMac/commit/c0f445bc4b12737680a56435d0f67e2e92257869))
+
 ## [0.7.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.6.0...v0.7.0) (2026-09-03)
 
 
