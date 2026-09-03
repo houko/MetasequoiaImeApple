@@ -87,6 +87,22 @@ shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256
 ./MetasequoiaIME-vX.Y.Z/Install.command
 ```
 
+## Uninstall
+
+The release ZIP also includes `Uninstall.command`. It removes only the current user's input method and moves it to Trash so the operation remains recoverable. It preserves preferences and learned data by default:
+
+```sh
+./MetasequoiaIME-vX.Y.Z/Uninstall.command
+```
+
+To move the application, preferences, and learned data to the same recovery folder in Trash, use the explicit data-removal option:
+
+```sh
+./MetasequoiaIME-vX.Y.Z/Uninstall.command --remove-user-data
+```
+
+Both modes require typing `REMOVE METASEQUOIAIME` before changing files. Log out afterward so macOS refreshes its input source cache.
+
 ## License
 
 Metasequoia IME for macOS is distributed under the GNU General Public License version 3. Release archives, installer packages, and the application bundle include the applicable GPL and third-party license notices; see `LICENSE` and `THIRD_PARTY_NOTICES.txt`.

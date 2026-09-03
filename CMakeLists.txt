@@ -44,6 +44,7 @@ if(BUILD_TESTING)
     add_test(NAME preferences_window COMMAND MetasequoiaPreferencesWindowTests)
     add_test(NAME release_automation COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/ReleaseAutomationTests.py)
     add_test(NAME release_configuration COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/ReleaseConfigurationTests.py)
+    add_test(NAME uninstall_workflow COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/UninstallTests.py)
 endif()
 
 option(METASEQUOIA_IME_BUILD_INPUT_METHOD "Build the InputMethodKit bundle" ON)

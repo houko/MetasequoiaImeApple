@@ -5,6 +5,8 @@ project_root=${METASEQUOIA_PROJECT_ROOT:-${0:A:h:h}}
 project_root=${project_root:A}
 install_script=${METASEQUOIA_RELEASE_INSTALL_SCRIPT:-$project_root/scripts/install-release.sh}
 install_script=${install_script:A}
+uninstall_script=${METASEQUOIA_RELEASE_UNINSTALL_SCRIPT:-$project_root/scripts/uninstall.sh}
+uninstall_script=${uninstall_script:A}
 tag_name=${1:-}
 source_bundle=${2:-$project_root/build/MetasequoiaIME.app}
 output_dir=${3:-$project_root/dist}
@@ -54,6 +56,10 @@ if [[ ! -d "$source_bundle" ]]; then
 fi
 if [[ ! -f "$install_script" ]]; then
     print -u2 "Release install script not found at $install_script"
+    exit 1
+fi
+if [[ ! -f "$uninstall_script" ]]; then
+    print -u2 "Release uninstall script not found at $uninstall_script"
     exit 1
 fi
 
@@ -125,6 +131,7 @@ trap 'exit 1' HUP INT TERM
 mkdir -p "$package_root"
 ditto "$source_bundle" "$package_root/MetasequoiaIME.app"
 ditto "$install_script" "$package_root/Install.command"
+ditto "$uninstall_script" "$package_root/Uninstall.command"
 ditto "$project_root/LICENSE" "$package_root/LICENSE"
 ditto "$project_root/THIRD_PARTY_NOTICES.txt" "$package_root/THIRD_PARTY_NOTICES.txt"
 if [[ "$asset_suffix" == -unsigned ]]; then
@@ -136,6 +143,7 @@ if [[ "$asset_suffix" == -unsigned ]]; then
         > "$package_root/UNSIGNED_BUILD.txt"
 fi
 chmod +x "$package_root/Install.command"
+chmod +x "$package_root/Uninstall.command"
 if [[ -n "$notary_profile" ]]; then
     notary_input="$staging_root/MetasequoiaIME-notary.zip"
     ditto -c -k --keepParent "$package_root/MetasequoiaIME.app" "$notary_input"
