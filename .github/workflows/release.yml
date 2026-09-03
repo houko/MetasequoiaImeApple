@@ -89,11 +89,15 @@ jobs:
           path: .release-automation
           sparse-checkout: |
             scripts/detect-release-signing.sh
+            scripts/install-release.sh
+            scripts/package_release.sh
             scripts/publish-release.sh
           persist-credentials: false
       - name: Stage trusted release automation
         run: |
           install -m 0755 .release-automation/scripts/detect-release-signing.sh "$RUNNER_TEMP/detect-release-signing.sh"
+          install -m 0755 .release-automation/scripts/install-release.sh "$RUNNER_TEMP/install-release.sh"
+          install -m 0755 .release-automation/scripts/package_release.sh "$RUNNER_TEMP/package-release.sh"
           install -m 0755 .release-automation/scripts/publish-release.sh "$RUNNER_TEMP/publish-release.sh"
       - name: Determine release signing mode
         id: signing
@@ -169,7 +173,9 @@ jobs:
           METASEQUOIA_DEVELOPER_ID_INSTALLER: ${{ secrets.MACOS_DEVELOPER_ID_INSTALLER }}
           METASEQUOIA_NOTARY_PROFILE: ${{ steps.signing.outputs.signing_enabled == 'true' && 'metasequoia-notary' || '' }}
           METASEQUOIA_RELEASE_ASSET_SUFFIX: ${{ steps.signing.outputs.asset_suffix }}
-        run: scripts/package_release.sh "$TAG_NAME" build/MetasequoiaIME.app dist
+          METASEQUOIA_PROJECT_ROOT: ${{ github.workspace }}
+          METASEQUOIA_RELEASE_INSTALL_SCRIPT: ${{ runner.temp }}/install-release.sh
+        run: exec "$RUNNER_TEMP/package-release.sh" "$TAG_NAME" build/MetasequoiaIME.app dist
       - name: Upload and publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

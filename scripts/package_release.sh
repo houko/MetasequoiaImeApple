@@ -1,7 +1,10 @@
 #!/bin/zsh
 set -euo pipefail
 
-project_root=${0:A:h:h}
+project_root=${METASEQUOIA_PROJECT_ROOT:-${0:A:h:h}}
+project_root=${project_root:A}
+install_script=${METASEQUOIA_RELEASE_INSTALL_SCRIPT:-$project_root/scripts/install-release.sh}
+install_script=${install_script:A}
 tag_name=${1:-}
 source_bundle=${2:-$project_root/build/MetasequoiaIME.app}
 output_dir=${3:-$project_root/dist}
@@ -49,6 +52,10 @@ if [[ ! -d "$source_bundle" ]]; then
     print -u2 "Input method bundle not found at $source_bundle"
     exit 1
 fi
+if [[ ! -f "$install_script" ]]; then
+    print -u2 "Release install script not found at $install_script"
+    exit 1
+fi
 
 bundle_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$source_bundle/Contents/Info.plist")
 if [[ "$bundle_version" != "$version" ]]; then
@@ -74,7 +81,7 @@ installer_resources="$staging_root/InstallerResources"
 
 mkdir -p "$package_root"
 ditto "$source_bundle" "$package_root/MetasequoiaIME.app"
-ditto "$project_root/scripts/install-release.sh" "$package_root/Install.command"
+ditto "$install_script" "$package_root/Install.command"
 ditto "$project_root/LICENSE" "$package_root/LICENSE"
 ditto "$project_root/THIRD_PARTY_NOTICES.txt" "$package_root/THIRD_PARTY_NOTICES.txt"
 if [[ "$asset_suffix" == -unsigned ]]; then
