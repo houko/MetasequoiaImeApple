@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.10.0...v0.10.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **input:** navigate candidate pages reliably ([#52](https://github.com/houko/MetasequoiaImeMac/issues/52)) ([e0b4808](https://github.com/houko/MetasequoiaImeMac/commit/e0b4808cd85d3b79e30f579ff95145d99b50d5f1))
+
 ## [0.10.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.4...v0.10.0) (2026-09-03)
 
 
