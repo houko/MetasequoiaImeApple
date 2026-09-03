@@ -56,6 +56,7 @@ class UninstallTests(unittest.TestCase):
         fake_pgrep = fake_bin / "pgrep"
         fake_pgrep.write_text(
             "#!/bin/sh\n"
+            "if test -n \"${FAKE_PGREP_STATUS:-}\"; then exit \"$FAKE_PGREP_STATUS\"; fi\n"
             "if test \"${FAKE_PROCESS_RUNNING:-false}\" = true; then exit 0; fi\n"
             "exit 1\n"
         )
@@ -231,6 +232,24 @@ exec /bin/mv "$@"
             self.assertIn("did not stop in time", result.stderr)
             pkill_arguments = (home.parent / "pkill.log").read_text()
             self.assertIn(f"-u {os.geteuid()}", pkill_arguments)
+
+    def test_process_inspection_error_changes_no_files(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            home = (Path(temporary_directory) / "home").resolve()
+            application, user_data, preferences = self.create_installation(home)
+
+            result = self.run_uninstaller(
+                home,
+                ("--remove-user-data",),
+                extra_environment={"FAKE_PGREP_STATUS": "2"},
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual((application / "installed.txt").read_text(), "installed\n")
+            self.assertEqual((user_data / "learned.txt").read_text(), "learned\n")
+            self.assertEqual(preferences.read_text(), "preferences\n")
+            self.assertFalse((home / ".Trash").exists())
+            self.assertIn("Could not verify whether MetasequoiaIME stopped", result.stderr)
 
     def test_concurrent_installation_lock_leaves_everything_untouched(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
