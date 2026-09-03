@@ -1,6 +1,7 @@
 #include "../src/InputControllerKeyRouting.h"
 #include "../src/CandidatePanelStyle.h"
 #include "../src/CandidatePageSize.h"
+#include "../src/InputModeRouting.h"
 
 #import <InputMethodKit/InputMethodKit.h>
 
@@ -35,6 +36,17 @@ int main()
     using metasequoia::mac::IsPrimaryCandidateDirection;
     using metasequoia::mac::NormalizeCandidatePageSize;
     using metasequoia::mac::NormalizeCandidatePanelStyle;
+    using metasequoia::mac::IsInputModeToggle;
+
+    require(IsInputModeToggle(kVK_Space, NSEventModifierFlagShift),
+            "Shift+Space did not map to input-mode switching.");
+    require(!IsInputModeToggle(kVK_Space, 0) &&
+                !IsInputModeToggle(kVK_ANSI_A, NSEventModifierFlagShift) &&
+                !IsInputModeToggle(kVK_Space, NSEventModifierFlagShift | NSEventModifierFlagCommand),
+            "A non-toggle shortcut unexpectedly mapped to input-mode switching.");
+    require(metasequoia::mac::ShouldPrepareInputSession(false) &&
+                !metasequoia::mac::ShouldPrepareInputSession(true),
+            "Direct English mode did not bypass input-session preparation.");
 
     require(NormalizeCandidatePanelStyle(0) == CandidatePanelStyle::Horizontal &&
                 NormalizeCandidatePanelStyle(1) == CandidatePanelStyle::Vertical &&

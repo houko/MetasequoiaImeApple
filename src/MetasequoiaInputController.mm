@@ -4,6 +4,7 @@
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
 #import "InputMenu.h"
+#include "InputModeRouting.h"
 #import "PreferencesWindowController.h"
 #include "CandidateSelectionState.h"
 #include "InputControllerKeyRouting.h"
@@ -79,7 +80,11 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
         [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @YES}];
 
-        [self prepareSessionIfNeeded];
+        if (metasequoia::mac::ShouldPrepareInputSession(
+                [MetasequoiaPreferencesWindowController storedEnglishInputMode]))
+        {
+            [self prepareSessionIfNeeded];
+        }
     }
     return self;
 }
@@ -140,7 +145,9 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 {
     [super activateServer:sender];
     _dictionaryRetryAfter = 0.0;
-    if ([self prepareSessionIfNeeded])
+    if (metasequoia::mac::ShouldPrepareInputSession(
+            [MetasequoiaPreferencesWindowController storedEnglishInputMode]) &&
+        [self prepareSessionIfNeeded])
     {
         [self reloadSessionFromPreferences];
     }
@@ -217,6 +224,17 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 - (BOOL)handleEvent:(NSEvent *)event client:(id)sender
 {
     if (event.type != NSEventTypeKeyDown)
+    {
+        return NO;
+    }
+    const NSEventModifierFlags inputModeModifiers =
+        event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
+    if (metasequoia::mac::IsInputModeToggle(event.keyCode, inputModeModifiers))
+    {
+        [self setEnglishInputMode:![MetasequoiaPreferencesWindowController storedEnglishInputMode] client:sender];
+        return YES;
+    }
+    if ([MetasequoiaPreferencesWindowController storedEnglishInputMode])
     {
         return NO;
     }
@@ -503,9 +521,32 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     [[MetasequoiaPreferencesWindowController sharedController] showAndActivate];
 }
 
+- (void)setEnglishInputMode:(BOOL)enabled client:(id)sender
+{
+    if (enabled)
+    {
+        [self commitLeadingCandidate:sender];
+    }
+    _candidateSelection.reset();
+    [_candidatePanel hide];
+    [MetasequoiaPreferencesWindowController setEnglishInputMode:enabled];
+}
+
+- (void)selectChineseMode:(id)sender
+{
+    (void)sender;
+    [self setEnglishInputMode:NO client:self.client];
+}
+
+- (void)selectEnglishMode:(id)sender
+{
+    (void)sender;
+    [self setEnglishInputMode:YES client:self.client];
+}
+
 - (NSMenu *)menu
 {
-    return CreateMetasequoiaInputMenu(self);
+    return CreateMetasequoiaInputMenu(self, [MetasequoiaPreferencesWindowController storedEnglishInputMode]);
 }
 
 - (NSUInteger)recognizedEvents:(id)sender

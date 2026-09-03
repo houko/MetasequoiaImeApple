@@ -44,12 +44,15 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidatePanelStyle:1];
         [MetasequoiaPreferencesWindowController setCandidatePageSize:5];
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
+        [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         require([MetasequoiaPreferencesWindowController storedCandidatePanelStyle] == 1,
                 "The vertical candidate layout preference was not stored.");
         require([MetasequoiaPreferencesWindowController storedCandidatePageSize] == 5,
                 "The five-candidate page-size preference was not stored.");
         require(![MetasequoiaPreferencesWindowController storedCandidateLearningEnabled],
                 "The disabled candidate-learning preference was not stored.");
+        require([MetasequoiaPreferencesWindowController storedEnglishInputMode],
+                "The English input-mode state was not stored.");
 
         MetasequoiaPreferencesWindowController *controller =
             [[MetasequoiaPreferencesWindowController alloc] init];
@@ -108,6 +111,9 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidatePageSize:99];
         require([MetasequoiaPreferencesWindowController storedCandidatePageSize] == 9,
                 "An unsupported candidate page size was not normalized safely.");
+        [MetasequoiaPreferencesWindowController setEnglishInputMode:NO];
+        require(![MetasequoiaPreferencesWindowController storedEnglishInputMode],
+                "The Chinese input-mode state was not stored.");
     }
     return 0;
 }

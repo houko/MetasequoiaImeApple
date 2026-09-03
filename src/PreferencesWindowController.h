@@ -18,5 +18,7 @@
 + (void)setCandidatePageSize:(NSInteger)pageSize;
 + (BOOL)storedCandidateLearningEnabled;
 + (void)setCandidateLearningEnabled:(BOOL)enabled;
++ (BOOL)storedEnglishInputMode;
++ (void)setEnglishInputMode:(BOOL)enabled;
 - (void)showAndActivate;
 @end

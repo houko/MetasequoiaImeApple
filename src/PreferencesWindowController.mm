@@ -15,6 +15,7 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
 NSString * const kCandidatePanelStylePreferenceKey = @"MetasequoiaImeCandidatePanelStyle";
 NSString * const kCandidatePageSizePreferenceKey = @"MetasequoiaImeCandidatePageSize";
 NSString * const kCandidateLearningPreferenceKey = @"MetasequoiaImeCandidateLearning";
+NSString * const kEnglishInputModePreferenceKey = @"MetasequoiaImeEnglishInputMode";
 
 NSColor *MetasequoiaBrandColor()
 {
@@ -155,6 +156,18 @@ void ConfigureCard(NSBox *card)
 {
     [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kCandidateLearningPreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaCandidateLearningDidChangeNotification"
+                                                        object:@(enabled)];
+}
+
++ (BOOL)storedEnglishInputMode
+{
+    return [[NSUserDefaults standardUserDefaults] boolForKey:kEnglishInputModePreferenceKey];
+}
+
++ (void)setEnglishInputMode:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kEnglishInputModePreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaEnglishInputModeDidChangeNotification"
                                                         object:@(enabled)];
 }
 

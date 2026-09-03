@@ -2,10 +2,23 @@
 
 #import <AppKit/AppKit.h>
 
-inline NSMenu *CreateMetasequoiaInputMenu(id target)
+inline NSMenuItem *CreateInputModeItem(NSString *title, SEL action, id target, BOOL selected)
+{
+    NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:title action:action keyEquivalent:@""];
+    item.target = target;
+    item.enabled = YES;
+    item.state = selected ? NSControlStateValueOn : NSControlStateValueOff;
+    return item;
+}
+
+inline NSMenu *CreateMetasequoiaInputMenu(id target, BOOL englishMode)
 {
     NSMenu *menu = [[NSMenu alloc] initWithTitle:@"水杉输入法"];
     menu.autoenablesItems = NO;
+
+    [menu addItem:CreateInputModeItem(@"中文输入", @selector(selectChineseMode:), target, !englishMode)];
+    [menu addItem:CreateInputModeItem(@"英文输入", @selector(selectEnglishMode:), target, englishMode)];
+    [menu addItem:[NSMenuItem separatorItem]];
 
     NSMenuItem *settingsItem = [[NSMenuItem alloc] initWithTitle:@"水杉输入法设置…"
                                                           action:@selector(showPreferences:)
