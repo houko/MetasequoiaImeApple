@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.0...v0.9.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* **input:** route candidate command keys reliably ([#42](https://github.com/houko/MetasequoiaImeMac/issues/42)) ([0ef1e2e](https://github.com/houko/MetasequoiaImeMac/commit/0ef1e2e75c6467174c99ccbc8a4aa8d8607d310c))
+
 ## [0.9.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.8.0...v0.9.0) (2026-09-03)
 
 
