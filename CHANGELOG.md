@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.4...v0.10.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** give preferences a native product layout ([#50](https://github.com/houko/MetasequoiaImeMac/issues/50)) ([d6e0bbb](https://github.com/houko/MetasequoiaImeMac/commit/d6e0bbb90be38b61186bf309dbcf1b4c03bebb7a))
+
 ## [0.9.4](https://github.com/houko/MetasequoiaImeMac/compare/v0.9.3...v0.9.4) (2026-09-03)
 
 
