@@ -133,6 +133,10 @@ int main()
         Require(!InstallMetasequoiaDictionary(missingSource, failureDirectory, @"missing", &error),
                 "A missing bundled dictionary unexpectedly succeeded.");
         Require(ReadString(failureDestination) == "keep-me", "A failed update removed the working dictionary.");
+        error = nil;
+        Require(!PrepareMetasequoiaDictionary(missingSource, failureDirectory, @"missing", &error),
+                "A corrupt existing dictionary was accepted as an update fallback.");
+        Require(error != nil, "A rejected dictionary fallback did not preserve the update error.");
 
         NSURL *replayFailureDirectory = CreateDirectory(root, @"replay-failure");
         NSURL *replayFailureSource = [root URLByAppendingPathComponent:@"replay-failure-source.db"];
@@ -154,6 +158,13 @@ int main()
                 "An invalid user dictionary replay unexpectedly succeeded.");
         Require(ReadWeight(replayFailureDestination, "你好") == 321,
                 "A failed journal replay replaced the working dictionary.");
+        error = nil;
+        Require(PrepareMetasequoiaDictionary(replayFailureSource, replayFailureDirectory, @"new-fingerprint",
+                                             &error),
+                "A valid existing dictionary was not used after an update failure.");
+        Require(error == nil, "A successful dictionary fallback leaked the update error.");
+        Require(ReadWeight(replayFailureDestination, "你好") == 321,
+                "Dictionary fallback did not preserve the existing working database.");
 
         Require([fileManager removeItemAtURL:root error:&error], error.localizedDescription.UTF8String);
     }
