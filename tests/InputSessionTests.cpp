@@ -146,7 +146,7 @@ int main()
         metasequoia::mac::InputSession unarmed_selection_session;
         type(unarmed_selection_session, "nihao");
         const std::string initial_leading_candidate = unarmed_selection_session.candidates().front().word;
-        candidate_selection.update(unarmed_selection_session.candidates()[1].word);
+        candidate_selection.update(1, unarmed_selection_session.candidates()[1].word);
         const auto initial_selection = candidate_selection.commit(unarmed_selection_session);
         require(initial_selection.handled && initial_selection.commit == initial_leading_candidate,
                 "An unsolicited candidate selection callback replaced the leading candidate.");
@@ -155,7 +155,7 @@ int main()
         type(highlighted_session, "nihao");
         const std::string highlighted_candidate = highlighted_session.candidates()[1].word;
         candidate_selection.begin_navigation();
-        candidate_selection.update(highlighted_candidate);
+        candidate_selection.update(1, highlighted_candidate);
         const auto highlighted = candidate_selection.commit(highlighted_session);
         require(highlighted.handled && highlighted.commit == highlighted_candidate,
                 "Space did not commit the candidate highlighted by the native panel.");
@@ -164,7 +164,7 @@ int main()
         type(leading_session, "nihao");
         const std::string leading_candidate = leading_session.candidates().front().word;
         candidate_selection.begin_navigation();
-        candidate_selection.update(leading_session.candidates()[1].word);
+        candidate_selection.update(1, leading_session.candidates()[1].word);
         candidate_selection.reset();
         const auto leading = candidate_selection.commit(leading_session);
         require(leading.handled && leading.commit == leading_candidate,
@@ -174,7 +174,7 @@ int main()
         type(stale_selection_session, "nihao");
         const std::string stale_fallback_candidate = stale_selection_session.candidates().front().word;
         candidate_selection.begin_navigation();
-        candidate_selection.update("candidate-from-an-old-composition");
+        candidate_selection.update(1, "candidate-from-an-old-composition");
         const auto stale_fallback = candidate_selection.commit(stale_selection_session);
         require(stale_fallback.handled && stale_fallback.commit == stale_fallback_candidate,
                 "A stale native highlight did not fall back to the leading candidate.");
@@ -199,6 +199,47 @@ int main()
 
         const auto idle_backspace = session.handle_command(metasequoia::mac::Command::Backspace);
         require(!idle_backspace.handled, "Backspace was swallowed while no composition was active.");
+
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '候选三', 90)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '候选四', 80)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '候选五', 70)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '候选六', 60)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '候选七', 50)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '候选八', 40)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '候选九', 30)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '候选十', 20)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '候选十一', 10)");
+
+        metasequoia::mac::InputSession paged_session;
+        type(paged_session, "nihao");
+        require(paged_session.candidates().size() >= 11, "The paging test dictionary did not return enough candidates.");
+        const std::string first_candidate_on_second_page = paged_session.candidates()[9].word;
+        candidate_selection.begin_navigation();
+        candidate_selection.update(9, first_candidate_on_second_page);
+        const auto out_of_range_page_digit = candidate_selection.commit_number(paged_session, '9');
+        require(!out_of_range_page_digit.handled && paged_session.has_composition(),
+                "An unavailable number on the current candidate page changed composition.");
+        const auto page_digit = candidate_selection.commit_number(paged_session, '1');
+        require(page_digit.handled && page_digit.commit == first_candidate_on_second_page,
+                "The 1 key did not commit the first candidate on the visible page.");
+
+        metasequoia::mac::InputSession middle_of_page_session;
+        type(middle_of_page_session, "nihao");
+        const std::string first_candidate_from_middle = middle_of_page_session.candidates()[9].word;
+        candidate_selection.begin_navigation();
+        candidate_selection.update(10, middle_of_page_session.candidates()[10].word);
+        const auto middle_page_digit = candidate_selection.commit_number(middle_of_page_session, '1');
+        require(middle_page_digit.handled && middle_page_digit.commit == first_candidate_from_middle,
+                "A highlight in the middle of a page did not preserve that page for number selection.");
+
+        metasequoia::mac::InputSession stale_page_session;
+        type(stale_page_session, "nihao");
+        const std::string stale_page_fallback = stale_page_session.candidates().front().word;
+        candidate_selection.begin_navigation();
+        candidate_selection.update(10, "candidate-from-an-old-composition");
+        const auto stale_page_digit = candidate_selection.commit_number(stale_page_session, '1');
+        require(stale_page_digit.handled && stale_page_digit.commit == stale_page_fallback,
+                "A stale page highlight did not fall back to the first candidate page.");
     }
 
     std::filesystem::remove_all(data_directory);

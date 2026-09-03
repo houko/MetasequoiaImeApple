@@ -173,7 +173,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
             }
             else if (character >= '1' && character <= '9')
             {
-                result = _session->handle_candidate_key(static_cast<char>(character));
+                result = _candidateSelection.commit_number(*_session, static_cast<char>(character));
                 if (!result.handled && _session->has_composition())
                 {
                     return YES;
@@ -259,9 +259,19 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 - (void)candidateSelectionChanged:(NSAttributedString *)candidateString
 {
     const char *utf8 = candidateString.string.UTF8String;
-    if (utf8 != nullptr)
+    const NSInteger selectedIdentifier = [_candidatePanel selectedCandidate];
+    if (utf8 == nullptr || selectedIdentifier == NSNotFound)
     {
-        _candidateSelection.update(utf8);
+        return;
+    }
+
+    for (NSUInteger index = 0; index < _candidateData.count; ++index)
+    {
+        if ([_candidatePanel candidateStringIdentifier:_candidateData[index]] == selectedIdentifier)
+        {
+            _candidateSelection.update(static_cast<size_t>(index), utf8);
+            return;
+        }
     }
 }
 
