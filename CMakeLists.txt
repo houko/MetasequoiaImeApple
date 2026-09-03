@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum supported macOS version")
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS target architectures")
 
-project(MetasequoiaImeMac VERSION 0.2.0 LANGUAGES CXX OBJCXX) # x-release-please-version
+project(MetasequoiaImeMac VERSION 0.3.0 LANGUAGES CXX OBJCXX) # x-release-please-version
 
 include(CTest)
 
@@ -54,5 +54,6 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
     add_custom_target(MetasequoiaIMESign ALL COMMAND /usr/bin/codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:MetasequoiaIME>" DEPENDS MetasequoiaIME VERBATIM)
     if(BUILD_TESTING)
         add_test(NAME release_package COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/ReleasePackageTests.py $<TARGET_BUNDLE_DIR:MetasequoiaIME>)
+        set_tests_properties(release_package PROPERTIES TIMEOUT 120)
     endif()
 endif()
