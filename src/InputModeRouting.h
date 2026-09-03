@@ -12,6 +12,11 @@ inline bool IsInputModeToggle(unsigned short keyCode, NSEventModifierFlags modif
     return keyCode == kVK_Space && (modifiers & NSEventModifierFlagShift) != 0 && competingModifiers == 0;
 }
 
+inline bool ShouldToggleInputMode(bool shortcutEnabled, unsigned short keyCode, NSEventModifierFlags modifiers)
+{
+    return shortcutEnabled && IsInputModeToggle(keyCode, modifiers);
+}
+
 inline bool ShouldPrepareInputSession(bool englishMode)
 {
     return !englishMode;

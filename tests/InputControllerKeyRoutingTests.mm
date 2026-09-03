@@ -45,6 +45,9 @@ int main()
                 !IsInputModeToggle(kVK_ANSI_A, NSEventModifierFlagShift) &&
                 !IsInputModeToggle(kVK_Space, NSEventModifierFlagShift | NSEventModifierFlagCommand),
             "A non-toggle shortcut unexpectedly mapped to input-mode switching.");
+    require(metasequoia::mac::ShouldToggleInputMode(true, kVK_Space, NSEventModifierFlagShift) &&
+                !metasequoia::mac::ShouldToggleInputMode(false, kVK_Space, NSEventModifierFlagShift),
+            "The input-mode shortcut preference did not gate Shift+Space.");
     require(metasequoia::mac::ShouldPrepareInputSession(false) &&
                 !metasequoia::mac::ShouldPrepareInputSession(true),
             "Direct English mode did not bypass input-session preparation.");

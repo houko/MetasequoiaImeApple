@@ -18,6 +18,7 @@ NSString * const kCandidatePageSizePreferenceKey = @"MetasequoiaImeCandidatePage
 NSString * const kCandidateFontSizePreferenceKey = @"MetasequoiaImeCandidateFontSize";
 NSString * const kCandidateLearningPreferenceKey = @"MetasequoiaImeCandidateLearning";
 NSString * const kEnglishInputModePreferenceKey = @"MetasequoiaImeEnglishInputMode";
+NSString * const kInputModeShortcutPreferenceKey = @"MetasequoiaImeInputModeShortcutEnabled";
 
 NSColor *MetasequoiaBrandColor()
 {
@@ -53,6 +54,7 @@ void ConfigureCard(NSBox *card)
     NSPopUpButton *_candidatePageSizeButton;
     NSPopUpButton *_candidateFontSizeButton;
     NSButton *_candidateLearningButton;
+    NSButton *_inputModeShortcutButton;
     NSTextField *_statusLabel;
 }
 
@@ -186,6 +188,19 @@ void ConfigureCard(NSBox *card)
 {
     [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kEnglishInputModePreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaEnglishInputModeDidChangeNotification"
+                                                        object:@(enabled)];
+}
+
++ (BOOL)storedInputModeShortcutEnabled
+{
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:kInputModeShortcutPreferenceKey];
+    return value == nil ? YES : [value boolValue];
+}
+
++ (void)setInputModeShortcutEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kInputModeShortcutPreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaInputModeShortcutDidChangeNotification"
                                                         object:@(enabled)];
 }
 
@@ -344,6 +359,12 @@ void ConfigureCard(NSBox *card)
     _candidateLearningButton = [NSButton checkboxWithTitle:@"记住候选词频" target:self action:@selector(candidateLearningChanged:)];
     _candidateLearningButton.translatesAutoresizingMaskIntoConstraints = NO;
 
+    _inputModeShortcutButton = [NSButton checkboxWithTitle:@"Shift+Space 切换中英文"
+                                                    target:self
+                                                    action:@selector(inputModeShortcutChanged:)];
+    _inputModeShortcutButton.accessibilityLabel = @"Shift+Space 切换中英文";
+    _inputModeShortcutButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     _statusLabel = [NSTextField labelWithString:@"检查词库状态…"];
     _statusLabel.accessibilityLabel = @"词库状态";
     _statusLabel.textColor = [NSColor secondaryLabelColor];
@@ -388,6 +409,7 @@ void ConfigureCard(NSBox *card)
     [behaviorCard addSubview:_autocorrectButton];
     [behaviorCard addSubview:_helpcodeButton];
     [behaviorCard addSubview:_chinesePunctuationButton];
+    [behaviorCard addSubview:_inputModeShortcutButton];
     [behaviorCard addSubview:_candidateLearningButton];
     [settingsPanel addSubview:_statusLabel];
     [settingsPanel addSubview:restoreButton];
@@ -457,11 +479,13 @@ void ConfigureCard(NSBox *card)
         [_autocorrectButton.leadingAnchor constraintEqualToAnchor:behaviorCard.leadingAnchor constant:18.0],
         [_autocorrectButton.topAnchor constraintEqualToAnchor:behaviorCard.topAnchor constant:16.0],
         [_helpcodeButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
-        [_helpcodeButton.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:12.0],
+        [_helpcodeButton.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:8.0],
         [_chinesePunctuationButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
-        [_chinesePunctuationButton.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:12.0],
+        [_chinesePunctuationButton.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:8.0],
+        [_inputModeShortcutButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
+        [_inputModeShortcutButton.topAnchor constraintEqualToAnchor:_chinesePunctuationButton.bottomAnchor constant:8.0],
         [_candidateLearningButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
-        [_candidateLearningButton.topAnchor constraintEqualToAnchor:_chinesePunctuationButton.bottomAnchor constant:12.0],
+        [_candidateLearningButton.topAnchor constraintEqualToAnchor:_inputModeShortcutButton.bottomAnchor constant:8.0],
         [_statusLabel.topAnchor constraintEqualToAnchor:behaviorCard.bottomAnchor constant:12.0],
         [_statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [_statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
@@ -488,6 +512,7 @@ void ConfigureCard(NSBox *card)
     [_candidateFontSizeButton selectItemAtIndex:static_cast<NSInteger>(metasequoia::mac::CandidateFontSizeOptionIndex(
                                                         static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidateFontSize])))];
     _candidateLearningButton.state = [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+    _inputModeShortcutButton.state = [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
 }
 
 - (void)refreshDictionaryStatus
@@ -568,6 +593,12 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:button.state == NSControlStateValueOn];
 }
 
+- (void)inputModeShortcutChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:button.state == NSControlStateValueOn];
+}
+
 - (void)restoreDefaults:(id)sender
 {
     (void)sender;
@@ -579,6 +610,7 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setCandidatePageSize:9];
     [MetasequoiaPreferencesWindowController setCandidateFontSize:18];
     [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:YES];
+    [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:YES];
     [self refreshControls];
 }
 
