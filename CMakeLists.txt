@@ -56,6 +56,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
     configure_file(licenses/fmt-LICENSE ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt COPYONLY)
     configure_file(licenses/spdlog-LICENSE ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt COPYONLY)
 
+    set(METASEQUOIA_IME_ICON resources/MetasequoiaIME.icns)
     set(METASEQUOIA_IME_LOCALIZATIONS resources/en.lproj/InfoPlist.strings resources/zh-Hans.lproj/InfoPlist.strings)
     set(METASEQUOIA_IME_LEGAL_RESOURCES
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/GPL-3.0.txt
@@ -64,8 +65,9 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Boost-1.0.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt)
-    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/MetasequoiaInputController.mm src/PreferencesWindowController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES})
+    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/MetasequoiaInputController.mm src/PreferencesWindowController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICON} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES})
     set_source_files_properties(${METASEQUOIA_IME_DICTIONARY} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_source_files_properties(${METASEQUOIA_IME_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(resources/en.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/en.lproj)
     set_source_files_properties(resources/zh-Hans.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/zh-Hans.lproj)
     set_source_files_properties(${METASEQUOIA_IME_LEGAL_RESOURCES}
