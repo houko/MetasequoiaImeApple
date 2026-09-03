@@ -2,8 +2,11 @@
 
 #import <AppKit/AppKit.h>
 
+FOUNDATION_EXPORT NSNotificationName const MetasequoiaWillResetLearnedDataNotification;
+
 @interface MetasequoiaPreferencesWindowController : NSWindowController
 + (instancetype)sharedController;
++ (void)prepareInputSessionsForLearnedDataReset;
 + (NSInteger)storedScheme;
 + (void)setStoredScheme:(NSInteger)scheme;
 + (BOOL)storedAutocorrectEnabled;

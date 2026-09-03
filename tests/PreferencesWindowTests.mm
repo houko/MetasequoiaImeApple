@@ -34,6 +34,23 @@ NSView *FindViewWithAccessibilityLabel(NSView *view, NSString *label)
     }
     return nil;
 }
+
+NSButton *FindButtonWithTitle(NSView *view, NSString *title)
+{
+    if ([view isKindOfClass:[NSButton class]] && [((NSButton *)view).title isEqualToString:title])
+    {
+        return (NSButton *)view;
+    }
+    for (NSView *subview in view.subviews)
+    {
+        NSButton *match = FindButtonWithTitle(subview, title);
+        if (match != nil)
+        {
+            return match;
+        }
+    }
+    return nil;
+}
 } // namespace
 
 int main()
@@ -112,6 +129,51 @@ int main()
         NSButton *shortcutButton = (NSButton *)shortcutView;
         require(shortcutButton.state == NSControlStateValueOff,
                 "The input-mode shortcut control did not reflect the stored disabled value.");
+
+        NSView *resetLearningView = FindViewWithAccessibilityLabel(controller.window.contentView,
+                                                                   @"清除学习数据");
+        require([resetLearningView isKindOfClass:[NSButton class]],
+                "The settings window did not expose the learned-data reset button.");
+        NSButton *resetLearningButton = (NSButton *)resetLearningView;
+
+        __block bool resetStartedAfterCancel = false;
+        id cancelObserver = [[NSNotificationCenter defaultCenter]
+            addObserverForName:MetasequoiaWillResetLearnedDataNotification
+                        object:nil
+                         queue:nil
+                    usingBlock:^(NSNotification *notification) {
+                        (void)notification;
+                        resetStartedAfterCancel = true;
+                    }];
+        [resetLearningButton performClick:nil];
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+        NSWindow *confirmationSheet = controller.window.attachedSheet;
+        require(confirmationSheet != nil, "The learned-data reset button did not present a confirmation sheet.");
+        NSButton *cancelResetButton = FindButtonWithTitle(confirmationSheet.contentView, @"取消");
+        NSButton *confirmResetButton = FindButtonWithTitle(confirmationSheet.contentView, @"清除");
+        require(cancelResetButton != nil && confirmationSheet.defaultButtonCell == cancelResetButton.cell,
+                "The learned-data reset confirmation did not make cancellation the default action.");
+        require(confirmResetButton != nil && confirmResetButton.hasDestructiveAction,
+                "The learned-data reset confirmation did not mark the clear action as destructive.");
+        [cancelResetButton performClick:nil];
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+        [[NSNotificationCenter defaultCenter] removeObserver:cancelObserver];
+        require(!resetStartedAfterCancel && controller.window.attachedSheet == nil,
+                "Cancelling the learned-data reset started destructive work.");
+
+        __block bool resetNotificationReceived = false;
+        id resetObserver = [[NSNotificationCenter defaultCenter]
+            addObserverForName:MetasequoiaWillResetLearnedDataNotification
+                        object:nil
+                         queue:nil
+                    usingBlock:^(NSNotification *notification) {
+                        (void)notification;
+                        resetNotificationReceived = true;
+                    }];
+        [MetasequoiaPreferencesWindowController prepareInputSessionsForLearnedDataReset];
+        [[NSNotificationCenter defaultCenter] removeObserver:resetObserver];
+        require(resetNotificationReceived,
+                "The learned-data reset did not synchronously request input-session quiescence.");
 
         [styleButton selectItemAtIndex:0];
         require([NSApp sendAction:styleButton.action to:styleButton.target from:styleButton],

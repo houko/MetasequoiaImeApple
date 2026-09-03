@@ -90,8 +90,32 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         {
             [self prepareSessionIfNeeded];
         }
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(prepareForLearnedDataReset:)
+                                                     name:MetasequoiaWillResetLearnedDataNotification
+                                                   object:nil];
     }
     return self;
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)prepareForLearnedDataReset:(NSNotification *)notification
+{
+    (void)notification;
+    [self commitLeadingCandidate:self.client];
+    _session.reset();
+    _candidateSelection.reset();
+    _candidateHighlightedIndex = 0;
+    _candidatePageStart = 0;
+    _candidateLineIdentifiersCollapsed = NO;
+    _candidateData = @[];
+    [_candidatePanel setCandidateData:_candidateData];
+    [_candidatePanel hide];
+    _dictionaryRetryAfter = 0.0;
 }
 
 - (void)reloadSessionFromPreferences
