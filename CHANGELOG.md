@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.6](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.5...v0.20.6) (2026-09-03)
+
+
+### Bug Fixes
+
+* **dictionary:** validate bundled database before upgrade ([#104](https://github.com/houko/MetasequoiaImeMac/issues/104)) ([e9dc8e9](https://github.com/houko/MetasequoiaImeMac/commit/e9dc8e94d3648f96955f3345c046a349d1d3c0ee))
+
 ## [0.20.5](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.4...v0.20.5) (2026-09-03)
 
 
