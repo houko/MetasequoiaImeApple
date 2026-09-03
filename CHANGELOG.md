@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.3](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.2...v0.20.3) (2026-09-03)
+
+
+### Bug Fixes
+
+* **settings:** restore evolving defaults ([#98](https://github.com/houko/MetasequoiaImeMac/issues/98)) ([4ffe027](https://github.com/houko/MetasequoiaImeMac/commit/4ffe027b0050f01e0b507f11edb7356523886426))
+
 ## [0.20.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.1...v0.20.2) (2026-09-03)
 
 
