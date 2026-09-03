@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.2.0...v0.3.0) (2026-09-03)
+
+
+### Features
+
+* **release:** publish macOS installer package ([c8d524f](https://github.com/houko/MetasequoiaImeMac/commit/c8d524fcc94c42c525ecb6493c25a2fa537dda7d))
+* **settings:** add macOS input method preferences panel ([ec8da28](https://github.com/houko/MetasequoiaImeMac/commit/ec8da289ebd3ecfbda179ebf0c13e1029dfa429f))
+
 ## [0.2.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.1.0...v0.2.0) (2026-09-03)
 
 
