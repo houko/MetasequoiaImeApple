@@ -72,6 +72,34 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Validate release credentials
+        env:
+          MACOS_DEVELOPER_ID_CERTIFICATE_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          MACOS_SIGNING_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_SIGNING_KEYCHAIN_PASSWORD }}
+          MACOS_NOTARY_APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
+          MACOS_NOTARY_TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
+          MACOS_NOTARY_APP_SPECIFIC_PASSWORD: ${{ secrets.MACOS_NOTARY_APP_SPECIFIC_PASSWORD }}
+          MACOS_DEVELOPER_ID_APPLICATION: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION }}
+          MACOS_DEVELOPER_ID_INSTALLER: ${{ secrets.MACOS_DEVELOPER_ID_INSTALLER }}
+        run: |
+          set -euo pipefail
+          required_secrets=(
+            MACOS_DEVELOPER_ID_CERTIFICATE_BASE64
+            MACOS_DEVELOPER_ID_CERTIFICATE_PASSWORD
+            MACOS_SIGNING_KEYCHAIN_PASSWORD
+            MACOS_NOTARY_APPLE_ID
+            MACOS_NOTARY_TEAM_ID
+            MACOS_NOTARY_APP_SPECIFIC_PASSWORD
+            MACOS_DEVELOPER_ID_APPLICATION
+            MACOS_DEVELOPER_ID_INSTALLER
+          )
+          for required in "${required_secrets[@]}"; do
+            if [[ -z "${!required}" ]]; then
+              echo "Missing required GitHub Actions secret: $required" >&2
+              exit 1
+            fi
+          done
       - name: Check out release tag
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -92,12 +120,6 @@ jobs:
           NOTARY_PASSWORD: ${{ secrets.MACOS_NOTARY_APP_SPECIFIC_PASSWORD }}
         run: |
           set -euo pipefail
-          for required in CERTIFICATE_BASE64 CERTIFICATE_PASSWORD KEYCHAIN_PASSWORD NOTARY_APPLE_ID NOTARY_TEAM_ID NOTARY_PASSWORD; do
-            if [[ -z "${!required}" ]]; then
-              echo "Missing required release signing secret: $required" >&2
-              exit 1
-            fi
-          done
           keychain="$RUNNER_TEMP/metasequoia-signing.keychain-db"
           certificate="$RUNNER_TEMP/metasequoia-developer-id.p12"
           echo "$CERTIFICATE_BASE64" | base64 -D > "$certificate"

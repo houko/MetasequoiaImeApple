@@ -30,6 +30,29 @@ class ReleasePackageTests(unittest.TestCase):
         self.assertTrue(dictionary.is_file())
         self.assertEqual(dictionary_fingerprint, sha256_file(dictionary))
 
+        executable = bundle / "Contents/MacOS/MetasequoiaIME"
+        for architecture in ("arm64", "x86_64"):
+            dependencies = subprocess.run(
+                ["otool", "-arch", architecture, "-L", executable],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.splitlines()[1:]
+            for dependency in dependencies:
+                library = dependency.strip().split(" (", 1)[0]
+                self.assertTrue(
+                    library.startswith(("/System/Library/", "/usr/lib/", "@")),
+                    f"{architecture} has a non-portable dependency: {library}",
+                )
+
+            build_version = subprocess.run(
+                ["vtool", "-arch", architecture, "-show-build", executable],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+            self.assertRegex(build_version, r"(?m)^\s*minos 12\.0$")
+
         with tempfile.TemporaryDirectory() as temporary_directory:
             output = Path(temporary_directory) / "output"
             subprocess.run([PROJECT_ROOT / "scripts/package_release.sh", f"v{version}", bundle, output], check=True)
