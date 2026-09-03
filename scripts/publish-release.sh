@@ -30,6 +30,32 @@ if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
+archive="$dist_dir/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX.zip"
+installer="$dist_dir/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX.pkg"
+for artifact in "$installer" "$installer.sha256" "$archive" "$archive.sha256"; do
+    if [[ ! -f "$artifact" ]]; then
+        printf 'Release artifact is missing: %s\n' "$artifact" >&2
+        exit 1
+    fi
+done
+(
+    cd "$dist_dir"
+    verify_checksum_manifest() {
+        local artifact_name=$1
+        local manifest_name=$2
+        local expected_line
+        local manifest_line
+        expected_line=$(shasum -a 256 "$artifact_name")
+        manifest_line=$(command cat "$manifest_name")
+        if [[ "$manifest_line" != "$expected_line" ]]; then
+            printf 'Release checksum verification FAILED for %s.\n' "$artifact_name" >&2
+            return 1
+        fi
+    }
+    verify_checksum_manifest "$(basename "$installer")" "$(basename "$installer.sha256")"
+    verify_checksum_manifest "$(basename "$archive")" "$(basename "$archive.sha256")"
+)
+
 mode_marker="<!-- metasequoia-release-mode:$release_mode -->"
 opposite_marker="<!-- metasequoia-release-mode:$opposite_mode -->"
 current_notes=$(gh release view "$TAG_NAME" --repo "$GH_REPO" --json body --jq '.body // ""')
@@ -51,15 +77,6 @@ if [[ "$current_notes" != *"$mode_marker"* ]]; then
     } > "$release_notes"
     gh release edit "$TAG_NAME" --repo "$GH_REPO" --notes-file "$release_notes"
 fi
-
-archive="$dist_dir/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX.zip"
-installer="$dist_dir/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX.pkg"
-for artifact in "$installer" "$installer.sha256" "$archive" "$archive.sha256"; do
-    if [[ ! -f "$artifact" ]]; then
-        printf 'Release artifact is missing: %s\n' "$artifact" >&2
-        exit 1
-    fi
-done
 
 gh release upload "$TAG_NAME" --repo "$GH_REPO" "$installer" "$installer.sha256" "$archive" "$archive.sha256" --clobber
 gh release edit "$TAG_NAME" --repo "$GH_REPO" --draft=false
