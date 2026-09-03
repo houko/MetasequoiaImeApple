@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.11](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.10...v0.20.11) (2026-09-03)
+
+
+### Bug Fixes
+
+* **uninstall:** serialize with installation ([#114](https://github.com/houko/MetasequoiaImeMac/issues/114)) ([59efe20](https://github.com/houko/MetasequoiaImeMac/commit/59efe20c1fc60dad0a25b3e9d0ed6f8d51d7039b))
+
 ## [0.20.10](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.9...v0.20.10) (2026-09-03)
 
 
