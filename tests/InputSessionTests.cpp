@@ -115,6 +115,22 @@ int main()
         require(composed_punctuation.handled && composed_punctuation.commit == "你好，", "Punctuation did not commit the candidate atomically.");
         const auto idle_punctuation = session.handle_punctuation('.');
         require(idle_punctuation.handled && idle_punctuation.commit == "。", "Idle Chinese punctuation was not converted.");
+        require(session.handle_punctuation('"').commit == "“" && session.handle_punctuation('"').commit == "”",
+                "Double quotes did not alternate between opening and closing Chinese quotes.");
+        require(session.handle_punctuation('\'').commit == "‘" && session.handle_punctuation('\'').commit == "’",
+                "Single quotes did not alternate between opening and closing Chinese quotes.");
+        require(session.handle_punctuation('(').commit == "（" && session.handle_punctuation(')').commit == "）",
+                "Parentheses were not converted to Chinese punctuation.");
+        require(session.handle_punctuation('[').commit == "【" && session.handle_punctuation(']').commit == "】",
+                "Square brackets were not converted to Chinese punctuation.");
+        require(session.handle_punctuation('<').commit == "《" && session.handle_punctuation('>').commit == "》",
+                "Book-title brackets were not converted to Chinese punctuation.");
+        require(session.handle_punctuation('\\').commit == "、", "The enumeration comma was not converted.");
+
+        type(session, "ni");
+        require(session.handle_character('\'').handled && session.preedit() == "ni'",
+                "An apostrophe inside composition was not retained as a pinyin delimiter.");
+        session.handle_command(metasequoia::mac::Command::Cancel);
 
         type(session, "nihao");
         const auto digit = session.handle_candidate_key('2');
