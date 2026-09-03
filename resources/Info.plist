@@ -8,6 +8,8 @@
     <string>水杉输入法</string>
     <key>CFBundleExecutable</key>
     <string>MetasequoiaIME</string>
+    <key>CFBundleIconFile</key>
+    <string>MetasequoiaIME.icns</string>
     <key>CFBundleIdentifier</key>
     <string>com.houko.inputmethod.MetasequoiaIME</string>
     <key>CFBundleInfoDictionaryVersion</key>
@@ -30,6 +32,10 @@
                 <string>com.houko.inputmethod.MetasequoiaIME.Hans</string>
                 <key>TISIntendedLanguage</key>
                 <string>zh-Hans</string>
+                <key>tsInputModeMenuIconFileKey</key>
+                <string>MetasequoiaIME.icns</string>
+                <key>tsInputModePaletteIconFileKey</key>
+                <string>MetasequoiaIME.icns</string>
                 <key>tsInputModeCharacterRepertoireKey</key>
                 <array>
                     <string>Hans</string>
@@ -75,5 +81,7 @@
     <array>
         <string>Hans</string>
     </array>
+    <key>tsInputMethodIconFileKey</key>
+    <string>MetasequoiaIME.icns</string>
 </dict>
 </plist>

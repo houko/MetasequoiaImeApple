@@ -26,9 +26,26 @@ class ReleasePackageTests(unittest.TestCase):
         version = subprocess.run(["/usr/libexec/PlistBuddy", "-c", "Print :CFBundleShortVersionString", bundle / "Contents/Info.plist"], check=True, capture_output=True, text=True).stdout.strip()
         dictionary = bundle / "Contents/Resources/msime.db"
         with (bundle / "Contents/Info.plist").open("rb") as info_file:
-            dictionary_fingerprint = plistlib.load(info_file)["MetasequoiaDictionarySHA256"]
+            bundle_info = plistlib.load(info_file)
+            dictionary_fingerprint = bundle_info["MetasequoiaDictionarySHA256"]
         self.assertTrue(dictionary.is_file())
         self.assertEqual(dictionary_fingerprint, sha256_file(dictionary))
+
+        icon_name = "MetasequoiaIME.icns"
+        input_mode = bundle_info["ComponentInputModeDict"]["tsInputModeListKey"][
+            "com.houko.inputmethod.MetasequoiaIME.Hans"
+        ]
+        self.assertEqual(bundle_info["CFBundleIconFile"], icon_name)
+        self.assertEqual(bundle_info["tsInputMethodIconFileKey"], icon_name)
+        self.assertEqual(input_mode["tsInputModeMenuIconFileKey"], icon_name)
+        self.assertEqual(input_mode["tsInputModePaletteIconFileKey"], icon_name)
+        icon = bundle / "Contents/Resources" / icon_name
+        self.assertTrue(icon.is_file())
+        with tempfile.TemporaryDirectory() as icon_directory:
+            iconset = Path(icon_directory) / "MetasequoiaIME.iconset"
+            subprocess.run(["iconutil", "--convert", "iconset", "--output", iconset, icon], check=True)
+            self.assertTrue((iconset / "icon_16x16.png").is_file())
+            self.assertTrue((iconset / "icon_128x128@2x.png").is_file())
 
         executable = bundle / "Contents/MacOS/MetasequoiaIME"
         for architecture in ("arm64", "x86_64"):
