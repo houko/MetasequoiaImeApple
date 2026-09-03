@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.17.0...v0.18.0) (2026-09-03)
+
+
+### Features
+
+* **dictionary:** reset learned data safely ([#68](https://github.com/houko/MetasequoiaImeMac/issues/68)) ([d0ab07d](https://github.com/houko/MetasequoiaImeMac/commit/d0ab07dbf194c90d51a7f7b1945c86ac91248eeb))
+
 ## [0.17.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.16.0...v0.17.0) (2026-09-03)
 
 
