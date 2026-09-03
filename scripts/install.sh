@@ -1,9 +1,19 @@
 #!/bin/zsh
 set -euo pipefail
 
+if [[ -z ${HOME:-} || "$HOME" != /* ]]; then
+    print -u2 "HOME must be an absolute current-user directory."
+    exit 1
+fi
+home_directory=${HOME:A}
+if [[ "$home_directory" == / ]]; then
+    print -u2 "HOME must be an absolute current-user directory."
+    exit 1
+fi
+
 project_root=${0:A:h:h}
 source_bundle="$project_root/build/MetasequoiaIME.app"
-destination_root="$HOME/Library/Input Methods"
+destination_root="$home_directory/Library/Input Methods"
 destination_bundle="$destination_root/MetasequoiaIME.app"
 
 if [[ ! -d "$source_bundle" ]]; then
