@@ -2,6 +2,7 @@
 
 #import "DictionaryInstaller.h"
 #import "PreferencesWindowController.h"
+#include "CandidateSelectionState.h"
 #include "InputControllerKeyRouting.h"
 #include "InputSession.h"
 
@@ -47,6 +48,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 @implementation MetasequoiaInputController
 {
     std::unique_ptr<metasequoia::mac::InputSession> _session;
+    metasequoia::mac::CandidateSelectionState _candidateSelection;
     IMKCandidates *_candidatePanel;
     NSArray *_candidateData;
 }
@@ -120,21 +122,27 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     case metasequoia::mac::ControllerKeyAction::ConsumeCandidateKey:
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateLeft:
+        _candidateSelection.begin_navigation();
         [_candidatePanel moveLeft:self];
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateRight:
+        _candidateSelection.begin_navigation();
         [_candidatePanel moveRight:self];
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateUp:
+        _candidateSelection.begin_navigation();
         [_candidatePanel moveUp:self];
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateDown:
+        _candidateSelection.begin_navigation();
         [_candidatePanel moveDown:self];
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidatePageUp:
+        _candidateSelection.begin_navigation();
         [_candidatePanel pageUp:self];
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidatePageDown:
+        _candidateSelection.begin_navigation();
         [_candidatePanel pageDown:self];
         return YES;
     case metasequoia::mac::ControllerKeyAction::Backspace:
@@ -147,7 +155,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         result = _session->handle_command(metasequoia::mac::Command::Cancel);
         break;
     case metasequoia::mac::ControllerKeyAction::CommitCandidate:
-        result = _session->handle_command(metasequoia::mac::Command::CommitCandidate);
+        result = _candidateSelection.commit(*_session);
         break;
     case metasequoia::mac::ControllerKeyAction::Character:
     {
@@ -212,6 +220,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     if (result.commit.has_value())
     {
         [client insertText:StringFromUtf8(*result.commit) replacementRange:replacementRange];
+        _candidateSelection.reset();
         [_candidatePanel hide];
         return;
     }
@@ -223,6 +232,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 
 - (void)updateCandidatePanel
 {
+    _candidateSelection.reset();
     NSMutableArray *data = [NSMutableArray arrayWithCapacity:_session->candidates().size()];
     for (const WordItem &candidate : _session->candidates())
     {
@@ -244,6 +254,15 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 {
     (void)sender;
     return _candidateData != nil ? _candidateData : @[];
+}
+
+- (void)candidateSelectionChanged:(NSAttributedString *)candidateString
+{
+    const char *utf8 = candidateString.string.UTF8String;
+    if (utf8 != nullptr)
+    {
+        _candidateSelection.update(utf8);
+    }
 }
 
 - (void)candidateSelected:(NSAttributedString *)candidateString

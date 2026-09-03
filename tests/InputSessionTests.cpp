@@ -1,4 +1,5 @@
 #include "../src/InputSession.h"
+#include "../src/CandidateSelectionState.h"
 #include "../vendor/MetasequoiaImeEngine/core/data_path.h"
 
 #include <sqlite3.h>
@@ -140,6 +141,43 @@ int main()
         type(learned_session, "nihao");
         require(!learned_session.candidates().empty() && learned_session.candidates().front().word == "拟好",
                 "Selecting a candidate did not promote it for the next matching input.");
+
+        metasequoia::mac::CandidateSelectionState candidate_selection;
+        metasequoia::mac::InputSession unarmed_selection_session;
+        type(unarmed_selection_session, "nihao");
+        const std::string initial_leading_candidate = unarmed_selection_session.candidates().front().word;
+        candidate_selection.update(unarmed_selection_session.candidates()[1].word);
+        const auto initial_selection = candidate_selection.commit(unarmed_selection_session);
+        require(initial_selection.handled && initial_selection.commit == initial_leading_candidate,
+                "An unsolicited candidate selection callback replaced the leading candidate.");
+
+        metasequoia::mac::InputSession highlighted_session;
+        type(highlighted_session, "nihao");
+        const std::string highlighted_candidate = highlighted_session.candidates()[1].word;
+        candidate_selection.begin_navigation();
+        candidate_selection.update(highlighted_candidate);
+        const auto highlighted = candidate_selection.commit(highlighted_session);
+        require(highlighted.handled && highlighted.commit == highlighted_candidate,
+                "Space did not commit the candidate highlighted by the native panel.");
+
+        metasequoia::mac::InputSession leading_session;
+        type(leading_session, "nihao");
+        const std::string leading_candidate = leading_session.candidates().front().word;
+        candidate_selection.begin_navigation();
+        candidate_selection.update(leading_session.candidates()[1].word);
+        candidate_selection.reset();
+        const auto leading = candidate_selection.commit(leading_session);
+        require(leading.handled && leading.commit == leading_candidate,
+                "Clearing the native highlight did not restore leading-candidate commit.");
+
+        metasequoia::mac::InputSession stale_selection_session;
+        type(stale_selection_session, "nihao");
+        const std::string stale_fallback_candidate = stale_selection_session.candidates().front().word;
+        candidate_selection.begin_navigation();
+        candidate_selection.update("candidate-from-an-old-composition");
+        const auto stale_fallback = candidate_selection.commit(stale_selection_session);
+        require(stale_fallback.handled && stale_fallback.commit == stale_fallback_candidate,
+                "A stale native highlight did not fall back to the leading candidate.");
 
         type(session, "nihao");
         const auto out_of_range_digit = session.handle_candidate_key('9');
