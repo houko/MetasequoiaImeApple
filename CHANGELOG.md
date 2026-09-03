@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.7...v0.20.0) (2026-09-03)
+
+
+### Features
+
+* **release:** add recoverable uninstall workflow ([#90](https://github.com/houko/MetasequoiaImeMac/issues/90)) ([7fe823c](https://github.com/houko/MetasequoiaImeMac/commit/7fe823c5bc989f050a099e3cb64b503fb34c244b))
+
 ## [0.19.7](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.6...v0.19.7) (2026-09-03)
 
 
