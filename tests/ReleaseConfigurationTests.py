@@ -80,6 +80,11 @@ class ReleaseConfigurationTests(unittest.TestCase):
         input_controller = (PROJECT_ROOT / "src/MetasequoiaInputController.mm").read_text()
         self.assertIn("reloadSessionFromPreferences", input_controller)
         self.assertIn("- (void)activateServer:(id)sender", input_controller)
+        commit_composition = input_controller.split("- (void)commitComposition:(id)sender", 1)[1].split(
+            "- (void)deactivateServer:(id)sender", 1
+        )[0]
+        self.assertIn("commitLeadingCandidate", commit_composition)
+        self.assertNotIn("Command::CommitRaw", commit_composition)
         self.assertIn("next input-method activation", readme)
 
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
