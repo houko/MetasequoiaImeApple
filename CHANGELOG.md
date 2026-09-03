@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.8](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.7...v0.20.8) (2026-09-03)
+
+
+### Bug Fixes
+
+* **install:** clean partial temporary setup ([#108](https://github.com/houko/MetasequoiaImeMac/issues/108)) ([36e1b89](https://github.com/houko/MetasequoiaImeMac/commit/36e1b89575d6b212e48742958f99b4395d127f1a))
+
 ## [0.20.7](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.6...v0.20.7) (2026-09-03)
 
 
