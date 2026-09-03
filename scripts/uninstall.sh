@@ -1,7 +1,12 @@
 #!/bin/zsh
 set -euo pipefail
 
-if [[ -z ${HOME:-} || "$HOME" != /* || "$HOME" == / ]]; then
+if [[ -z ${HOME:-} || "$HOME" != /* ]]; then
+    print -u2 "HOME must be an absolute current-user directory."
+    exit 1
+fi
+home_directory=${HOME:A}
+if [[ "$home_directory" == / ]]; then
     print -u2 "HOME must be an absolute current-user directory."
     exit 1
 fi
@@ -19,10 +24,10 @@ if (( $# == 1 )); then
     remove_user_data=true
 fi
 
-installed_bundle="$HOME/Library/Input Methods/MetasequoiaIME.app"
-user_data="$HOME/Library/Application Support/metasequoiaime"
+installed_bundle="$home_directory/Library/Input Methods/MetasequoiaIME.app"
+user_data="$home_directory/Library/Application Support/metasequoiaime"
 preferences_domain="com.houko.inputmethod.MetasequoiaIME"
-preferences_file="$HOME/Library/Preferences/$preferences_domain.plist"
+preferences_file="$home_directory/Library/Preferences/$preferences_domain.plist"
 defaults_command=${METASEQUOIA_DEFAULTS_COMMAND:-/usr/bin/defaults}
 
 path_exists() {
@@ -94,7 +99,7 @@ if ! path_exists "$installed_bundle" &&
     exit 0
 fi
 
-trash_root="$HOME/.Trash"
+trash_root="$home_directory/.Trash"
 mkdir -p "$trash_root"
 recovery_root=$(mktemp -d "$trash_root/MetasequoiaIME-uninstall.XXXXXX")
 trashed_bundle="$recovery_root/MetasequoiaIME.app"
