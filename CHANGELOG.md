@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.6](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.5...v0.19.6) (2026-09-03)
+
+
+### Bug Fixes
+
+* **release:** preserve assets on packaging failure ([#83](https://github.com/houko/MetasequoiaImeMac/issues/83)) ([cfa43a6](https://github.com/houko/MetasequoiaImeMac/commit/cfa43a6aba44ef9afa94800ac9e0259caf9f44d2))
+
 ## [0.19.5](https://github.com/houko/MetasequoiaImeMac/compare/v0.19.4...v0.19.5) (2026-09-03)
 
 
