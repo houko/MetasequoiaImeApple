@@ -59,6 +59,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("requires administrator privileges", readme)
         self.assertNotIn("upgrades the current user's copy in `~/Library/Input Methods`", readme)
         self.assertIn("InputMethodServerPreferencesWindowControllerClass", info_plist)
+        self.assertIn("@METASEQUOIA_IME_DICTIONARY_SHA256@", info_plist)
+        self.assertIn('file(SHA256 "${METASEQUOIA_IME_DICTIONARY}" METASEQUOIA_IME_DICTIONARY_SHA256)', cmake)
         self.assertIn("PreferencesWindowController.mm", cmake)
         preferences_controller = (PROJECT_ROOT / "src/PreferencesWindowController.mm").read_text()
         self.assertIn("initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner", preferences_controller)
