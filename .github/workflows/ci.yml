@@ -13,9 +13,11 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
+      - name: Remove unused runner taps
+        run: if brew tap | grep -Fxq aws/tap; then brew untap aws/tap; fi
       - name: Install dependencies
         run: brew install boost fmt spdlog
       - name: Create test dictionary
