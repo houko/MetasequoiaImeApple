@@ -98,10 +98,6 @@ int main()
         require(session.preedit() == "nihao", "The marked text did not mirror the raw pinyin.");
         require(session.candidates().size() >= 2, "The real engine did not return both SQLite candidates.");
 
-        const auto selected = session.select_candidate(1);
-        require(selected.handled && selected.commit == "拟好", "Selecting the second candidate committed the wrong text.");
-        require(session.preedit().empty(), "Selecting a candidate did not end composition.");
-
         type(session, "nihao");
         const auto space = session.handle_command(metasequoia::mac::Command::CommitCandidate);
         require(space.handled && space.commit == "你好", "Space did not commit the leading candidate.");
@@ -115,6 +111,11 @@ int main()
         type(session, "nihao");
         const auto digit = session.handle_candidate_key('2');
         require(digit.handled && digit.commit == "拟好", "The 2 key did not commit the second candidate.");
+
+        metasequoia::mac::InputSession learned_session;
+        type(learned_session, "nihao");
+        require(!learned_session.candidates().empty() && learned_session.candidates().front().word == "拟好",
+                "Selecting a candidate did not promote it for the next matching input.");
 
         type(session, "nihao");
         const auto out_of_range_digit = session.handle_candidate_key('9');

@@ -44,6 +44,7 @@ class InputSession
 
   private:
     KeyResult commit(size_t index);
+    void learn_candidate(const WordItem &candidate);
 
     ImeSession engine_;
     bool quanpin_autocorrect_enabled_ = true;

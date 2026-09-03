@@ -72,7 +72,16 @@ KeyResult InputSession::handle_punctuation(char character)
     std::string text;
     if (has_composition())
     {
-        text = candidates().empty() ? preedit() : candidates().front().word;
+        if (candidates().empty())
+        {
+            text = preedit();
+        }
+        else
+        {
+            const WordItem candidate = candidates().front();
+            text = candidate.word;
+            learn_candidate(candidate);
+        }
         engine_.reset();
     }
     text += punctuation;
@@ -162,8 +171,28 @@ const std::vector<WordItem> &InputSession::candidates() const
 
 KeyResult InputSession::commit(size_t index)
 {
-    std::string text = index < candidates().size() ? candidates()[index].word : preedit();
+    if (index >= candidates().size())
+    {
+        std::string text = preedit();
+        engine_.reset();
+        return {true, std::move(text)};
+    }
+
+    const WordItem candidate = candidates()[index];
+    std::string text = candidate.word;
+    learn_candidate(candidate);
     engine_.reset();
     return {true, std::move(text)};
+}
+
+void InputSession::learn_candidate(const WordItem &candidate)
+{
+    if (candidate.source != CandidateSource::Database && candidate.source != CandidateSource::UserDatabase)
+    {
+        return;
+    }
+
+    const std::string &pinyin = candidate.canonical_pinyin.empty() ? candidate.pinyin : candidate.canonical_pinyin;
+    (void)engine_.update_weight_by_pinyin_and_word(pinyin, candidate.word);
 }
 } // namespace metasequoia::mac
