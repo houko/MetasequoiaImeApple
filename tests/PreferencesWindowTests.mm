@@ -214,6 +214,47 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidateFontSize:99];
         require([MetasequoiaPreferencesWindowController storedCandidateFontSize] == 18,
                 "An unsupported candidate font size was not normalized safely.");
+        [MetasequoiaPreferencesWindowController setStoredScheme:1];
+        [MetasequoiaPreferencesWindowController setAutocorrectEnabled:NO];
+        [MetasequoiaPreferencesWindowController setHelpcodeEnabled:NO];
+        [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:NO];
+        [MetasequoiaPreferencesWindowController setCandidatePanelStyle:1];
+        [MetasequoiaPreferencesWindowController setCandidatePageSize:5];
+        [MetasequoiaPreferencesWindowController setCandidateFontSize:20];
+        [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
+        [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
+        [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
+        NSButton *restoreDefaultsButton = FindButtonWithTitle(controller.window.contentView, @"恢复默认设置");
+        require(restoreDefaultsButton != nil, "The settings window did not expose the restore-defaults button.");
+        [restoreDefaultsButton performClick:nil];
+        require([MetasequoiaPreferencesWindowController storedScheme] == 0 &&
+                    [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] &&
+                    [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] &&
+                    [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] &&
+                    [MetasequoiaPreferencesWindowController storedCandidatePanelStyle] == 0 &&
+                    [MetasequoiaPreferencesWindowController storedCandidatePageSize] == 9 &&
+                    [MetasequoiaPreferencesWindowController storedCandidateFontSize] == 18 &&
+                    [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] &&
+                    [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled],
+                "Restoring defaults did not restore every visible setting.");
+        NSArray<NSString *> *preferenceKeys = @[
+            @"MetasequoiaImeInputScheme",
+            @"MetasequoiaImeQuanpinAutocorrect",
+            @"MetasequoiaImeHelpcodeEnabled",
+            @"MetasequoiaImeChinesePunctuation",
+            @"MetasequoiaImeCandidatePanelStyle",
+            @"MetasequoiaImeCandidatePageSize",
+            @"MetasequoiaImeCandidateFontSize",
+            @"MetasequoiaImeCandidateLearning",
+            @"MetasequoiaImeInputModeShortcutEnabled",
+        ];
+        for (NSString *key in preferenceKeys)
+        {
+            require([[NSUserDefaults standardUserDefaults] objectForKey:key] == nil,
+                    "Restoring defaults left a persisted override that can pin an obsolete default.");
+        }
+        require([MetasequoiaPreferencesWindowController storedEnglishInputMode],
+                "Restoring configurable defaults unexpectedly changed the current input mode.");
         [MetasequoiaPreferencesWindowController setEnglishInputMode:NO];
         require(![MetasequoiaPreferencesWindowController storedEnglishInputMode],
                 "The Chinese input-mode state was not stored.");

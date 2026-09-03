@@ -704,15 +704,41 @@ void ConfigureCard(NSBox *card)
 - (void)restoreDefaults:(id)sender
 {
     (void)sender;
-    [MetasequoiaPreferencesWindowController setStoredScheme:0];
-    [MetasequoiaPreferencesWindowController setAutocorrectEnabled:YES];
-    [MetasequoiaPreferencesWindowController setHelpcodeEnabled:YES];
-    [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:YES];
-    [MetasequoiaPreferencesWindowController setCandidatePanelStyle:0];
-    [MetasequoiaPreferencesWindowController setCandidatePageSize:9];
-    [MetasequoiaPreferencesWindowController setCandidateFontSize:18];
-    [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:YES];
-    [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:YES];
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    for (NSString *key in @[
+             kSchemePreferenceKey,
+             kAutocorrectPreferenceKey,
+             kHelpcodePreferenceKey,
+             kChinesePunctuationPreferenceKey,
+             kCandidatePanelStylePreferenceKey,
+             kCandidatePageSizePreferenceKey,
+             kCandidateFontSizePreferenceKey,
+             kCandidateLearningPreferenceKey,
+             kInputModeShortcutPreferenceKey,
+         ])
+    {
+        [defaults removeObjectForKey:key];
+    }
+
+    NSNotificationCenter *notifications = [NSNotificationCenter defaultCenter];
+    [notifications postNotificationName:@"MetasequoiaInputSchemeDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedScheme])];
+    [notifications postNotificationName:@"MetasequoiaQuanpinAutocorrectDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedAutocorrectEnabled])];
+    [notifications postNotificationName:@"MetasequoiaHelpcodeDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedHelpcodeEnabled])];
+    [notifications postNotificationName:@"MetasequoiaChinesePunctuationDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled])];
+    [notifications postNotificationName:@"MetasequoiaCandidatePanelStyleDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedCandidatePanelStyle])];
+    [notifications postNotificationName:@"MetasequoiaCandidatePageSizeDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedCandidatePageSize])];
+    [notifications postNotificationName:@"MetasequoiaCandidateFontSizeDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedCandidateFontSize])];
+    [notifications postNotificationName:@"MetasequoiaCandidateLearningDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedCandidateLearningEnabled])];
+    [notifications postNotificationName:@"MetasequoiaInputModeShortcutDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled])];
     [self refreshControls];
 }
 
