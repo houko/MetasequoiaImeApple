@@ -29,6 +29,59 @@ def sha256_file(path):
 
 
 class ReleasePackageTests(unittest.TestCase):
+    def test_installers_reject_unsafe_home_before_running_commands(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            fake_bin = temporary / "bin"
+            fake_bin.mkdir()
+            command_log = temporary / "commands.log"
+            fake_command = (
+                "#!/bin/sh\n"
+                "printf '%s %s\\n' \"$0\" \"$*\" >> \"$UNSAFE_COMMAND_LOG\"\n"
+                "exit 97\n"
+            )
+            for command_name in ("codesign", "mkdir"):
+                command = fake_bin / command_name
+                command.write_text(fake_command)
+                command.chmod(0o755)
+
+            release_root = temporary / "release"
+            release_root.mkdir()
+            release_installer = release_root / "Install.command"
+            shutil.copy2(PROJECT_ROOT / "scripts/install-release.sh", release_installer)
+            (release_root / "MetasequoiaIME.app").mkdir()
+
+            for installer in (PROJECT_ROOT / "scripts/install.sh", release_installer):
+                for unsafe_home in (
+                    "",
+                    "/",
+                    "/./",
+                    "//",
+                    "/tmp/..",
+                    "relative-home",
+                ):
+                    with self.subTest(installer=installer.name, home=unsafe_home):
+                        command_log.unlink(missing_ok=True)
+                        environment = os.environ.copy()
+                        environment["HOME"] = unsafe_home
+                        environment["PATH"] = str(fake_bin)
+                        environment["UNSAFE_COMMAND_LOG"] = str(command_log)
+
+                        result = subprocess.run(
+                            ["/bin/zsh", installer],
+                            capture_output=True,
+                            text=True,
+                            env=environment,
+                            cwd=temporary,
+                        )
+
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertIn(
+                            "HOME must be an absolute current-user directory.",
+                            result.stderr,
+                        )
+                        self.assertFalse(command_log.exists())
+
     def test_development_install_restores_previous_bundle_when_registration_fails(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             fake_bin = Path(temporary_directory) / "bin"
@@ -40,7 +93,7 @@ class ReleasePackageTests(unittest.TestCase):
             fake_xcrun.write_text("#!/bin/sh\nexit 47\n")
             fake_xcrun.chmod(0o755)
 
-            test_home = Path(temporary_directory) / "home"
+            test_home = (Path(temporary_directory) / "home").resolve()
             destination = test_home / "Library/Input Methods/MetasequoiaIME.app"
             previous_marker = destination / "Contents/previous-installation.txt"
             previous_marker.parent.mkdir(parents=True)
@@ -217,7 +270,7 @@ class ReleasePackageTests(unittest.TestCase):
             fake_pkill = fake_bin / "pkill"
             fake_pkill.write_text("#!/bin/sh\nexit 0\n")
             fake_pkill.chmod(0o755)
-            install_home = temporary / "signed-install-home"
+            install_home = (temporary / "signed-install-home").resolve()
             install_environment = environment.copy()
             install_environment["HOME"] = str(install_home)
             install_result = subprocess.run(
@@ -356,7 +409,7 @@ class ReleasePackageTests(unittest.TestCase):
                 fake_pgrep = fake_bin / "pgrep"
                 fake_pgrep.write_text("#!/bin/sh\nexit 1\n")
                 fake_pgrep.chmod(0o755)
-                test_home = Path(temporary_directory) / "home"
+                test_home = (Path(temporary_directory) / "home").resolve()
                 install_environment = os.environ.copy()
                 install_environment["HOME"] = str(test_home)
                 install_environment["PATH"] = f"{fake_bin}:{install_environment['PATH']}"
@@ -426,7 +479,7 @@ class ReleasePackageTests(unittest.TestCase):
                 )
                 fake_mv.chmod(0o755)
 
-                interrupted_home = Path(temporary_directory) / "interrupted-home"
+                interrupted_home = (Path(temporary_directory) / "interrupted-home").resolve()
                 interrupted_destination = interrupted_home / "Library/Input Methods/MetasequoiaIME.app"
                 interrupted_marker = interrupted_destination / "Contents/previous-installation.txt"
                 interrupted_marker.parent.mkdir(parents=True)
@@ -447,7 +500,7 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertFalse(any(interrupted_destination.parent.glob(".MetasequoiaIME.installing.*")))
                 self.assertFalse(any(interrupted_destination.parent.glob(".MetasequoiaIME.backup.*")))
 
-                restored_home = Path(temporary_directory) / "restored-home"
+                restored_home = (Path(temporary_directory) / "restored-home").resolve()
                 restored_destination = restored_home / "Library/Input Methods/MetasequoiaIME.app"
                 restored_marker = restored_destination / "Contents/previous-installation.txt"
                 restored_marker.parent.mkdir(parents=True)
@@ -468,7 +521,7 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertFalse(any(restored_destination.parent.glob(".MetasequoiaIME.backup.*")))
                 self.assertIn("restoring the previous installation", failed_install.stderr)
 
-                rollback_home = Path(temporary_directory) / "rollback-home"
+                rollback_home = (Path(temporary_directory) / "rollback-home").resolve()
                 rollback_destination = rollback_home / "Library/Input Methods/MetasequoiaIME.app"
                 previous_marker = rollback_destination / "Contents/previous-installation.txt"
                 previous_marker.parent.mkdir(parents=True)
