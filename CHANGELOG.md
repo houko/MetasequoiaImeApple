@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.4.0...v0.5.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** add auxiliary code option ([dcd68e9](https://github.com/houko/MetasequoiaImeMac/commit/dcd68e97f25ef412adf2c006cda2cab59a3a4343))
+* **settings:** add pinyin autocorrect option ([b1b3810](https://github.com/houko/MetasequoiaImeMac/commit/b1b3810654f4fe2f228b8f31e1f398c7b4650b3b))
+
 ## [0.4.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.3.0...v0.4.0) (2026-09-03)
 
 
