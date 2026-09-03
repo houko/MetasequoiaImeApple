@@ -14,6 +14,33 @@ NSString *StringFromUtf8(const std::string &value)
 {
     return [[NSString alloc] initWithBytes:value.data() length:value.size() encoding:NSUTF8StringEncoding];
 }
+
+struct SessionPreferences
+{
+    SchemeType scheme;
+    bool autocorrectEnabled;
+    bool helpcodeEnabled;
+    bool chinesePunctuationEnabled;
+};
+
+SessionPreferences ReadSessionPreferences()
+{
+    const NSInteger storedScheme = [MetasequoiaPreferencesWindowController storedScheme];
+    return {
+        storedScheme == 1 ? SchemeType::Shuangpin : SchemeType::Quanpin,
+        [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] == YES,
+        [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] == YES,
+        [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] == YES,
+    };
+}
+
+bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, const SessionPreferences &preferences)
+{
+    return session.scheme_type() == preferences.scheme &&
+           session.quanpin_autocorrect_enabled() == preferences.autocorrectEnabled &&
+           session.helpcode_enabled() == preferences.helpcodeEnabled &&
+           session.chinese_punctuation_enabled() == preferences.chinesePunctuationEnabled;
+}
 } // namespace
 
 @implementation MetasequoiaInputController
@@ -34,17 +61,41 @@ NSString *StringFromUtf8(const std::string &value)
             NSLog(@"Failed to prepare the Metasequoia dictionary: %@", error.localizedDescription);
             return self;
         }
-        const NSInteger storedScheme = [MetasequoiaPreferencesWindowController storedScheme];
-        const SchemeType scheme = storedScheme == 1 ? SchemeType::Shuangpin : SchemeType::Quanpin;
-        const BOOL autocorrectEnabled = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled];
-        const BOOL helpcodeEnabled = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled];
-        const BOOL chinesePunctuationEnabled = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled];
-        _session = std::make_unique<metasequoia::mac::InputSession>(scheme, autocorrectEnabled, helpcodeEnabled,
-                                                                   chinesePunctuationEnabled);
+        [self reloadSessionFromPreferences];
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
         [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @NO}];
     }
     return self;
+}
+
+- (void)reloadSessionFromPreferences
+{
+    const SessionPreferences preferences = ReadSessionPreferences();
+    if (_session != nullptr &&
+        (_session->has_composition() || SessionMatchesPreferences(*_session, preferences)))
+    {
+        return;
+    }
+    _session = std::make_unique<metasequoia::mac::InputSession>(
+        preferences.scheme, preferences.autocorrectEnabled, preferences.helpcodeEnabled,
+        preferences.chinesePunctuationEnabled);
+    _candidateData = @[];
+    [_candidatePanel setCandidateData:_candidateData];
+}
+
+- (void)activateServer:(id)sender
+{
+    [super activateServer:sender];
+    if (_session == nullptr)
+    {
+        NSError *error = nil;
+        if (!EnsureMetasequoiaDictionary(&error))
+        {
+            NSLog(@"Failed to prepare the Metasequoia dictionary: %@", error.localizedDescription);
+            return;
+        }
+    }
+    [self reloadSessionFromPreferences];
 }
 
 - (BOOL)handleEvent:(NSEvent *)event client:(id)sender
