@@ -1,5 +1,7 @@
 #import "DictionaryInstaller.h"
 
+#import <CommonCrypto/CommonDigest.h>
+
 #include "../vendor/MetasequoiaImeEngine/user_dictionary/user_dictionary_journal.h"
 #include "../vendor/MetasequoiaImeEngine/googlepinyinime-rev/src/include/pinyinime.h"
 
@@ -48,6 +50,66 @@ BOOL FailWithErrno(NSError **error, int errorNumber)
         *error = [NSError errorWithDomain:NSPOSIXErrorDomain code:errorNumber userInfo:nil];
     }
     return NO;
+}
+
+BOOL DictionaryMatchesFingerprint(NSURL *dictionary, NSString *fingerprint)
+{
+    if (fingerprint.length != CC_SHA256_DIGEST_LENGTH * 2)
+    {
+        return NO;
+    }
+
+    NSString *normalizedFingerprint = fingerprint.lowercaseString;
+    NSCharacterSet *nonHexadecimal = [[NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"]
+        invertedSet];
+    if ([normalizedFingerprint rangeOfCharacterFromSet:nonHexadecimal].location != NSNotFound)
+    {
+        return NO;
+    }
+
+    const int descriptor = open(dictionary.fileSystemRepresentation, O_RDONLY | O_CLOEXEC);
+    if (descriptor < 0)
+    {
+        return NO;
+    }
+
+    CC_SHA256_CTX context;
+    BOOL succeeded = CC_SHA256_Init(&context) == 1;
+    unsigned char buffer[64 * 1024];
+    while (succeeded)
+    {
+        const ssize_t bytesRead = read(descriptor, buffer, sizeof(buffer));
+        if (bytesRead > 0)
+        {
+            succeeded = CC_SHA256_Update(&context, buffer, static_cast<CC_LONG>(bytesRead)) == 1;
+            continue;
+        }
+        if (bytesRead == 0)
+        {
+            break;
+        }
+        if (errno != EINTR)
+        {
+            succeeded = NO;
+        }
+    }
+    close(descriptor);
+    if (!succeeded)
+    {
+        return NO;
+    }
+
+    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+    if (CC_SHA256_Final(digest, &context) != 1)
+    {
+        return NO;
+    }
+    NSMutableString *actualFingerprint = [NSMutableString stringWithCapacity:CC_SHA256_DIGEST_LENGTH * 2];
+    for (unsigned char byte : digest)
+    {
+        [actualFingerprint appendFormat:@"%02x", byte];
+    }
+    return [actualFingerprint isEqualToString:normalizedFingerprint];
 }
 
 std::string FileSystemPath(NSURL *url)
@@ -424,24 +486,34 @@ BOOL InstallMetasequoiaDictionary(NSURL *source, NSURL *dataDirectory, NSString 
             }
         }
 
-        if (!IsUsableDictionary(source))
-        {
-            return Fail(error, 2, @"The bundled msime.db dictionary is invalid.");
-        }
-        if (destinationExists && installedFingerprint == nil &&
-            [fileManager contentsEqualAtPath:source.path andPath:destination.path])
-        {
-            return [dictionaryFingerprint writeToURL:fingerprintFile
-                                          atomically:YES
-                                            encoding:NSUTF8StringEncoding
-                                               error:error];
-        }
-
         NSString *temporaryName = [@".msime.db.installing." stringByAppendingString:NSUUID.UUID.UUIDString];
         NSURL *temporary = [dataDirectory URLByAppendingPathComponent:temporaryName isDirectory:NO];
         if (![fileManager copyItemAtURL:source toURL:temporary error:error])
         {
+            [fileManager removeItemAtURL:temporary error:nil];
             return NO;
+        }
+        if (!IsUsableDictionary(temporary))
+        {
+            [fileManager removeItemAtURL:temporary error:nil];
+            return Fail(error, 2, @"The bundled msime.db dictionary is invalid.");
+        }
+        if (!DictionaryMatchesFingerprint(temporary, dictionaryFingerprint))
+        {
+            [fileManager removeItemAtURL:temporary error:nil];
+            return Fail(error, 2, @"The bundled msime.db dictionary fingerprint does not match its contents.");
+        }
+        if (destinationExists && installedFingerprint == nil &&
+            [fileManager contentsEqualAtPath:temporary.path andPath:destination.path])
+        {
+            if (![fileManager removeItemAtURL:temporary error:error])
+            {
+                return NO;
+            }
+            return [dictionaryFingerprint writeToURL:fingerprintFile
+                                          atomically:YES
+                                            encoding:NSUTF8StringEncoding
+                                               error:error];
         }
 
         NSURL *userDatabase = [dataDirectory URLByAppendingPathComponent:@"msime_user.db" isDirectory:NO];
@@ -502,11 +574,6 @@ BOOL ResetMetasequoiaLearnedData(NSURL *source, NSURL *dataDirectory, NSString *
     {
         return Fail(error, 5, @"The bundled dictionary metadata is incomplete.");
     }
-    if (!IsUsableDictionary(source))
-    {
-        return Fail(error, 6, @"The bundled dictionary cannot be used to reset learned data.");
-    }
-
     @synchronized([NSFileManager class])
     {
         NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -524,7 +591,18 @@ BOOL ResetMetasequoiaLearnedData(NSURL *source, NSURL *dataDirectory, NSString *
         NSURL *temporaryFingerprint = ResetTemporaryFingerprint(dataDirectory, identifier);
         if (![fileManager copyItemAtURL:source toURL:temporaryDictionary error:error])
         {
+            [fileManager removeItemAtURL:temporaryDictionary error:nil];
             return NO;
+        }
+        if (!IsUsableDictionary(temporaryDictionary))
+        {
+            [fileManager removeItemAtURL:temporaryDictionary error:nil];
+            return Fail(error, 6, @"The bundled dictionary cannot be used to reset learned data.");
+        }
+        if (!DictionaryMatchesFingerprint(temporaryDictionary, dictionaryFingerprint))
+        {
+            [fileManager removeItemAtURL:temporaryDictionary error:nil];
+            return Fail(error, 6, @"The bundled dictionary fingerprint does not match its contents.");
         }
         if (![dictionaryFingerprint writeToURL:temporaryFingerprint
                                     atomically:YES
