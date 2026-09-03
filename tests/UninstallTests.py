@@ -10,6 +10,40 @@ UNINSTALLER = PROJECT_ROOT / "scripts/uninstall.sh"
 
 
 class UninstallTests(unittest.TestCase):
+    def test_uninstaller_rejects_unsafe_home_before_running_commands(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            empty_bin = temporary / "bin"
+            empty_bin.mkdir()
+
+            for unsafe_home in (
+                "",
+                "/",
+                "/./",
+                "//",
+                "/tmp/..",
+                "relative-home",
+            ):
+                with self.subTest(home=unsafe_home):
+                    environment = os.environ.copy()
+                    environment["HOME"] = unsafe_home
+                    environment["PATH"] = str(empty_bin)
+
+                    result = subprocess.run(
+                        ["/bin/zsh", UNINSTALLER],
+                        input="",
+                        capture_output=True,
+                        text=True,
+                        env=environment,
+                        cwd=temporary,
+                    )
+
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(
+                        "HOME must be an absolute current-user directory.",
+                        result.stderr,
+                    )
+
     def run_uninstaller(
         self, home, arguments=(), confirmation="REMOVE METASEQUOIAIME\n", fake_mv=None, extra_environment=None
     ):
@@ -84,7 +118,7 @@ class UninstallTests(unittest.TestCase):
 
     def test_default_uninstall_moves_application_to_trash_and_preserves_user_data(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
 
             result = self.run_uninstaller(home)
@@ -104,7 +138,7 @@ class UninstallTests(unittest.TestCase):
 
     def test_remove_user_data_moves_application_and_data_to_same_recovery_directory(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
 
             result = self.run_uninstaller(home, ("--remove-user-data",))
@@ -123,7 +157,7 @@ class UninstallTests(unittest.TestCase):
 
     def test_wrong_confirmation_and_unknown_option_leave_everything_untouched(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
 
             cancelled = self.run_uninstaller(home, confirmation="no\n")
@@ -140,7 +174,7 @@ class UninstallTests(unittest.TestCase):
 
     def test_data_move_failure_restores_application_and_preserves_data(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
             fake_mv = r"""#!/bin/sh
 source_path=$1
@@ -161,7 +195,7 @@ exec /bin/mv "$@"
 
     def test_preferences_delete_failure_restores_application_data_and_preferences(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
 
             result = self.run_uninstaller(
@@ -179,7 +213,7 @@ exec /bin/mv "$@"
 
     def test_running_process_timeout_changes_no_files(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
 
             result = self.run_uninstaller(
@@ -199,7 +233,7 @@ exec /bin/mv "$@"
 
     def test_preferences_inspection_failure_changes_no_files(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
 
             result = self.run_uninstaller(
@@ -217,7 +251,7 @@ exec /bin/mv "$@"
 
     def test_signal_after_application_move_restores_installation(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
             fake_mv = r"""#!/bin/sh
 source_path=$1
@@ -241,7 +275,7 @@ fi
 
     def test_rollback_failure_preserves_only_application_copy_in_recovery_directory(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
             fake_mv = r"""#!/bin/sh
 source_path=$1
@@ -274,7 +308,7 @@ fi
 
     def test_preferences_restore_failure_preserves_exported_copy(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
-            home = Path(temporary_directory) / "home"
+            home = (Path(temporary_directory) / "home").resolve()
             application, user_data, preferences = self.create_installation(home)
 
             result = self.run_uninstaller(
