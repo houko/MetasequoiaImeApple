@@ -107,6 +107,13 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("productsign", package_script)
         self.assertIn("notarytool", package_script)
         self.assertIn("Commercial release signing requires", package_script)
+        license_text = (PROJECT_ROOT / "LICENSE").read_text()
+        notices = (PROJECT_ROOT / "THIRD_PARTY_NOTICES.txt").read_text()
+        self.assertIn("GNU GENERAL PUBLIC LICENSE", license_text)
+        self.assertIn("MetasequoiaImeEngine", notices)
+        self.assertIn("googlepinyinime-rev", notices)
+        self.assertIn("utfcpp", notices)
+        self.assertIn("THIRD_PARTY_NOTICES.txt", package_script)
 
     def test_release_scripts_have_valid_zsh_syntax(self):
         for relative_path in ("scripts/install-release.sh", "scripts/package_release.sh"):

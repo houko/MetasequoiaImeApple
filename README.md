@@ -82,3 +82,7 @@ Verify the ZIP checksum, extract it, and run `Install.command`:
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256
 ./MetasequoiaIME-vX.Y.Z/Install.command
 ```
+
+## License
+
+Metasequoia IME for macOS is distributed under the GNU General Public License version 3. Release archives, installer packages, and the application bundle include the applicable GPL and third-party license notices; see `LICENSE` and `THIRD_PARTY_NOTICES.txt`.
