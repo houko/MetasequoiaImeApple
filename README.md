@@ -46,18 +46,23 @@ The test suite uses real SQLite tables and the production engine path; it does n
 
 Merges to `main` update a Release Please pull request from conventional commit history. Merging that release pull request bumps `version.txt`, `CMakeLists.txt`, and `CHANGELOG.md`, creates the matching `vX.Y.Z` tag, builds and tests the universal input method bundle, and publishes a GitHub Release with these assets:
 
+- `MetasequoiaIME-vX.Y.Z-macos-universal.pkg`
+- `MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256`
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip`
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256`
 
-Verify the checksum before extracting the archive:
+Download the `.pkg` and its checksum, verify it, then double-click the package to open the native macOS Installer. The package upgrades the current user's copy in `~/Library/Input Methods` and requires a logout after installation so macOS refreshes its input source cache.
+
+```sh
+shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
+```
+
+The current alpha uses an ad-hoc application signature and the package is not Developer ID signed or notarized. Gatekeeper may block the first double-click as expected. After verifying the checksum, try opening the package once, then open System Settings > Privacy & Security, scroll to Security, click Open Anyway, confirm Open, and return to the Installer. The Open Anyway button is available for about one hour after the blocked launch. After installation and logout, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
+
+The ZIP remains available as a manual fallback. Verify its checksum, extract it, remove quarantine from the extracted release directory, and run `Install.command`:
 
 ```sh
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256
-```
-
-The current alpha uses an ad-hoc application signature and is not Developer ID signed or notarized. After verifying the checksum, remove the download quarantine from the extracted release directory, run the installer, then log out and back in so macOS refreshes its input source cache:
-
-```sh
 xattr -dr com.apple.quarantine MetasequoiaIME-vX.Y.Z
 ./MetasequoiaIME-vX.Y.Z/Install.command
 ```

@@ -24,6 +24,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         config = json.loads((PROJECT_ROOT / "release-please-config.json").read_text())
         package = config["packages"]["."]
         workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text()
+        readme = (PROJECT_ROOT / "README.md").read_text()
 
         self.assertEqual(package["release-type"], "simple")
         self.assertIn({"type": "generic", "path": "CMakeLists.txt"}, package["extra-files"])
@@ -39,8 +40,12 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("GH_REPO: ${{ github.repository }}", workflow)
         self.assertIn("gh workflow run ci.yml", workflow)
         self.assertIn("scripts/package_release.sh", workflow)
+        self.assertIn("macos-universal.pkg", workflow)
+        self.assertIn("timeout-minutes: 30", workflow)
         self.assertIn("gh release upload", workflow)
         self.assertIn("gh release edit", workflow)
+        self.assertIn("Open Anyway", readme)
+        self.assertIn("Privacy & Security", readme)
 
         release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
         self.assertNotIn("xcrun", release_installer)
