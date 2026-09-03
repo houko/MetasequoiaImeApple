@@ -1,6 +1,7 @@
 #import "MetasequoiaInputController.h"
 
 #import "DictionaryInstaller.h"
+#include "CandidatePanelStyle.h"
 #import "InputMenu.h"
 #import "PreferencesWindowController.h"
 #include "CandidateSelectionState.h"
@@ -26,6 +27,7 @@ struct SessionPreferences
     bool autocorrectEnabled;
     bool helpcodeEnabled;
     bool chinesePunctuationEnabled;
+    metasequoia::mac::CandidatePanelStyle candidatePanelStyle;
 };
 
 SessionPreferences ReadSessionPreferences()
@@ -36,6 +38,8 @@ SessionPreferences ReadSessionPreferences()
         [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] == YES,
         [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] == YES,
         [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] == YES,
+        metasequoia::mac::NormalizeCandidatePanelStyle(
+            [MetasequoiaPreferencesWindowController storedCandidatePanelStyle]),
     };
 }
 
@@ -81,6 +85,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     }
 
     const SessionPreferences preferences = ReadSessionPreferences();
+    [_candidatePanel setPanelType:metasequoia::mac::CandidatePanelTypeForStyle(preferences.candidatePanelStyle)];
     if (_session != nullptr && SessionMatchesPreferences(*_session, preferences))
     {
         return;
@@ -224,6 +229,10 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     switch (metasequoia::mac::ClassifyControllerKey(event.keyCode, [_candidatePanel isVisible]))
     {
     case metasequoia::mac::ControllerKeyAction::MoveCandidateLeft:
+        if (!metasequoia::mac::IsPrimaryCandidateDirection(event.keyCode, _candidatePanel.panelType))
+        {
+            return YES;
+        }
         _candidateSelection.begin_navigation();
         [_candidatePanel moveLeft:self];
         if (_candidateHighlightedIndex > 0)
@@ -233,6 +242,10 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         [self trackCandidateAtIndex:_candidateHighlightedIndex];
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateRight:
+        if (!metasequoia::mac::IsPrimaryCandidateDirection(event.keyCode, _candidatePanel.panelType))
+        {
+            return YES;
+        }
         _candidateSelection.begin_navigation();
         [_candidatePanel moveRight:self];
         if (_candidateHighlightedIndex + 1 < _candidateData.count)
@@ -242,6 +255,10 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         [self trackCandidateAtIndex:_candidateHighlightedIndex];
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateUp:
+        if (!metasequoia::mac::IsPrimaryCandidateDirection(event.keyCode, _candidatePanel.panelType))
+        {
+            return YES;
+        }
         _candidateSelection.begin_navigation();
         [_candidatePanel moveUp:self];
         if (_candidateHighlightedIndex > 0)
@@ -251,6 +268,10 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         [self trackCandidateAtIndex:_candidateHighlightedIndex];
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateDown:
+        if (!metasequoia::mac::IsPrimaryCandidateDirection(event.keyCode, _candidatePanel.panelType))
+        {
+            return YES;
+        }
         _candidateSelection.begin_navigation();
         [_candidatePanel moveDown:self];
         if (_candidateHighlightedIndex + 1 < _candidateData.count)

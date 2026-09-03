@@ -1,15 +1,17 @@
 #import "PreferencesWindowController.h"
 
+#include "CandidatePanelStyle.h"
 #import "DictionaryInstaller.h"
 
 namespace
 {
 constexpr CGFloat kWindowWidth = 600.0;
-constexpr CGFloat kWindowHeight = 460.0;
+constexpr CGFloat kWindowHeight = 504.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
 NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunctuation";
+NSString * const kCandidatePanelStylePreferenceKey = @"MetasequoiaImeCandidatePanelStyle";
 
 NSColor *MetasequoiaBrandColor()
 {
@@ -41,6 +43,7 @@ void ConfigureCard(NSBox *card)
     NSButton *_autocorrectButton;
     NSButton *_helpcodeButton;
     NSButton *_chinesePunctuationButton;
+    NSPopUpButton *_candidatePanelStyleButton;
     NSTextField *_statusLabel;
 }
 
@@ -105,6 +108,21 @@ void ConfigureCard(NSBox *card)
     [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kChinesePunctuationPreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaChinesePunctuationDidChangeNotification"
                                                         object:@(enabled)];
+}
+
++ (NSInteger)storedCandidatePanelStyle
+{
+    const NSInteger value = [[NSUserDefaults standardUserDefaults] integerForKey:kCandidatePanelStylePreferenceKey];
+    return static_cast<NSInteger>(metasequoia::mac::NormalizeCandidatePanelStyle(value));
+}
+
++ (void)setCandidatePanelStyle:(NSInteger)style
+{
+    const NSInteger normalizedStyle =
+        static_cast<NSInteger>(metasequoia::mac::NormalizeCandidatePanelStyle(style));
+    [[NSUserDefaults standardUserDefaults] setInteger:normalizedStyle forKey:kCandidatePanelStylePreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaCandidatePanelStyleDidChangeNotification"
+                                                        object:@(normalizedStyle)];
 }
 
 - (instancetype)initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner
@@ -208,6 +226,18 @@ void ConfigureCard(NSBox *card)
     _schemeButton.accessibilityLabel = @"输入方案";
     _schemeButton.translatesAutoresizingMaskIntoConstraints = NO;
 
+    NSTextField *candidatePanelStyleLabel = [NSTextField labelWithString:@"候选排列"];
+    candidatePanelStyleLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
+    candidatePanelStyleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _candidatePanelStyleButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_candidatePanelStyleButton addItemWithTitle:@"横向排列"];
+    [_candidatePanelStyleButton addItemWithTitle:@"纵向列表"];
+    _candidatePanelStyleButton.target = self;
+    _candidatePanelStyleButton.action = @selector(candidatePanelStyleChanged:);
+    _candidatePanelStyleButton.accessibilityLabel = @"候选排列";
+    _candidatePanelStyleButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     NSTextField *behaviorSectionLabel = [NSTextField labelWithString:@"输入行为"];
     behaviorSectionLabel.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
     behaviorSectionLabel.textColor = [NSColor secondaryLabelColor];
@@ -258,6 +288,8 @@ void ConfigureCard(NSBox *card)
     [settingsPanel addSubview:inputCard];
     [inputCard addSubview:schemeLabel];
     [inputCard addSubview:_schemeButton];
+    [inputCard addSubview:candidatePanelStyleLabel];
+    [inputCard addSubview:_candidatePanelStyleButton];
     [settingsPanel addSubview:behaviorSectionLabel];
     [settingsPanel addSubview:behaviorCard];
     [behaviorCard addSubview:_autocorrectButton];
@@ -301,12 +333,17 @@ void ConfigureCard(NSBox *card)
         [inputCard.topAnchor constraintEqualToAnchor:inputSectionLabel.bottomAnchor constant:8.0],
         [inputCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [inputCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [inputCard.heightAnchor constraintEqualToConstant:68.0],
+        [inputCard.heightAnchor constraintEqualToConstant:112.0],
         [schemeLabel.leadingAnchor constraintEqualToAnchor:inputCard.leadingAnchor constant:18.0],
+        [schemeLabel.topAnchor constraintEqualToAnchor:inputCard.topAnchor constant:18.0],
         [_schemeButton.centerYAnchor constraintEqualToAnchor:schemeLabel.centerYAnchor],
-        [schemeLabel.centerYAnchor constraintEqualToAnchor:inputCard.centerYAnchor],
         [_schemeButton.trailingAnchor constraintEqualToAnchor:inputCard.trailingAnchor constant:-16.0],
         [_schemeButton.widthAnchor constraintEqualToConstant:180.0],
+        [candidatePanelStyleLabel.leadingAnchor constraintEqualToAnchor:schemeLabel.leadingAnchor],
+        [candidatePanelStyleLabel.bottomAnchor constraintEqualToAnchor:inputCard.bottomAnchor constant:-18.0],
+        [_candidatePanelStyleButton.centerYAnchor constraintEqualToAnchor:candidatePanelStyleLabel.centerYAnchor],
+        [_candidatePanelStyleButton.trailingAnchor constraintEqualToAnchor:_schemeButton.trailingAnchor],
+        [_candidatePanelStyleButton.widthAnchor constraintEqualToAnchor:_schemeButton.widthAnchor],
         [behaviorSectionLabel.topAnchor constraintEqualToAnchor:inputCard.bottomAnchor constant:18.0],
         [behaviorSectionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [behaviorCard.topAnchor constraintEqualToAnchor:behaviorSectionLabel.bottomAnchor constant:8.0],
@@ -339,6 +376,7 @@ void ConfigureCard(NSBox *card)
     _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+    [_candidatePanelStyleButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]];
 }
 
 - (void)refreshDictionaryStatus
@@ -391,6 +429,12 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setStoredScheme:schemeButton.indexOfSelectedItem];
 }
 
+- (void)candidatePanelStyleChanged:(id)sender
+{
+    NSPopUpButton *styleButton = (NSPopUpButton *)sender;
+    [MetasequoiaPreferencesWindowController setCandidatePanelStyle:styleButton.indexOfSelectedItem];
+}
+
 - (void)restoreDefaults:(id)sender
 {
     (void)sender;
@@ -398,6 +442,7 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setAutocorrectEnabled:YES];
     [MetasequoiaPreferencesWindowController setHelpcodeEnabled:YES];
     [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:YES];
+    [MetasequoiaPreferencesWindowController setCandidatePanelStyle:0];
     [self refreshControls];
 }
 

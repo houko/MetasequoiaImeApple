@@ -1,4 +1,5 @@
 #include "../src/InputControllerKeyRouting.h"
+#include "../src/CandidatePanelStyle.h"
 
 #import <InputMethodKit/InputMethodKit.h>
 
@@ -24,7 +25,29 @@ int main()
     using metasequoia::mac::ControllerKeyAction;
     using metasequoia::mac::CandidatePageEnd;
     using metasequoia::mac::CandidatePageStart;
+    using metasequoia::mac::CandidatePanelStyle;
+    using metasequoia::mac::CandidatePanelTypeForStyle;
     using metasequoia::mac::ClassifyControllerKey;
+    using metasequoia::mac::IsPrimaryCandidateDirection;
+    using metasequoia::mac::NormalizeCandidatePanelStyle;
+
+    require(NormalizeCandidatePanelStyle(0) == CandidatePanelStyle::Horizontal &&
+                NormalizeCandidatePanelStyle(1) == CandidatePanelStyle::Vertical &&
+                NormalizeCandidatePanelStyle(99) == CandidatePanelStyle::Horizontal,
+            "The stored candidate layout was not normalized safely.");
+    require(CandidatePanelTypeForStyle(CandidatePanelStyle::Horizontal) == kIMKSingleRowSteppingCandidatePanel &&
+                CandidatePanelTypeForStyle(CandidatePanelStyle::Vertical) == kIMKSingleColumnScrollingCandidatePanel,
+            "The candidate layout preference did not map to the expected native panel types.");
+    require(IsPrimaryCandidateDirection(kVK_LeftArrow, kIMKSingleRowSteppingCandidatePanel) &&
+                IsPrimaryCandidateDirection(kVK_RightArrow, kIMKSingleRowSteppingCandidatePanel) &&
+                !IsPrimaryCandidateDirection(kVK_UpArrow, kIMKSingleRowSteppingCandidatePanel) &&
+                !IsPrimaryCandidateDirection(kVK_DownArrow, kIMKSingleRowSteppingCandidatePanel),
+            "The horizontal candidate panel did not restrict navigation to its primary axis.");
+    require(!IsPrimaryCandidateDirection(kVK_LeftArrow, kIMKSingleColumnScrollingCandidatePanel) &&
+                !IsPrimaryCandidateDirection(kVK_RightArrow, kIMKSingleColumnScrollingCandidatePanel) &&
+                IsPrimaryCandidateDirection(kVK_UpArrow, kIMKSingleColumnScrollingCandidatePanel) &&
+                IsPrimaryCandidateDirection(kVK_DownArrow, kIMKSingleColumnScrollingCandidatePanel),
+            "The vertical candidate panel did not restrict navigation to its primary axis.");
 
     require(ClassifyControllerKey(kVK_Return, true) == ControllerKeyAction::CommitRaw,
             "Return did not remain a raw commit while candidates were visible.");
