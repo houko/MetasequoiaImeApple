@@ -6,12 +6,14 @@ constexpr CGFloat kWindowWidth = 480.0;
 constexpr CGFloat kWindowHeight = 276.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
+NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
 } // namespace
 
 @implementation MetasequoiaPreferencesWindowController
 {
     NSPopUpButton *_schemeButton;
     NSButton *_autocorrectButton;
+    NSButton *_helpcodeButton;
 }
 
 + (instancetype)sharedController
@@ -48,6 +50,19 @@ NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect"
 {
     [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kAutocorrectPreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaQuanpinAutocorrectDidChangeNotification"
+                                                        object:@(enabled)];
+}
+
++ (BOOL)storedHelpcodeEnabled
+{
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:kHelpcodePreferenceKey];
+    return value == nil ? YES : [value boolValue];
+}
+
++ (void)setHelpcodeEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kHelpcodePreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaHelpcodeDidChangeNotification"
                                                         object:@(enabled)];
 }
 
@@ -107,6 +122,9 @@ NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect"
     _autocorrectButton = [NSButton checkboxWithTitle:@"启用全拼自动纠错" target:self action:@selector(autocorrectChanged:)];
     _autocorrectButton.translatesAutoresizingMaskIntoConstraints = NO;
 
+    _helpcodeButton = [NSButton checkboxWithTitle:@"启用辅助码" target:self action:@selector(helpcodeChanged:)];
+    _helpcodeButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     NSTextField *statusLabel = [NSTextField labelWithString:@"输入方案会保存到当前用户设置，并在下一次输入会话中生效。"];
     statusLabel.textColor = [NSColor secondaryLabelColor];
     statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -121,6 +139,7 @@ NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect"
     [contentView addSubview:schemeLabel];
     [contentView addSubview:_schemeButton];
     [contentView addSubview:_autocorrectButton];
+    [contentView addSubview:_helpcodeButton];
     [contentView addSubview:statusLabel];
     [contentView addSubview:closeButton];
 
@@ -139,7 +158,9 @@ NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect"
         [_schemeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
         [_autocorrectButton.leadingAnchor constraintEqualToAnchor:_schemeButton.leadingAnchor],
         [_autocorrectButton.topAnchor constraintEqualToAnchor:_schemeButton.bottomAnchor constant:16.0],
-        [statusLabel.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:12.0],
+        [_helpcodeButton.leadingAnchor constraintEqualToAnchor:_schemeButton.leadingAnchor],
+        [_helpcodeButton.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:10.0],
+        [statusLabel.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:12.0],
         [statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
         [closeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
@@ -153,6 +174,7 @@ NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect"
 {
     [_schemeButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedScheme]];
     _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+    _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     [self showWindow:nil];
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
@@ -163,6 +185,12 @@ NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect"
 {
     NSButton *button = (NSButton *)sender;
     [MetasequoiaPreferencesWindowController setAutocorrectEnabled:button.state == NSControlStateValueOn];
+}
+
+- (void)helpcodeChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setHelpcodeEnabled:button.state == NSControlStateValueOn];
 }
 
 - (void)schemeChanged:(id)sender

@@ -8,5 +8,7 @@
 + (void)setStoredScheme:(NSInteger)scheme;
 + (BOOL)storedAutocorrectEnabled;
 + (void)setAutocorrectEnabled:(BOOL)enabled;
++ (BOOL)storedHelpcodeEnabled;
++ (void)setHelpcodeEnabled:(BOOL)enabled;
 - (void)showAndActivate;
 @end

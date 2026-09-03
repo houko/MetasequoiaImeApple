@@ -37,7 +37,8 @@ NSString *StringFromUtf8(const std::string &value)
         const NSInteger storedScheme = [MetasequoiaPreferencesWindowController storedScheme];
         const SchemeType scheme = storedScheme == 1 ? SchemeType::Shuangpin : SchemeType::Quanpin;
         const BOOL autocorrectEnabled = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled];
-        _session = std::make_unique<metasequoia::mac::InputSession>(scheme, autocorrectEnabled);
+        const BOOL helpcodeEnabled = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled];
+        _session = std::make_unique<metasequoia::mac::InputSession>(scheme, autocorrectEnabled, helpcodeEnabled);
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
         [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @NO}];
     }

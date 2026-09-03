@@ -5,10 +5,12 @@
 
 namespace metasequoia::mac
 {
-InputSession::InputSession(SchemeType scheme_type, bool quanpin_autocorrect_enabled)
-    : engine_(scheme_type), quanpin_autocorrect_enabled_(quanpin_autocorrect_enabled)
+InputSession::InputSession(SchemeType scheme_type, bool quanpin_autocorrect_enabled, bool helpcode_enabled)
+    : engine_(scheme_type), quanpin_autocorrect_enabled_(quanpin_autocorrect_enabled), helpcode_enabled_(helpcode_enabled)
 {
     engine_.set_quanpin_autocorrect_enabled(quanpin_autocorrect_enabled_);
+    engine_.set_quanpin_helpcode_enabled(helpcode_enabled_);
+    engine_.set_shuangpin_helpcode_enabled(helpcode_enabled_);
 }
 
 KeyResult InputSession::handle_character(char character)
@@ -78,6 +80,11 @@ SchemeType InputSession::scheme_type() const
 bool InputSession::quanpin_autocorrect_enabled() const
 {
     return quanpin_autocorrect_enabled_;
+}
+
+bool InputSession::helpcode_enabled() const
+{
+    return helpcode_enabled_;
 }
 
 bool InputSession::has_composition() const
