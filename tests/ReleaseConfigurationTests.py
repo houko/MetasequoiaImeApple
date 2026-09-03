@@ -57,6 +57,17 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("macos-universal$ASSET_SUFFIX.pkg", release_publisher)
         self.assertIn("asset_suffix=-unsigned", signing_detector)
         self.assertIn("timeout-minutes: 30", workflow)
+        ci_workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text()
+        self.assertIn(
+            """        include:
+          - runner: macos-15
+            architecture: arm64
+          - runner: macos-15-intel
+            architecture: x86_64
+""",
+            ci_workflow,
+        )
+        self.assertIn("runs-on: ${{ matrix.runner }}", ci_workflow)
         self.assertIn("gh release upload", release_publisher)
         self.assertIn("gh release edit", release_publisher)
         self.assertIn("METASEQUOIA_REQUIRE_RELEASE_SIGNING", workflow)
