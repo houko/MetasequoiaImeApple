@@ -4,12 +4,35 @@
 
 namespace
 {
-constexpr CGFloat kWindowWidth = 480.0;
-constexpr CGFloat kWindowHeight = 320.0;
+constexpr CGFloat kWindowWidth = 600.0;
+constexpr CGFloat kWindowHeight = 460.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
 NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunctuation";
+
+NSColor *MetasequoiaBrandColor()
+{
+    return [NSColor colorWithName:@"MetasequoiaBrandColor" dynamicProvider:^NSColor *(NSAppearance *appearance) {
+        NSString *match = [appearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]];
+        if ([match isEqualToString:NSAppearanceNameDarkAqua])
+        {
+            return [NSColor colorWithSRGBRed:0.08 green:0.38 blue:0.35 alpha:1.0];
+        }
+        return [NSColor colorWithSRGBRed:0.07 green:0.49 blue:0.45 alpha:1.0];
+    }];
+}
+
+void ConfigureCard(NSBox *card)
+{
+    card.boxType = NSBoxCustom;
+    card.titlePosition = NSNoTitle;
+    card.borderWidth = 1.0;
+    card.cornerRadius = 12.0;
+    card.borderColor = [NSColor separatorColor];
+    card.fillColor = [NSColor controlBackgroundColor];
+    card.translatesAutoresizingMaskIntoConstraints = NO;
+}
 } // namespace
 
 @implementation MetasequoiaPreferencesWindowController
@@ -107,6 +130,9 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     window.title = @"水杉输入法设置";
     window.releasedWhenClosed = NO;
     window.restorable = NO;
+    window.titleVisibility = NSWindowTitleHidden;
+    window.titlebarAppearsTransparent = YES;
+    window.movableByWindowBackground = YES;
 
     self = [super initWithWindow:window];
     if (self == nil)
@@ -118,15 +144,60 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     contentView.translatesAutoresizingMaskIntoConstraints = NO;
     window.contentView = contentView;
 
-    NSTextField *titleLabel = [NSTextField labelWithString:@"水杉输入法设置"];
-    titleLabel.font = [NSFont boldSystemFontOfSize:24.0];
+    NSBox *brandPanel = [[NSBox alloc] initWithFrame:NSZeroRect];
+    brandPanel.boxType = NSBoxCustom;
+    brandPanel.titlePosition = NSNoTitle;
+    brandPanel.borderWidth = 0.0;
+    brandPanel.fillColor = MetasequoiaBrandColor();
+    brandPanel.accessibilityLabel = @"水杉输入法品牌";
+    brandPanel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSImageView *iconView = [[NSImageView alloc] initWithFrame:NSZeroRect];
+    iconView.image = NSApp.applicationIconImage;
+    iconView.imageScaling = NSImageScaleProportionallyUpOrDown;
+    iconView.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *brandTitle = [NSTextField labelWithString:@"水杉输入法"];
+    brandTitle.font = [NSFont systemFontOfSize:23.0 weight:NSFontWeightSemibold];
+    brandTitle.textColor = [NSColor whiteColor];
+    brandTitle.alignment = NSTextAlignmentCenter;
+    brandTitle.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *brandDescription = [NSTextField labelWithString:@"轻巧、专注的中文输入体验"];
+    brandDescription.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightRegular];
+    brandDescription.textColor = [[NSColor whiteColor] colorWithAlphaComponent:0.95];
+    brandDescription.alignment = NSTextAlignmentCenter;
+    brandDescription.maximumNumberOfLines = 2;
+    brandDescription.lineBreakMode = NSLineBreakByWordWrapping;
+    brandDescription.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *brandTag = [NSTextField labelWithString:@"METASEQUOIA  ·  macOS"];
+    brandTag.font = [NSFont monospacedSystemFontOfSize:9.0 weight:NSFontWeightMedium];
+    brandTag.textColor = [NSColor whiteColor];
+    brandTag.alignment = NSTextAlignmentCenter;
+    brandTag.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSView *settingsPanel = [[NSView alloc] initWithFrame:NSZeroRect];
+    settingsPanel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *titleLabel = [NSTextField labelWithString:@"输入设置"];
+    titleLabel.font = [NSFont systemFontOfSize:24.0 weight:NSFontWeightSemibold];
     titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSTextField *descriptionLabel = [NSTextField labelWithString:@"配置输入方案和输入行为。"];
+    NSTextField *descriptionLabel = [NSTextField labelWithString:@"选择输入方案，并调整候选与标点行为。"];
     descriptionLabel.textColor = [NSColor secondaryLabelColor];
     descriptionLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSTextField *schemeLabel = [NSTextField labelWithString:@"输入方案"];
+    NSTextField *inputSectionLabel = [NSTextField labelWithString:@"输入方案"];
+    inputSectionLabel.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
+    inputSectionLabel.textColor = [NSColor secondaryLabelColor];
+    inputSectionLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSBox *inputCard = [[NSBox alloc] initWithFrame:NSZeroRect];
+    ConfigureCard(inputCard);
+
+    NSTextField *schemeLabel = [NSTextField labelWithString:@"拼音方案"];
+    schemeLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
     schemeLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
     _schemeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
@@ -136,6 +207,14 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     _schemeButton.action = @selector(schemeChanged:);
     _schemeButton.accessibilityLabel = @"输入方案";
     _schemeButton.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSTextField *behaviorSectionLabel = [NSTextField labelWithString:@"输入行为"];
+    behaviorSectionLabel.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
+    behaviorSectionLabel.textColor = [NSColor secondaryLabelColor];
+    behaviorSectionLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSBox *behaviorCard = [[NSBox alloc] initWithFrame:NSZeroRect];
+    ConfigureCard(behaviorCard);
 
     _autocorrectButton = [NSButton checkboxWithTitle:@"启用全拼自动纠错" target:self action:@selector(autocorrectChanged:)];
     _autocorrectButton.translatesAutoresizingMaskIntoConstraints = NO;
@@ -167,46 +246,88 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
     closeButton.keyEquivalent = @"\r";
     closeButton.translatesAutoresizingMaskIntoConstraints = NO;
 
-    [contentView addSubview:titleLabel];
-    [contentView addSubview:descriptionLabel];
-    [contentView addSubview:schemeLabel];
-    [contentView addSubview:_schemeButton];
-    [contentView addSubview:_autocorrectButton];
-    [contentView addSubview:_helpcodeButton];
-    [contentView addSubview:_chinesePunctuationButton];
-    [contentView addSubview:_statusLabel];
-    [contentView addSubview:restoreButton];
-    [contentView addSubview:versionLabel];
-    [contentView addSubview:closeButton];
+    [contentView addSubview:brandPanel];
+    [brandPanel addSubview:iconView];
+    [brandPanel addSubview:brandTitle];
+    [brandPanel addSubview:brandDescription];
+    [brandPanel addSubview:brandTag];
+    [contentView addSubview:settingsPanel];
+    [settingsPanel addSubview:titleLabel];
+    [settingsPanel addSubview:descriptionLabel];
+    [settingsPanel addSubview:inputSectionLabel];
+    [settingsPanel addSubview:inputCard];
+    [inputCard addSubview:schemeLabel];
+    [inputCard addSubview:_schemeButton];
+    [settingsPanel addSubview:behaviorSectionLabel];
+    [settingsPanel addSubview:behaviorCard];
+    [behaviorCard addSubview:_autocorrectButton];
+    [behaviorCard addSubview:_helpcodeButton];
+    [behaviorCard addSubview:_chinesePunctuationButton];
+    [settingsPanel addSubview:_statusLabel];
+    [settingsPanel addSubview:restoreButton];
+    [settingsPanel addSubview:versionLabel];
+    [settingsPanel addSubview:closeButton];
 
     [NSLayoutConstraint activateConstraints:@[
-        [titleLabel.topAnchor constraintEqualToAnchor:contentView.topAnchor constant:28.0],
-        [titleLabel.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:32.0],
-        [titleLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
+        [brandPanel.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor],
+        [brandPanel.topAnchor constraintEqualToAnchor:contentView.topAnchor],
+        [brandPanel.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor],
+        [brandPanel.widthAnchor constraintEqualToConstant:176.0],
+        [iconView.topAnchor constraintEqualToAnchor:brandPanel.topAnchor constant:48.0],
+        [iconView.centerXAnchor constraintEqualToAnchor:brandPanel.centerXAnchor],
+        [iconView.widthAnchor constraintEqualToConstant:64.0],
+        [iconView.heightAnchor constraintEqualToConstant:64.0],
+        [brandTitle.topAnchor constraintEqualToAnchor:iconView.bottomAnchor constant:20.0],
+        [brandTitle.leadingAnchor constraintEqualToAnchor:brandPanel.leadingAnchor constant:16.0],
+        [brandTitle.trailingAnchor constraintEqualToAnchor:brandPanel.trailingAnchor constant:-16.0],
+        [brandDescription.topAnchor constraintEqualToAnchor:brandTitle.bottomAnchor constant:10.0],
+        [brandDescription.leadingAnchor constraintEqualToAnchor:brandPanel.leadingAnchor constant:22.0],
+        [brandDescription.trailingAnchor constraintEqualToAnchor:brandPanel.trailingAnchor constant:-22.0],
+        [brandTag.leadingAnchor constraintEqualToAnchor:brandPanel.leadingAnchor constant:12.0],
+        [brandTag.trailingAnchor constraintEqualToAnchor:brandPanel.trailingAnchor constant:-12.0],
+        [brandTag.bottomAnchor constraintEqualToAnchor:brandPanel.bottomAnchor constant:-28.0],
+        [settingsPanel.leadingAnchor constraintEqualToAnchor:brandPanel.trailingAnchor],
+        [settingsPanel.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor],
+        [settingsPanel.topAnchor constraintEqualToAnchor:contentView.topAnchor],
+        [settingsPanel.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor],
+        [titleLabel.topAnchor constraintEqualToAnchor:settingsPanel.topAnchor constant:28.0],
+        [titleLabel.leadingAnchor constraintEqualToAnchor:settingsPanel.leadingAnchor constant:28.0],
+        [titleLabel.trailingAnchor constraintLessThanOrEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
         [descriptionLabel.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:8.0],
         [descriptionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [descriptionLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
-        [schemeLabel.topAnchor constraintEqualToAnchor:descriptionLabel.bottomAnchor constant:34.0],
-        [schemeLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [schemeLabel.widthAnchor constraintEqualToConstant:100.0],
+        [descriptionLabel.trailingAnchor constraintLessThanOrEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
+        [inputSectionLabel.topAnchor constraintEqualToAnchor:descriptionLabel.bottomAnchor constant:24.0],
+        [inputSectionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
+        [inputCard.topAnchor constraintEqualToAnchor:inputSectionLabel.bottomAnchor constant:8.0],
+        [inputCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
+        [inputCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
+        [inputCard.heightAnchor constraintEqualToConstant:68.0],
+        [schemeLabel.leadingAnchor constraintEqualToAnchor:inputCard.leadingAnchor constant:18.0],
         [_schemeButton.centerYAnchor constraintEqualToAnchor:schemeLabel.centerYAnchor],
-        [_schemeButton.leadingAnchor constraintEqualToAnchor:schemeLabel.trailingAnchor constant:12.0],
-        [_schemeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
-        [_autocorrectButton.leadingAnchor constraintEqualToAnchor:_schemeButton.leadingAnchor],
-        [_autocorrectButton.topAnchor constraintEqualToAnchor:_schemeButton.bottomAnchor constant:16.0],
-        [_helpcodeButton.leadingAnchor constraintEqualToAnchor:_schemeButton.leadingAnchor],
-        [_helpcodeButton.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:10.0],
-        [_chinesePunctuationButton.leadingAnchor constraintEqualToAnchor:_schemeButton.leadingAnchor],
-        [_chinesePunctuationButton.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:10.0],
-        [_statusLabel.topAnchor constraintEqualToAnchor:_chinesePunctuationButton.bottomAnchor constant:12.0],
+        [schemeLabel.centerYAnchor constraintEqualToAnchor:inputCard.centerYAnchor],
+        [_schemeButton.trailingAnchor constraintEqualToAnchor:inputCard.trailingAnchor constant:-16.0],
+        [_schemeButton.widthAnchor constraintEqualToConstant:180.0],
+        [behaviorSectionLabel.topAnchor constraintEqualToAnchor:inputCard.bottomAnchor constant:18.0],
+        [behaviorSectionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
+        [behaviorCard.topAnchor constraintEqualToAnchor:behaviorSectionLabel.bottomAnchor constant:8.0],
+        [behaviorCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
+        [behaviorCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
+        [behaviorCard.heightAnchor constraintEqualToConstant:116.0],
+        [_autocorrectButton.leadingAnchor constraintEqualToAnchor:behaviorCard.leadingAnchor constant:18.0],
+        [_autocorrectButton.topAnchor constraintEqualToAnchor:behaviorCard.topAnchor constant:16.0],
+        [_helpcodeButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
+        [_helpcodeButton.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:12.0],
+        [_chinesePunctuationButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
+        [_chinesePunctuationButton.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:12.0],
+        [_statusLabel.topAnchor constraintEqualToAnchor:behaviorCard.bottomAnchor constant:12.0],
         [_statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [_statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:contentView.trailingAnchor constant:-32.0],
-        [restoreButton.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor constant:32.0],
-        [restoreButton.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor constant:-24.0],
-        [versionLabel.centerXAnchor constraintEqualToAnchor:contentView.centerXAnchor],
+        [_statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
+        [restoreButton.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
+        [restoreButton.bottomAnchor constraintEqualToAnchor:settingsPanel.bottomAnchor constant:-20.0],
+        [versionLabel.centerXAnchor constraintEqualToAnchor:settingsPanel.centerXAnchor],
         [versionLabel.centerYAnchor constraintEqualToAnchor:restoreButton.centerYAnchor],
-        [closeButton.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor constant:-32.0],
-        [closeButton.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor constant:-24.0],
+        [closeButton.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
+        [closeButton.bottomAnchor constraintEqualToAnchor:settingsPanel.bottomAnchor constant:-20.0],
         [closeButton.widthAnchor constraintGreaterThanOrEqualToConstant:80.0],
     ]];
     return self;
