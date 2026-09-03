@@ -134,17 +134,25 @@ int main()
         NSURL *sameSizeDirectory = CreateDirectory(root, @"same-size");
         NSURL *sameSizeSource = [root URLByAppendingPathComponent:@"same-size-source.db"];
         NSURL *sameSizeDestination = [sameSizeDirectory URLByAppendingPathComponent:@"msime.db"];
-        WriteString(@"new-data", sameSizeSource);
-        WriteString(@"old-data", sameSizeDestination);
+        ExecuteSql(sameSizeSource,
+                   "CREATE TABLE tbl_2_n(key TEXT, jp TEXT, value TEXT, weight INTEGER);"
+                   "INSERT INTO tbl_2_n VALUES('ni''hao','nh','拟好',100);");
+        ExecuteSql(sameSizeDestination,
+                   "CREATE TABLE tbl_2_n(key TEXT, jp TEXT, value TEXT, weight INTEGER);"
+                   "INSERT INTO tbl_2_n VALUES('ni''hao','nh','拟好',200);");
+        Require([[fileManager attributesOfItemAtPath:sameSizeSource.path error:&error] fileSize] ==
+                    [[fileManager attributesOfItemAtPath:sameSizeDestination.path error:&error] fileSize],
+                "The same-size update fixture dictionaries have different sizes.");
         Require(InstallMetasequoiaDictionary(sameSizeSource, sameSizeDirectory, @"new-fingerprint", &error),
                 error.localizedDescription.UTF8String);
-        Require(ReadString(sameSizeDestination) == "new-data",
+        Require(ReadWeight(sameSizeDestination, "拟好") == 100,
                 "A same-size dictionary update was incorrectly skipped.");
 
-        WriteString(@"learned-data", sameSizeDestination);
+        ExecuteSql(sameSizeDestination, "UPDATE tbl_2_n SET weight=999 WHERE value='拟好';");
+        WriteString(@"unused corrupt source", sameSizeSource);
         Require(InstallMetasequoiaDictionary(sameSizeSource, sameSizeDirectory, @"new-fingerprint", &error),
-                error.localizedDescription.UTF8String);
-        Require(ReadString(sameSizeDestination) == "learned-data",
+                "A matching dictionary fingerprint did not use the no-update fast path.");
+        Require(ReadWeight(sameSizeDestination, "拟好") == 999,
                 "A matching dictionary fingerprint overwrote learned data.");
 
         NSURL *replayDirectory = CreateDirectory(root, @"replay");
@@ -449,6 +457,30 @@ int main()
         Require(!PrepareMetasequoiaDictionary(missingSource, failureDirectory, @"missing", &error),
                 "A corrupt existing dictionary was accepted as an update fallback.");
         Require(error != nil, "A rejected dictionary fallback did not preserve the update error.");
+
+        NSURL *corruptSourceDirectory = CreateDirectory(root, @"corrupt-source");
+        NSURL *corruptSource = [root URLByAppendingPathComponent:@"corrupt-source.db"];
+        NSURL *preservedDestination =
+            [corruptSourceDirectory URLByAppendingPathComponent:@"msime.db"];
+        WriteString(@"not a SQLite dictionary", corruptSource);
+        ExecuteSql(preservedDestination,
+                   "CREATE TABLE tbl_2_n(key TEXT, jp TEXT, value TEXT, weight INTEGER);"
+                   "INSERT INTO tbl_2_n VALUES('ni''hao','nh','你好',321);");
+        WriteString(@"old-fingerprint",
+                    [corruptSourceDirectory URLByAppendingPathComponent:@"msime.db.sha256"]);
+        error = nil;
+        Require(!InstallMetasequoiaDictionary(corruptSource, corruptSourceDirectory,
+                                              @"new-fingerprint", &error),
+                "A nonempty corrupt bundled dictionary unexpectedly replaced the working dictionary.");
+        Require(ReadWeight(preservedDestination, "你好") == 321,
+                "A corrupt bundled dictionary damaged the working dictionary.");
+        error = nil;
+        Require(PrepareMetasequoiaDictionary(corruptSource, corruptSourceDirectory,
+                                             @"new-fingerprint", &error),
+                "A valid working dictionary was not used after bundled dictionary validation failed.");
+        Require(error == nil, "A successful corrupt-source fallback leaked the validation error.");
+        Require(ReadWeight(preservedDestination, "你好") == 321,
+                "Corrupt-source fallback did not preserve the working dictionary.");
 
         NSURL *replayFailureDirectory = CreateDirectory(root, @"replay-failure");
         NSURL *replayFailureSource = [root URLByAppendingPathComponent:@"replay-failure-source.db"];
