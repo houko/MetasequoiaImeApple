@@ -258,15 +258,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 
 - (void)commitComposition:(id)sender
 {
-    if (_session == nullptr)
-    {
-        return;
-    }
-    const auto result = _session->handle_command(metasequoia::mac::Command::CommitRaw);
-    if (result.handled)
-    {
-        [self applyResult:result client:sender];
-    }
+    [self commitLeadingCandidate:sender];
 }
 
 - (void)deactivateServer:(id)sender
