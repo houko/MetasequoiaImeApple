@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.13.0...v0.14.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** control candidate learning ([#60](https://github.com/houko/MetasequoiaImeMac/issues/60)) ([0353f29](https://github.com/houko/MetasequoiaImeMac/commit/0353f29c1cafdceee7965e80f64a024b7e016f65))
+
 ## [0.13.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.12.0...v0.13.0) (2026-09-03)
 
 
