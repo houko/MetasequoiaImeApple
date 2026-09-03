@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.3.0...v0.4.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** support selectable input schemes ([ab566d3](https://github.com/houko/MetasequoiaImeMac/commit/ab566d30bbb3cfe952ed1acf8497362f1b8f0163))
+
 ## [0.3.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.2.0...v0.3.0) (2026-09-03)
 
 
