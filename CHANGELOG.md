@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.6.0...v0.7.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** add reset and version details ([2612c39](https://github.com/houko/MetasequoiaImeMac/commit/2612c39df4a5782a588fb839c0a98239ca369bf4))
+
 ## [0.6.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.5.0...v0.6.0) (2026-09-03)
 
 
