@@ -10,5 +10,7 @@
 + (void)setAutocorrectEnabled:(BOOL)enabled;
 + (BOOL)storedHelpcodeEnabled;
 + (void)setHelpcodeEnabled:(BOOL)enabled;
++ (BOOL)storedChinesePunctuationEnabled;
++ (void)setChinesePunctuationEnabled:(BOOL)enabled;
 - (void)showAndActivate;
 @end

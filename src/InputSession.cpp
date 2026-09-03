@@ -5,8 +5,10 @@
 
 namespace metasequoia::mac
 {
-InputSession::InputSession(SchemeType scheme_type, bool quanpin_autocorrect_enabled, bool helpcode_enabled)
-    : engine_(scheme_type), quanpin_autocorrect_enabled_(quanpin_autocorrect_enabled), helpcode_enabled_(helpcode_enabled)
+InputSession::InputSession(SchemeType scheme_type, bool quanpin_autocorrect_enabled, bool helpcode_enabled,
+                           bool chinese_punctuation_enabled)
+    : engine_(scheme_type), quanpin_autocorrect_enabled_(quanpin_autocorrect_enabled), helpcode_enabled_(helpcode_enabled),
+      chinese_punctuation_enabled_(chinese_punctuation_enabled)
 {
     engine_.set_quanpin_autocorrect_enabled(quanpin_autocorrect_enabled_);
     engine_.set_quanpin_helpcode_enabled(helpcode_enabled_);
@@ -33,6 +35,48 @@ KeyResult InputSession::handle_candidate_key(char character)
         return {};
     }
     return select_candidate(static_cast<size_t>(character - '1'));
+}
+
+KeyResult InputSession::handle_punctuation(char character)
+{
+    if (!chinese_punctuation_enabled_)
+    {
+        return {};
+    }
+
+    const char *punctuation = nullptr;
+    switch (character)
+    {
+    case ',':
+        punctuation = "，";
+        break;
+    case '.':
+        punctuation = "。";
+        break;
+    case '?':
+        punctuation = "？";
+        break;
+    case '!':
+        punctuation = "！";
+        break;
+    case ';':
+        punctuation = "；";
+        break;
+    case ':':
+        punctuation = "：";
+        break;
+    default:
+        return {};
+    }
+
+    std::string text;
+    if (has_composition())
+    {
+        text = candidates().empty() ? preedit() : candidates().front().word;
+        engine_.reset();
+    }
+    text += punctuation;
+    return {true, std::move(text)};
 }
 
 KeyResult InputSession::handle_command(Command command)
@@ -94,6 +138,11 @@ bool InputSession::quanpin_autocorrect_enabled() const
 bool InputSession::helpcode_enabled() const
 {
     return helpcode_enabled_;
+}
+
+bool InputSession::chinese_punctuation_enabled() const
+{
+    return chinese_punctuation_enabled_;
 }
 
 bool InputSession::has_composition() const

@@ -33,7 +33,7 @@ Then enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit. T
 
 ## Settings
 
-In System Settings > Keyboard > Text Input > Edit, select 水杉输入法 and choose its settings action to open the native 水杉输入法设置 panel. The panel lets you choose 全拼 or 小鹤双拼, enable full-pinyin autocorrection, and enable auxiliary codes; these choices are saved for the current user and apply to the next input session. Additional input and candidate options will be added incrementally.
+In System Settings > Keyboard > Text Input > Edit, select 水杉输入法 and choose its settings action to open the native 水杉输入法设置 panel. The panel lets you choose 全拼 or 小鹤双拼, enable full-pinyin autocorrection and auxiliary codes, and switch Chinese punctuation conversion; these choices are saved for the current user and apply to the next input session. Additional input and candidate options will be added incrementally.
 
 ## Development tests
 
