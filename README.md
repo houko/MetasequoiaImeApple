@@ -55,7 +55,7 @@ Merges to `main` update a Release Please pull request from conventional commit h
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip`
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256`
 
-Download the `.pkg` and its checksum, verify it, then double-click the package to open the native macOS Installer. The package upgrades the current user's copy in `~/Library/Input Methods` and requires a logout after installation so macOS refreshes its input source cache.
+Download the `.pkg` and its checksum, verify it, then double-click the package to open the native macOS Installer. The package installs the input method system-wide at `/Library/Input Methods` and requires administrator privileges. Log out after installation so macOS refreshes its input source cache.
 
 ```sh
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
@@ -63,7 +63,9 @@ shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
 
 The current alpha uses an ad-hoc application signature and the package is not Developer ID signed or notarized. Gatekeeper may block the first double-click as expected. After verifying the checksum, try opening the package once, then open System Settings > Privacy & Security, scroll to Security, click Open Anyway, confirm Open, and return to the Installer. The Open Anyway button is available for about one hour after the blocked launch. After installation and logout, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
 
-The ZIP remains available as a manual fallback. Verify its checksum, extract it, remove quarantine from the extracted release directory, and run `Install.command`:
+The ZIP remains the no-administrator option: it installs the signed bundle for the current user in `~/Library/Input Methods` via `Install.command`.
+
+Verify the ZIP checksum, extract it, remove quarantine from the extracted release directory, and run `Install.command`:
 
 ```sh
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256
