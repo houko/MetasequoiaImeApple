@@ -61,6 +61,153 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertFalse(any(destination.parent.glob(".MetasequoiaIME.installing.*")))
             self.assertFalse(any(destination.parent.glob(".MetasequoiaIME.backup.*")))
 
+    def test_signed_packaging_exercises_signing_notarization_and_gatekeeper(self):
+        bundle = Path(sys.argv[1]).resolve()
+        version = subprocess.run(
+            [
+                "/usr/libexec/PlistBuddy",
+                "-c",
+                "Print :CFBundleShortVersionString",
+                bundle / "Contents/Info.plist",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            fake_bin = temporary / "bin"
+            fake_bin.mkdir()
+            signing_log = temporary / "signing.log"
+            fake_codesign = fake_bin / "codesign"
+            fake_codesign.write_text(
+                "#!/bin/bash\n"
+                "set -euo pipefail\n"
+                "printf 'codesign %s\\n' \"$*\" >> \"$FAKE_SIGNING_LOG\"\n"
+                "case \" $* \" in\n"
+                "  *' --force '*) exit 0 ;;\n"
+                "esac\n"
+                "exec /usr/bin/codesign \"$@\"\n"
+            )
+            fake_codesign.chmod(0o755)
+            fake_productsign = fake_bin / "productsign"
+            fake_productsign.write_text(
+                "#!/bin/bash\n"
+                "set -euo pipefail\n"
+                "printf 'productsign %s\\n' \"$*\" >> \"$FAKE_SIGNING_LOG\"\n"
+                "source_path=\n"
+                "destination_path=\n"
+                "for argument in \"$@\"; do\n"
+                "  source_path=$destination_path\n"
+                "  destination_path=$argument\n"
+                "done\n"
+                "exec /bin/cp \"$source_path\" \"$destination_path\"\n"
+            )
+            fake_productsign.chmod(0o755)
+            fake_xcrun = fake_bin / "xcrun"
+            fake_xcrun.write_text(
+                "#!/bin/bash\n"
+                "set -euo pipefail\n"
+                "printf 'xcrun %s\\n' \"$*\" >> \"$FAKE_SIGNING_LOG\"\n"
+            )
+            fake_xcrun.chmod(0o755)
+
+            output = temporary / "output"
+            environment = os.environ.copy()
+            environment.update(
+                {
+                    "PATH": f"{fake_bin}:{environment['PATH']}",
+                    "FAKE_SIGNING_LOG": str(signing_log),
+                    "METASEQUOIA_REQUIRE_RELEASE_SIGNING": "true",
+                    "METASEQUOIA_DEVELOPER_ID_APPLICATION": "Developer ID Application: Test",
+                    "METASEQUOIA_DEVELOPER_ID_INSTALLER": "Developer ID Installer: Test",
+                    "METASEQUOIA_NOTARY_PROFILE": "metasequoia-test-notary",
+                    "METASEQUOIA_RELEASE_ASSET_SUFFIX": "",
+                    "METASEQUOIA_PROJECT_ROOT": str(PROJECT_ROOT),
+                    "METASEQUOIA_RELEASE_INSTALL_SCRIPT": str(
+                        PROJECT_ROOT / "scripts/install-release.sh"
+                    ),
+                }
+            )
+            result = subprocess.run(
+                [PROJECT_ROOT / "scripts/package_release.sh", f"v{version}", bundle, output],
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            archive = output / f"MetasequoiaIME-v{version}-macos-universal.zip"
+            installer_package = output / f"MetasequoiaIME-v{version}-macos-universal.pkg"
+            self.assertTrue(archive.is_file())
+            self.assertTrue(archive.with_suffix(".zip.sha256").is_file())
+            self.assertTrue(installer_package.is_file())
+            self.assertTrue(installer_package.with_suffix(".pkg.sha256").is_file())
+            self.assertFalse(any(output.glob("*-unsigned.*")))
+
+            signing_calls = signing_log.read_text()
+            self.assertIn("--sign Developer ID Application: Test", signing_calls)
+            self.assertIn("productsign --sign Developer ID Installer: Test", signing_calls)
+            notary_calls = [line for line in signing_calls.splitlines() if line.startswith("xcrun notarytool submit ")]
+            self.assertEqual(len(notary_calls), 2)
+            self.assertTrue(any("/MetasequoiaIME-notary.zip " in line for line in notary_calls))
+            self.assertTrue(any("-macos-universal.pkg " in line for line in notary_calls))
+            for notary_call in notary_calls:
+                self.assertIn("--keychain-profile metasequoia-test-notary --wait", notary_call)
+            staple_calls = [line for line in signing_calls.splitlines() if line.startswith("xcrun stapler staple ")]
+            validate_calls = [line for line in signing_calls.splitlines() if line.startswith("xcrun stapler validate ")]
+            self.assertEqual(len(staple_calls), 2)
+            self.assertEqual(len(validate_calls), 2)
+            for stapler_calls in (staple_calls, validate_calls):
+                self.assertTrue(any(line.endswith("/MetasequoiaIME.app") for line in stapler_calls))
+                self.assertTrue(any(line.endswith("-macos-universal.pkg") for line in stapler_calls))
+
+            extracted = temporary / "signed-extracted"
+            subprocess.run(["ditto", "-x", "-k", archive, extracted], check=True)
+            package_root = extracted / f"MetasequoiaIME-v{version}"
+            self.assertFalse((package_root / "UNSIGNED_BUILD.txt").exists())
+            install_command = (package_root / "Install.command").read_text()
+            self.assertIn("spctl --assess --type execute", install_command)
+
+            expanded_package = temporary / "signed-expanded-package"
+            subprocess.run(["pkgutil", "--expand-full", installer_package, expanded_package], check=True)
+            installer_readme = (expanded_package / "Resources/InstallerReadMe.txt").read_text()
+            self.assertIn("Developer ID signed and notarized", installer_readme)
+            self.assertNotIn("UNSIGNED TEST BUILD", installer_readme)
+
+            fake_spctl = fake_bin / "spctl"
+            fake_spctl.write_text(
+                "#!/bin/bash\n"
+                "set -euo pipefail\n"
+                "printf 'spctl %s\\n' \"$*\" >> \"$FAKE_SIGNING_LOG\"\n"
+            )
+            fake_spctl.chmod(0o755)
+            fake_pkill = fake_bin / "pkill"
+            fake_pkill.write_text("#!/bin/sh\nexit 0\n")
+            fake_pkill.chmod(0o755)
+            install_home = temporary / "signed-install-home"
+            install_environment = environment.copy()
+            install_environment["HOME"] = str(install_home)
+            install_result = subprocess.run(
+                ["zsh", package_root / "Install.command"],
+                capture_output=True,
+                text=True,
+                env=install_environment,
+            )
+            self.assertEqual(install_result.returncode, 0, install_result.stderr)
+            self.assertNotIn("Type I UNDERSTAND", install_result.stdout)
+            gatekeeper_calls = [
+                line for line in signing_log.read_text().splitlines() if line.startswith("spctl --assess --type execute ")
+            ]
+            self.assertEqual(len(gatekeeper_calls), 3)
+            self.assertTrue(any("/signed-extracted/" in line for line in gatekeeper_calls))
+            self.assertTrue(any("/.MetasequoiaIME.installing." in line for line in gatekeeper_calls))
+            self.assertTrue(any("/signed-install-home/" in line for line in gatekeeper_calls))
+            self.assertTrue(
+                (install_home / "Library/Input Methods/MetasequoiaIME.app/Contents/Info.plist").is_file()
+            )
+
     def test_package_is_portable_and_self_contained(self):
         bundle = Path(sys.argv[1]).resolve()
         version = subprocess.run(["/usr/libexec/PlistBuddy", "-c", "Print :CFBundleShortVersionString", bundle / "Contents/Info.plist"], check=True, capture_output=True, text=True).stdout.strip()
