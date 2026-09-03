@@ -2,6 +2,8 @@
 
 #include "../vendor/MetasequoiaImeEngine/user_dictionary/user_dictionary_journal.h"
 
+#include <sqlite3.h>
+
 namespace
 {
 NSString *const MetasequoiaDictionaryErrorDomain = @"com.houko.inputmethod.MetasequoiaIME.dictionary";
@@ -21,6 +23,44 @@ std::string FileSystemPath(NSURL *url)
 {
     const char *path = url.fileSystemRepresentation;
     return path == nullptr ? std::string{} : std::string(path);
+}
+
+BOOL IsUsableDictionary(NSURL *dictionary)
+{
+    const std::string path = FileSystemPath(dictionary);
+    if (path.empty())
+    {
+        return NO;
+    }
+
+    sqlite3 *database = nullptr;
+    if (sqlite3_open_v2(path.c_str(), &database, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK)
+    {
+        sqlite3_close(database);
+        return NO;
+    }
+
+    sqlite3_stmt *integrityStatement = nullptr;
+    BOOL integrityValid = sqlite3_prepare_v2(database, "PRAGMA quick_check(1)", -1, &integrityStatement, nullptr) ==
+                              SQLITE_OK &&
+                          sqlite3_step(integrityStatement) == SQLITE_ROW;
+    if (integrityValid)
+    {
+        const unsigned char *result = sqlite3_column_text(integrityStatement, 0);
+        integrityValid = result != nullptr && std::string(reinterpret_cast<const char *>(result)) == "ok";
+    }
+    sqlite3_finalize(integrityStatement);
+
+    sqlite3_stmt *schemaStatement = nullptr;
+    BOOL schemaValid = integrityValid &&
+                       sqlite3_prepare_v2(database,
+                                          "SELECT 1 FROM sqlite_master WHERE type='table' AND name GLOB 'tbl_*' "
+                                          "LIMIT 1",
+                                          -1, &schemaStatement, nullptr) == SQLITE_OK &&
+                       sqlite3_step(schemaStatement) == SQLITE_ROW;
+    sqlite3_finalize(schemaStatement);
+    sqlite3_close(database);
+    return schemaValid;
 }
 } // namespace
 
@@ -140,6 +180,41 @@ BOOL InstallMetasequoiaDictionary(NSURL *source, NSURL *dataDirectory, NSString 
     }
 }
 
+BOOL PrepareMetasequoiaDictionary(NSURL *source, NSURL *dataDirectory, NSString *dictionaryFingerprint,
+                                  NSError **error)
+{
+    NSError *installError = nil;
+    if (InstallMetasequoiaDictionary(source, dataDirectory, dictionaryFingerprint, &installError))
+    {
+        if (error != nullptr)
+        {
+            *error = nil;
+        }
+        return YES;
+    }
+
+    NSURL *existingDictionary = [dataDirectory URLByAppendingPathComponent:@"msime.db" isDirectory:NO];
+    if (IsUsableDictionary(existingDictionary))
+    {
+        NSLog(@"Bundled dictionary update failed; continuing with the validated existing dictionary.");
+        if (error != nullptr)
+        {
+            *error = nil;
+        }
+        return YES;
+    }
+
+    if (installError != nil)
+    {
+        if (error != nullptr)
+        {
+            *error = installError;
+        }
+        return NO;
+    }
+    return Fail(error, 4, @"No usable Metasequoia dictionary is available.");
+}
+
 BOOL EnsureMetasequoiaDictionary(NSError **error)
 {
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -156,5 +231,5 @@ BOOL EnsureMetasequoiaDictionary(NSError **error)
     NSURL *dataDirectory = [applicationSupport URLByAppendingPathComponent:@"metasequoiaime" isDirectory:YES];
     NSURL *source = [[NSBundle mainBundle] URLForResource:@"msime" withExtension:@"db"];
     NSString *fingerprint = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"MetasequoiaDictionarySHA256"];
-    return InstallMetasequoiaDictionary(source, dataDirectory, fingerprint, error);
+    return PrepareMetasequoiaDictionary(source, dataDirectory, fingerprint, error);
 }
