@@ -31,6 +31,10 @@ The dictionary build generates `vendor/MetasequoiaImeDict/out/msime.db` from the
 
 Then enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit. The installer copies the signed bundle to `~/Library/Input Methods` and registers that exact bundle with macOS; it does not require administrator privileges.
 
+## Settings
+
+In System Settings > Keyboard > Text Input > Edit, select 水杉输入法 and choose its settings action to open the native 水杉输入法设置 panel. The first panel exposes the currently supported full-pinyin scheme; additional input and candidate options will be added incrementally.
+
 ## Development tests
 
 ```sh
