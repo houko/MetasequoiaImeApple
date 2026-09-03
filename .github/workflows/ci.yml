@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS arm64
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          submodules: recursive
+      - name: Remove unused runner taps
+        run: if brew tap | grep -Fxq aws/tap; then brew untap aws/tap; fi
+      - name: Install dependencies
+        run: brew install boost fmt spdlog
+      - name: Create test dictionary
+        run: python3 tests/create_fixture_dictionary.py "$RUNNER_TEMP/msime.db"
+      - name: Type-check registration helper
+        run: xcrun swiftc -typecheck scripts/register_input_source.swift
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix)" -DMETASEQUOIA_IME_DICTIONARY="$RUNNER_TEMP/msime.db"
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --timeout 20
+      - name: Verify input method bundle
+        run: |
+          codesign --verify --deep --strict --verbose=2 build/MetasequoiaIME.app
+          lipo build/MetasequoiaIME.app/Contents/MacOS/MetasequoiaIME -verify_arch arm64 x86_64
+          plutil -lint build/MetasequoiaIME.app/Contents/Info.plist
+          test "$(/usr/libexec/PlistBuddy -c 'Print :TISInputSourceID' build/MetasequoiaIME.app/Contents/Info.plist)" = "com.houko.inputmethod.MetasequoiaIME"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :TISIntendedLanguage' build/MetasequoiaIME.app/Contents/Info.plist)" = "zh-Hans"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :ComponentInputModeDict:tsInputModeListKey:com.houko.inputmethod.MetasequoiaIME.Hans:tsInputModeScriptKey' build/MetasequoiaIME.app/Contents/Info.plist)" = "smSimpChinese"

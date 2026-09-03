@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+
+import sqlite3
+import sys
+from pathlib import Path
+
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        raise SystemExit("Usage: create_fixture_dictionary.py OUTPUT")
+    output = Path(sys.argv[1]).resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.unlink(missing_ok=True)
+    with sqlite3.connect(output) as database:
+        database.execute("CREATE TABLE tbl_2_n(key TEXT, jp TEXT, value TEXT, weight INTEGER)")
+        database.execute("INSERT INTO tbl_2_n VALUES(?, ?, ?, ?)", ("ni'hao", "nh", "你好", 100))
+    print(output)
+
+
+if __name__ == "__main__":
+    main()
