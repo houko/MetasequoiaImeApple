@@ -1,0 +1,111 @@
+#include "../src/InputSession.h"
+#include "../vendor/MetasequoiaImeEngine/core/data_path.h"
+
+#include <sqlite3.h>
+
+#include <algorithm>
+#include <chrono>
+#include <cstdlib>
+#include <filesystem>
+#include <stdexcept>
+#include <string>
+
+namespace
+{
+class Database
+{
+  public:
+    explicit Database(const std::filesystem::path &path)
+    {
+        if (sqlite3_open(metasequoia::path_to_utf8(path).c_str(), &database_) != SQLITE_OK)
+        {
+            throw std::runtime_error("Failed to create the input-session test dictionary.");
+        }
+    }
+
+    ~Database()
+    {
+        sqlite3_close(database_);
+    }
+
+    void execute(const char *sql)
+    {
+        char *error = nullptr;
+        if (sqlite3_exec(database_, sql, nullptr, nullptr, &error) != SQLITE_OK)
+        {
+            const std::string message = error == nullptr ? "SQLite operation failed." : error;
+            sqlite3_free(error);
+            throw std::runtime_error(message);
+        }
+    }
+
+  private:
+    sqlite3 *database_ = nullptr;
+};
+
+void type(metasequoia::mac::InputSession &session, const std::string &text)
+{
+    for (const char character : text)
+    {
+        if (!session.handle_character(character).handled)
+        {
+            throw std::runtime_error("A pinyin character was not handled.");
+        }
+    }
+}
+
+void require(bool condition, const char *message)
+{
+    if (!condition)
+    {
+        throw std::runtime_error(message);
+    }
+}
+} // namespace
+
+int main()
+{
+    const auto suffix = std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    const std::filesystem::path data_directory = std::filesystem::temp_directory_path() / std::filesystem::u8path("metasequoia-mac-词库-" + suffix);
+    std::filesystem::create_directories(data_directory);
+    if (setenv("METASEQUOIA_IME_DATA_DIR", metasequoia::path_to_utf8(data_directory).c_str(), 1) != 0)
+    {
+        throw std::runtime_error("Failed to set the test data directory.");
+    }
+
+    {
+        Database database(data_directory / "msime.db");
+        database.execute("CREATE TABLE tbl_2_n(key TEXT, jp TEXT, value TEXT, weight INTEGER)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '你好', 200)");
+        database.execute("INSERT INTO tbl_2_n VALUES('ni''hao', 'nh', '拟好', 100)");
+
+        metasequoia::mac::InputSession session;
+        type(session, "nihao");
+        require(session.preedit() == "nihao", "The marked text did not mirror the raw pinyin.");
+        require(session.candidates().size() >= 2, "The real engine did not return both SQLite candidates.");
+
+        const auto selected = session.select_candidate(1);
+        require(selected.handled && selected.commit == "拟好", "Selecting the second candidate committed the wrong text.");
+        require(session.preedit().empty(), "Selecting a candidate did not end composition.");
+
+        type(session, "nihao");
+        const auto space = session.handle_command(metasequoia::mac::Command::CommitCandidate);
+        require(space.handled && space.commit == "你好", "Space did not commit the leading candidate.");
+
+        type(session, "nihao");
+        session.handle_command(metasequoia::mac::Command::Backspace);
+        require(session.preedit() == "niha", "Backspace did not remove the last pinyin character.");
+        const auto raw = session.handle_command(metasequoia::mac::Command::CommitRaw);
+        require(raw.handled && raw.commit == "niha", "Return did not commit raw input.");
+
+        type(session, "nihao");
+        const auto cancel = session.handle_command(metasequoia::mac::Command::Cancel);
+        require(cancel.handled && !cancel.commit.has_value() && session.preedit().empty(), "Escape did not cancel composition.");
+
+        const auto idle_backspace = session.handle_command(metasequoia::mac::Command::Backspace);
+        require(!idle_backspace.handled, "Backspace was swallowed while no composition was active.");
+    }
+
+    std::filesystem::remove_all(data_directory);
+    return 0;
+}

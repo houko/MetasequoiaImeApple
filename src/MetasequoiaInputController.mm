@@ -1,0 +1,207 @@
+#import "MetasequoiaInputController.h"
+
+#import "DictionaryInstaller.h"
+#include "InputSession.h"
+
+#import <Carbon/Carbon.h>
+
+#include <memory>
+
+namespace
+{
+NSString *StringFromUtf8(const std::string &value)
+{
+    return [[NSString alloc] initWithBytes:value.data() length:value.size() encoding:NSUTF8StringEncoding];
+}
+} // namespace
+
+@implementation MetasequoiaInputController
+{
+    std::unique_ptr<metasequoia::mac::InputSession> _session;
+    IMKCandidates *_candidatePanel;
+    NSArray *_candidateData;
+}
+
+- (instancetype)initWithServer:(IMKServer *)server delegate:(id)delegate client:(id)inputClient
+{
+    self = [super initWithServer:server delegate:delegate client:inputClient];
+    if (self != nil)
+    {
+        NSError *error = nil;
+        if (!EnsureMetasequoiaDictionary(&error))
+        {
+            NSLog(@"Failed to prepare the Metasequoia dictionary: %@", error.localizedDescription);
+            return self;
+        }
+        _session = std::make_unique<metasequoia::mac::InputSession>();
+        _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
+        [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @NO}];
+    }
+    return self;
+}
+
+- (BOOL)handleEvent:(NSEvent *)event client:(id)sender
+{
+    if (event.type != NSEventTypeKeyDown || _session == nullptr)
+    {
+        return NO;
+    }
+
+    const NSEventModifierFlags modifiers = event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
+    if ((modifiers & (NSEventModifierFlagCommand | NSEventModifierFlagControl | NSEventModifierFlagOption)) != 0)
+    {
+        [self commitLeadingCandidate:sender];
+        return NO;
+    }
+
+    metasequoia::mac::KeyResult result;
+    switch (event.keyCode)
+    {
+    case kVK_Delete:
+        result = _session->handle_command(metasequoia::mac::Command::Backspace);
+        break;
+    case kVK_Return:
+    case kVK_ANSI_KeypadEnter:
+        result = _session->handle_command(metasequoia::mac::Command::CommitRaw);
+        break;
+    case kVK_Escape:
+        result = _session->handle_command(metasequoia::mac::Command::Cancel);
+        break;
+    case kVK_Space:
+        result = _session->handle_command(metasequoia::mac::Command::CommitCandidate);
+        break;
+    default:
+    {
+        NSString *characters = event.charactersIgnoringModifiers;
+        if (characters.length == 1)
+        {
+            const unichar character = [characters characterAtIndex:0];
+            if ((character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') || character == '\'')
+            {
+                result = _session->handle_character(static_cast<char>(character));
+            }
+        }
+        break;
+    }
+    }
+
+    if (!result.handled)
+    {
+        [self commitLeadingCandidate:sender];
+        return NO;
+    }
+    [self applyResult:result client:sender];
+    return YES;
+}
+
+- (void)commitLeadingCandidate:(id)sender
+{
+    if (_session == nullptr || !_session->has_composition())
+    {
+        return;
+    }
+    const auto result = _session->handle_command(metasequoia::mac::Command::CommitCandidate);
+    if (result.handled)
+    {
+        [self applyResult:result client:sender];
+    }
+}
+
+- (void)applyResult:(const metasequoia::mac::KeyResult &)result client:(id)sender
+{
+    id<IMKTextInput> client = sender;
+    const NSRange replacementRange = NSMakeRange(NSNotFound, NSNotFound);
+    if (result.commit.has_value())
+    {
+        [client insertText:StringFromUtf8(*result.commit) replacementRange:replacementRange];
+        [_candidatePanel hide];
+        return;
+    }
+
+    NSString *preedit = StringFromUtf8(_session->preedit());
+    [client setMarkedText:preedit selectionRange:NSMakeRange(preedit.length, 0) replacementRange:replacementRange];
+    [self updateCandidatePanel];
+}
+
+- (void)updateCandidatePanel
+{
+    NSMutableArray *data = [NSMutableArray arrayWithCapacity:_session->candidates().size()];
+    for (const WordItem &candidate : _session->candidates())
+    {
+        [data addObject:StringFromUtf8(candidate.word)];
+    }
+    _candidateData = [data copy];
+    [_candidatePanel setCandidateData:_candidateData];
+    if (_session->has_composition() && _candidateData.count > 0)
+    {
+        [_candidatePanel show:kIMKLocateCandidatesBelowHint];
+    }
+    else
+    {
+        [_candidatePanel hide];
+    }
+}
+
+- (NSArray *)candidates:(id)sender
+{
+    (void)sender;
+    return _candidateData != nil ? _candidateData : @[];
+}
+
+- (void)candidateSelected:(NSAttributedString *)candidateString
+{
+    if (_session == nullptr)
+    {
+        return;
+    }
+    const char *utf8 = candidateString.string.UTF8String;
+    if (utf8 == nullptr)
+    {
+        return;
+    }
+    const auto result = _session->select_candidate(utf8);
+    if (result.handled)
+    {
+        [self applyResult:result client:self.client];
+    }
+}
+
+- (id)composedString:(id)sender
+{
+    (void)sender;
+    return _session == nullptr ? @"" : StringFromUtf8(_session->preedit());
+}
+
+- (NSAttributedString *)originalString:(id)sender
+{
+    (void)sender;
+    NSString *raw = _session == nullptr ? @"" : StringFromUtf8(_session->preedit());
+    return [[NSAttributedString alloc] initWithString:raw];
+}
+
+- (void)commitComposition:(id)sender
+{
+    if (_session == nullptr)
+    {
+        return;
+    }
+    const auto result = _session->handle_command(metasequoia::mac::Command::CommitRaw);
+    if (result.handled)
+    {
+        [self applyResult:result client:sender];
+    }
+}
+
+- (void)deactivateServer:(id)sender
+{
+    [self commitComposition:sender];
+    [_candidatePanel hide];
+    [super deactivateServer:sender];
+}
+
+- (NSUInteger)recognizedEvents:(id)sender
+{
+    (void)sender;
+    return NSEventMaskKeyDown;
+}
+@end

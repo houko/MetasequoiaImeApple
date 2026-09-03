@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>zh_CN</string>
+    <key>CFBundleDisplayName</key>
+    <string>水杉输入法</string>
+    <key>CFBundleExecutable</key>
+    <string>MetasequoiaIME</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.houko.inputmethod.MetasequoiaIME</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Metasequoia IME</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>@PROJECT_VERSION@</string>
+    <key>CFBundleVersion</key>
+    <string>@PROJECT_VERSION@</string>
+    <key>ComponentInputModeDict</key>
+    <dict>
+        <key>tsInputModeListKey</key>
+        <dict>
+            <key>com.houko.inputmethod.MetasequoiaIME.Hans</key>
+            <dict>
+                <key>TISInputSourceID</key>
+                <string>com.houko.inputmethod.MetasequoiaIME.Hans</string>
+                <key>TISIntendedLanguage</key>
+                <string>zh-Hans</string>
+                <key>tsInputModeCharacterRepertoireKey</key>
+                <array>
+                    <string>Hans</string>
+                </array>
+                <key>tsInputModeDefaultStateKey</key>
+                <true/>
+                <key>tsInputModeIsVisibleKey</key>
+                <true/>
+                <key>tsInputModePrimaryInScriptKey</key>
+                <true/>
+                <key>tsInputModeScriptKey</key>
+                <string>smSimpChinese</string>
+            </dict>
+        </dict>
+        <key>tsVisibleInputModeOrderedArrayKey</key>
+        <array>
+            <string>com.houko.inputmethod.MetasequoiaIME.Hans</string>
+        </array>
+    </dict>
+    <key>InputMethodConnectionName</key>
+    <string>com.houko.inputmethod.MetasequoiaIME_Connection</string>
+    <key>InputMethodServerControllerClass</key>
+    <string>MetasequoiaInputController</string>
+    <key>InputMethodServerDelegateClass</key>
+    <string>MetasequoiaInputController</string>
+    <key>LSBackgroundOnly</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>TISInputSourceID</key>
+    <string>com.houko.inputmethod.MetasequoiaIME</string>
+    <key>TISIntendedLanguage</key>
+    <string>zh-Hans</string>
+    <key>TISInputSourceLanguages</key>
+    <array>
+        <string>zh-Hans</string>
+    </array>
+    <key>tsInputMethodCharacterRepertoireKey</key>
+    <array>
+        <string>Hans</string>
+    </array>
+</dict>
+</plist>
