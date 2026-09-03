@@ -2,6 +2,7 @@
 
 #import "DictionaryInstaller.h"
 #import "PreferencesWindowController.h"
+#include "InputControllerKeyRouting.h"
 #include "InputSession.h"
 
 #import <Carbon/Carbon.h>
@@ -56,7 +57,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     if (self != nil)
     {
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
-        [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @NO}];
+        [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @YES}];
 
         NSError *error = nil;
         if (!EnsureMetasequoiaDictionary(&error))
@@ -114,22 +115,41 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     }
 
     metasequoia::mac::KeyResult result;
-    switch (event.keyCode)
+    switch (metasequoia::mac::ClassifyControllerKey(event.keyCode, [_candidatePanel isVisible]))
     {
-    case kVK_Delete:
+    case metasequoia::mac::ControllerKeyAction::ConsumeCandidateKey:
+        return YES;
+    case metasequoia::mac::ControllerKeyAction::MoveCandidateLeft:
+        [_candidatePanel moveLeft:self];
+        return YES;
+    case metasequoia::mac::ControllerKeyAction::MoveCandidateRight:
+        [_candidatePanel moveRight:self];
+        return YES;
+    case metasequoia::mac::ControllerKeyAction::MoveCandidateUp:
+        [_candidatePanel moveUp:self];
+        return YES;
+    case metasequoia::mac::ControllerKeyAction::MoveCandidateDown:
+        [_candidatePanel moveDown:self];
+        return YES;
+    case metasequoia::mac::ControllerKeyAction::MoveCandidatePageUp:
+        [_candidatePanel pageUp:self];
+        return YES;
+    case metasequoia::mac::ControllerKeyAction::MoveCandidatePageDown:
+        [_candidatePanel pageDown:self];
+        return YES;
+    case metasequoia::mac::ControllerKeyAction::Backspace:
         result = _session->handle_command(metasequoia::mac::Command::Backspace);
         break;
-    case kVK_Return:
-    case kVK_ANSI_KeypadEnter:
+    case metasequoia::mac::ControllerKeyAction::CommitRaw:
         result = _session->handle_command(metasequoia::mac::Command::CommitRaw);
         break;
-    case kVK_Escape:
+    case metasequoia::mac::ControllerKeyAction::Cancel:
         result = _session->handle_command(metasequoia::mac::Command::Cancel);
         break;
-    case kVK_Space:
+    case metasequoia::mac::ControllerKeyAction::CommitCandidate:
         result = _session->handle_command(metasequoia::mac::Command::CommitCandidate);
         break;
-    default:
+    case metasequoia::mac::ControllerKeyAction::Character:
     {
         NSString *characters = event.characters;
         if (characters.length == 1)
