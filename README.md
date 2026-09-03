@@ -103,6 +103,12 @@ To move the application, preferences, and learned data to the same recovery fold
 
 Both modes require typing `REMOVE METASEQUOIAIME` before changing files. Log out afterward so macOS refreshes its input source cache.
 
+PKG installations keep the same helper inside the installed application bundle, so it remains available even without the release ZIP:
+
+```sh
+"$HOME/Library/Input Methods/MetasequoiaIME.app/Contents/Resources/Uninstall.command"
+```
+
 ## License
 
 Metasequoia IME for macOS is distributed under the GNU General Public License version 3. Release archives, installer packages, and the application bundle include the applicable GPL and third-party license notices; see `LICENSE` and `THIRD_PARTY_NOTICES.txt`.

@@ -69,9 +69,6 @@ if [[ "$bundle_version" != "$version" ]]; then
     exit 1
 fi
 
-if [[ -n "$application_identity" ]]; then
-    codesign --force --deep --options runtime --timestamp --sign "$application_identity" "$source_bundle"
-fi
 codesign --verify --deep --strict --verbose=2 "$source_bundle"
 mkdir -p "$output_dir"
 staging_root=$(mktemp -d "$output_dir/.package.XXXXXX")
@@ -129,7 +126,18 @@ trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
 
 mkdir -p "$package_root"
-ditto "$source_bundle" "$package_root/MetasequoiaIME.app"
+packaged_bundle="$package_root/MetasequoiaIME.app"
+bundled_uninstaller="$packaged_bundle/Contents/Resources/Uninstall.command"
+ditto "$source_bundle" "$packaged_bundle"
+mkdir -p "$packaged_bundle/Contents/Resources"
+ditto "$uninstall_script" "$bundled_uninstaller"
+chmod +x "$bundled_uninstaller"
+if [[ -n "$application_identity" ]]; then
+    codesign --force --deep --options runtime --timestamp --sign "$application_identity" "$packaged_bundle"
+else
+    codesign --force --deep --sign - "$packaged_bundle"
+fi
+codesign --verify --deep --strict --verbose=2 "$packaged_bundle"
 ditto "$install_script" "$package_root/Install.command"
 ditto "$uninstall_script" "$package_root/Uninstall.command"
 ditto "$project_root/LICENSE" "$package_root/LICENSE"
@@ -146,14 +154,14 @@ chmod +x "$package_root/Install.command"
 chmod +x "$package_root/Uninstall.command"
 if [[ -n "$notary_profile" ]]; then
     notary_input="$staging_root/MetasequoiaIME-notary.zip"
-    ditto -c -k --keepParent "$package_root/MetasequoiaIME.app" "$notary_input"
+    ditto -c -k --keepParent "$packaged_bundle" "$notary_input"
     xcrun notarytool submit "$notary_input" --keychain-profile "$notary_profile" --wait
-    xcrun stapler staple "$package_root/MetasequoiaIME.app"
-    xcrun stapler validate "$package_root/MetasequoiaIME.app"
+    xcrun stapler staple "$packaged_bundle"
+    xcrun stapler validate "$packaged_bundle"
 fi
 ditto -c -k --keepParent "$package_root" "$archive_path"
 (cd "$staging_root" && shasum -a 256 "$archive_name") > "$checksum_path"
-pkgbuild --component "$package_root/MetasequoiaIME.app" --identifier com.houko.inputmethod.MetasequoiaIME.pkg --version "$version" --install-location "Library/Input Methods" "$component_package"
+pkgbuild --component "$packaged_bundle" --identifier com.houko.inputmethod.MetasequoiaIME.pkg --version "$version" --install-location "Library/Input Methods" "$component_package"
 sed "s/@VERSION@/$version/g" "$project_root/resources/InstallerDistribution.xml.in" > "$distribution_file"
 mkdir -p "$installer_resources"
 ditto "$project_root/LICENSE" "$installer_resources/LICENSE"
@@ -176,6 +184,9 @@ fi
 printf '%s\n' \
     '' \
     'Installation scope: current user (~/Library/Input Methods).' \
+    '' \
+    'Uninstall from Terminal with:' \
+    '"$HOME/Library/Input Methods/MetasequoiaIME.app/Contents/Resources/Uninstall.command"' \
     '' \
     'Third-party notices' \
     '-------------------' \
