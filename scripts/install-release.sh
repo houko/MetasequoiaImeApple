@@ -48,6 +48,11 @@ if ! verify_bundle "$source_bundle"; then
     exit 1
 fi
 mkdir -p "$destination_root"
+exec {install_lock_fd}>> "$destination_root/.MetasequoiaIME.install.lock"
+if ! /usr/bin/lockf -s -t 0 "$install_lock_fd"; then
+    print -u2 "Another MetasequoiaIME installation is already running, or the installation lock could not be acquired."
+    exit 1
+fi
 staging_root=$(mktemp -d "$destination_root/.MetasequoiaIME.installing.XXXXXX")
 backup_root=""
 cleanup_setup() {

@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import xml.etree.ElementTree as ElementTree
 import zipfile
@@ -260,6 +261,107 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertEqual(arguments, f"-TERM -x -u {os.geteuid()} MetasequoiaIME")
             for arguments in pgrep_log.read_text().splitlines():
                 self.assertEqual(arguments, f"-x -u {os.geteuid()} MetasequoiaIME")
+
+    def test_installers_reject_concurrent_installation(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            fake_bin = temporary / "bin"
+            fake_bin.mkdir()
+            for command_name, exit_status in (
+                ("codesign", 0),
+                ("spctl", 0),
+                ("pkill", 0),
+                ("pgrep", 1),
+                ("xcrun", 0),
+            ):
+                command = fake_bin / command_name
+                command.write_text(f"#!/bin/sh\nexit {exit_status}\n")
+                command.chmod(0o755)
+
+            fake_ditto = fake_bin / "ditto"
+            fake_ditto.write_text(
+                "#!/bin/sh\n"
+                "set -eu\n"
+                "if /bin/mkdir \"$FAKE_DITTO_ACTIVE\" 2>/dev/null; then\n"
+                "  : > \"$FAKE_DITTO_STARTED\"\n"
+                "  while test ! -e \"$FAKE_DITTO_RELEASE\"; do /bin/sleep 0.02; done\n"
+                "  /usr/bin/ditto \"$@\"\n"
+                "  /bin/rmdir \"$FAKE_DITTO_ACTIVE\"\n"
+                "else\n"
+                "  : > \"$FAKE_DITTO_OVERLAP\"\n"
+                "  /usr/bin/ditto \"$@\"\n"
+                "fi\n"
+            )
+            fake_ditto.chmod(0o755)
+
+            release_root = temporary / "release"
+            release_root.mkdir()
+            installer = release_root / "Install.command"
+            shutil.copy2(PROJECT_ROOT / "scripts/install-release.sh", installer)
+            (release_root / "MetasequoiaIME.app").mkdir()
+            installers = (PROJECT_ROOT / "scripts/install.sh", installer)
+            for index, tested_installer in enumerate(installers):
+                with self.subTest(installer=tested_installer.name):
+                    active = temporary / f"ditto-active-{index}"
+                    started = temporary / f"ditto-started-{index}"
+                    release = temporary / f"ditto-release-{index}"
+                    overlap = temporary / f"ditto-overlap-{index}"
+                    test_home = (temporary / f"home-{index}").resolve()
+                    environment = os.environ.copy()
+                    environment.update(
+                        {
+                            "HOME": str(test_home),
+                            "PATH": f"{fake_bin}:{environment['PATH']}",
+                            "FAKE_DITTO_ACTIVE": str(active),
+                            "FAKE_DITTO_STARTED": str(started),
+                            "FAKE_DITTO_RELEASE": str(release),
+                            "FAKE_DITTO_OVERLAP": str(overlap),
+                        }
+                    )
+
+                    first = subprocess.Popen(
+                        ["/bin/zsh", tested_installer],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        env=environment,
+                    )
+                    try:
+                        for _ in range(100):
+                            if started.exists():
+                                break
+                            if first.poll() is not None:
+                                break
+                            time.sleep(0.02)
+                        self.assertTrue(
+                            started.exists(),
+                            "The first installer did not reach the protected section.",
+                        )
+
+                        second = subprocess.run(
+                            ["/bin/zsh", tested_installer],
+                            capture_output=True,
+                            text=True,
+                            env=environment,
+                            timeout=5,
+                        )
+                    finally:
+                        release.touch()
+                        first_stdout, first_stderr = first.communicate(timeout=10)
+
+                    self.assertEqual(first.returncode, 0, first_stdout + first_stderr)
+                    self.assertNotEqual(second.returncode, 0)
+                    self.assertIn(
+                        "Another MetasequoiaIME installation is already running",
+                        second.stderr,
+                    )
+                    self.assertFalse(
+                        overlap.exists(),
+                        "Two installers entered the bundle-copy section concurrently.",
+                    )
+                    destination_root = test_home / "Library/Input Methods"
+                    self.assertFalse(any(destination_root.glob(".MetasequoiaIME.installing.*")))
+                    self.assertFalse(any(destination_root.glob(".MetasequoiaIME.backup.*")))
 
     def test_signed_packaging_exercises_signing_notarization_and_gatekeeper(self):
         bundle = Path(sys.argv[1]).resolve()
