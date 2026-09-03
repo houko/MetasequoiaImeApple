@@ -55,6 +55,9 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     self = [super initWithServer:server delegate:delegate client:inputClient];
     if (self != nil)
     {
+        _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
+        [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @NO}];
+
         NSError *error = nil;
         if (!EnsureMetasequoiaDictionary(&error))
         {
@@ -62,8 +65,6 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
             return self;
         }
         [self reloadSessionFromPreferences];
-        _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
-        [_candidatePanel setAttributes:@{IMKCandidatesSendServerKeyEventFirst: @NO}];
     }
     return self;
 }

@@ -85,6 +85,13 @@ class ReleaseConfigurationTests(unittest.TestCase):
         input_controller = (PROJECT_ROOT / "src/MetasequoiaInputController.mm").read_text()
         self.assertIn("reloadSessionFromPreferences", input_controller)
         self.assertIn("- (void)activateServer:(id)sender", input_controller)
+        controller_initialization = input_controller.split("- (instancetype)initWithServer:", 1)[1].split(
+            "- (void)reloadSessionFromPreferences", 1
+        )[0]
+        self.assertLess(
+            controller_initialization.index("_candidatePanel ="),
+            controller_initialization.index("EnsureMetasequoiaDictionary"),
+        )
         commit_composition = input_controller.split("- (void)commitComposition:(id)sender", 1)[1].split(
             "- (void)deactivateServer:(id)sender", 1
         )[0]
