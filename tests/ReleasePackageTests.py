@@ -114,6 +114,75 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertFalse(any(destination.parent.glob(".MetasequoiaIME.installing.*")))
             self.assertFalse(any(destination.parent.glob(".MetasequoiaIME.backup.*")))
 
+    def test_installers_clean_staging_when_backup_directory_creation_fails(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            fake_bin = temporary / "bin"
+            fake_bin.mkdir()
+            fake_mktemp = fake_bin / "mktemp"
+            fake_mktemp.write_text(
+                "#!/bin/sh\n"
+                "set -eu\n"
+                "if test -f \"$FAKE_MKTEMP_STATE\"; then\n"
+                "  if test \"${FAKE_MKTEMP_FAILURE:-exit}\" = term; then\n"
+                "    kill -TERM \"$PPID\"\n"
+                "    sleep 1\n"
+                "  fi\n"
+                "  exit 72\n"
+                "fi\n"
+                ": > \"$FAKE_MKTEMP_STATE\"\n"
+                "target=${2%XXXXXX}partial\n"
+                "/bin/mkdir -p \"$target\"\n"
+                "printf '%s\\n' \"$target\"\n"
+            )
+            fake_mktemp.chmod(0o755)
+            for command_name in ("codesign", "spctl"):
+                command = fake_bin / command_name
+                command.write_text("#!/bin/sh\nexit 0\n")
+                command.chmod(0o755)
+
+            release_root = temporary / "release"
+            release_root.mkdir()
+            release_installer = release_root / "Install.command"
+            shutil.copy2(PROJECT_ROOT / "scripts/install-release.sh", release_installer)
+            (release_root / "MetasequoiaIME.app").mkdir()
+
+            installers = (PROJECT_ROOT / "scripts/install.sh", release_installer)
+            for index, (installer, failure) in enumerate(
+                (installer, failure)
+                for installer in installers
+                for failure in ("exit", "term")
+            ):
+                with self.subTest(installer=installer.name, failure=failure):
+                    test_home = (temporary / f"home-{index}").resolve()
+                    state = temporary / f"mktemp-{index}.state"
+                    environment = os.environ.copy()
+                    environment["HOME"] = str(test_home)
+                    environment["PATH"] = f"{fake_bin}:{environment['PATH']}"
+                    environment["FAKE_MKTEMP_STATE"] = str(state)
+                    environment["FAKE_MKTEMP_FAILURE"] = failure
+
+                    result = subprocess.run(
+                        ["/bin/zsh", installer],
+                        capture_output=True,
+                        text=True,
+                        env=environment,
+                    )
+
+                    destination_root = test_home / "Library/Input Methods"
+                    if failure == "exit":
+                        self.assertEqual(result.returncode, 72, result.stderr)
+                    else:
+                        self.assertNotEqual(result.returncode, 0)
+                    self.assertFalse(
+                        any(destination_root.glob(".MetasequoiaIME.installing.*")),
+                        result.stderr,
+                    )
+                    self.assertFalse(
+                        any(destination_root.glob(".MetasequoiaIME.backup.*")),
+                        result.stderr,
+                    )
+
     def test_signed_packaging_exercises_signing_notarization_and_gatekeeper(self):
         bundle = Path(sys.argv[1]).resolve()
         version = subprocess.run(

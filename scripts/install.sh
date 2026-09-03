@@ -23,6 +23,26 @@ fi
 
 mkdir -p "$destination_root"
 staging_root=$(mktemp -d "$destination_root/.MetasequoiaIME.installing.XXXXXX")
+backup_root=""
+cleanup_setup() {
+    local exit_status=$?
+    trap - EXIT HUP INT TERM
+    local cleanup_failed=false
+    if [[ -n "$backup_root" && -e "$backup_root" ]] && ! rm -rf -- "$backup_root"; then
+        cleanup_failed=true
+    fi
+    if [[ -e "$staging_root" ]] && ! rm -rf -- "$staging_root"; then
+        cleanup_failed=true
+    fi
+    if [[ "$cleanup_failed" == true ]]; then
+        print -u2 "Installation setup cleanup was incomplete. Temporary files may remain under: $destination_root"
+        exit 1
+    fi
+    exit "$exit_status"
+}
+
+trap cleanup_setup EXIT
+trap 'exit 1' HUP INT TERM
 backup_root=$(mktemp -d "$destination_root/.MetasequoiaIME.backup.XXXXXX")
 staging_bundle="$staging_root/MetasequoiaIME.app"
 backup_bundle="$backup_root/MetasequoiaIME.app"
