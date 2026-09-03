@@ -72,6 +72,14 @@ class ReleasePackageTests(unittest.TestCase):
                 package_root = f"MetasequoiaIME-v{version}/"
                 self.assertIn(f"{package_root}MetasequoiaIME.app/Contents/Info.plist", names)
                 self.assertIn(f"{package_root}Install.command", names)
+                self.assertIn(f"{package_root}LICENSE", names)
+                self.assertIn(f"{package_root}THIRD_PARTY_NOTICES.txt", names)
+                self.assertIn(
+                    f"{package_root}MetasequoiaIME.app/Contents/Resources/Licenses/GPL-3.0.txt", names
+                )
+                self.assertIn(
+                    f"{package_root}MetasequoiaIME.app/Contents/Resources/Licenses/THIRD_PARTY_NOTICES.txt", names
+                )
                 self.assertFalse(any(name.endswith("register_input_source.swift") for name in names))
                 install_command = release_zip.read(f"{package_root}Install.command").decode()
                 self.assertIn("spctl --assess --type execute", install_command)
@@ -102,6 +110,8 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertIsNotNone(domains)
             self.assertEqual(domains.attrib["enable_currentUserHome"], "true")
             self.assertEqual(domains.attrib["enable_localSystem"], "false")
+            self.assertEqual(distribution.find("license").attrib["file"], "LICENSE")
+            self.assertEqual(distribution.find("readme").attrib["file"], "THIRD_PARTY_NOTICES.txt")
 
             component_info_path = next(expanded_package.glob("*.pkg/PackageInfo"))
             component_info = ElementTree.parse(component_info_path).getroot()
@@ -113,6 +123,12 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertIsNotNone(upgrade_bundle)
             self.assertEqual(upgrade_bundle.attrib["id"], "com.houko.inputmethod.MetasequoiaIME")
             self.assertTrue((component_info_path.parent / "Payload/MetasequoiaIME.app/Contents/Info.plist").is_file())
+            self.assertTrue(
+                (
+                    component_info_path.parent
+                    / "Payload/MetasequoiaIME.app/Contents/Resources/Licenses/GPL-3.0.txt"
+                ).is_file()
+            )
 
 
 if __name__ == "__main__":

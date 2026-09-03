@@ -44,11 +44,32 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
     find_library(INPUT_METHOD_KIT_FRAMEWORK InputMethodKit REQUIRED)
     configure_file(resources/Info.plist ${CMAKE_CURRENT_BINARY_DIR}/MetasequoiaIME-Info.plist @ONLY)
 
+    set(METASEQUOIA_IME_LEGAL_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Legal)
+    file(MAKE_DIRECTORY ${METASEQUOIA_IME_LEGAL_DIRECTORY})
+    configure_file(LICENSE ${METASEQUOIA_IME_LEGAL_DIRECTORY}/GPL-3.0.txt COPYONLY)
+    configure_file(THIRD_PARTY_NOTICES.txt
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/THIRD_PARTY_NOTICES.txt COPYONLY)
+    configure_file(vendor/MetasequoiaImeEngine/googlepinyinime-rev/LICENSE
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Apache-2.0-googlepinyinime.txt COPYONLY)
+    configure_file(vendor/MetasequoiaImeEngine/utfcpp/LICENSE
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Boost-1.0.txt COPYONLY)
+    configure_file(licenses/fmt-LICENSE ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt COPYONLY)
+    configure_file(licenses/spdlog-LICENSE ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt COPYONLY)
+
     set(METASEQUOIA_IME_LOCALIZATIONS resources/en.lproj/InfoPlist.strings resources/zh-Hans.lproj/InfoPlist.strings)
-    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/MetasequoiaInputController.mm src/PreferencesWindowController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_LOCALIZATIONS})
+    set(METASEQUOIA_IME_LEGAL_RESOURCES
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/GPL-3.0.txt
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/THIRD_PARTY_NOTICES.txt
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Apache-2.0-googlepinyinime.txt
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Boost-1.0.txt
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt)
+    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/MetasequoiaInputController.mm src/PreferencesWindowController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES})
     set_source_files_properties(${METASEQUOIA_IME_DICTIONARY} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(resources/en.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/en.lproj)
     set_source_files_properties(resources/zh-Hans.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/zh-Hans.lproj)
+    set_source_files_properties(${METASEQUOIA_IME_LEGAL_RESOURCES}
+        PROPERTIES MACOSX_PACKAGE_LOCATION Resources/Licenses)
     set_target_properties(MetasequoiaIME PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/MetasequoiaIME-Info.plist MACOSX_BUNDLE_BUNDLE_NAME "Metasequoia IME" MACOSX_BUNDLE_GUI_IDENTIFIER "com.houko.inputmethod.MetasequoiaIME" MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION} OUTPUT_NAME MetasequoiaIME)
     target_compile_options(MetasequoiaIME PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(MetasequoiaIME PRIVATE MetasequoiaImeMacCore ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})

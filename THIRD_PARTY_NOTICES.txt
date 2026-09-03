@@ -1,0 +1,26 @@
+Metasequoia IME for macOS — Third-Party Notices
+================================================
+
+This application embeds MetasequoiaImeEngine, which is distributed under
+the GNU General Public License version 3. The complete license is provided
+in GPL-3.0.txt. Source code is available from:
+https://github.com/houko/MetasequoiaImeMac
+https://github.com/houko/MetasequoiaImeEngine
+
+The application also incorporates the following components:
+
+- googlepinyinime-rev — Apache License 2.0
+  https://github.com/metasequoiaime/googlepinyinime-rev
+- utfcpp — Boost Software License 1.0
+  https://github.com/nemtrif/utfcpp
+- Boost C++ Libraries — Boost Software License 1.0
+  https://www.boost.org/
+- {fmt} — MIT License
+  Copyright (c) 2012-present, Victor Zverovich and {fmt} contributors
+  https://github.com/fmtlib/fmt
+- spdlog — MIT License
+  Copyright (c) 2016-present, Gabi Melman and spdlog contributors
+  https://github.com/gabime/spdlog
+
+Complete license texts for these components are included alongside this
+notice in the application's Resources/Licenses directory.
