@@ -3,6 +3,7 @@ set -euo pipefail
 
 package_root=${0:A:h}
 source_bundle="$package_root/MetasequoiaIME.app"
+unsigned_marker="$package_root/UNSIGNED_BUILD.txt"
 destination_root="$HOME/Library/Input Methods"
 destination_bundle="$destination_root/MetasequoiaIME.app"
 
@@ -11,8 +12,28 @@ if [[ ! -d "$source_bundle" ]]; then
     exit 1
 fi
 
-codesign --verify --deep --strict --verbose=2 "$source_bundle"
-spctl --assess --type execute --verbose=2 "$source_bundle"
+unsigned_release=false
+if [[ -f "$unsigned_marker" ]]; then
+    unsigned_release=true
+    print -u2 "WARNING: This build is not Developer ID signed or notarized. macOS may block it until you explicitly allow it in Privacy & Security settings."
+    printf '%s' "Type I UNDERSTAND to install this unsigned build: "
+    confirmation=""
+    IFS= read -r confirmation || true
+    if [[ "$confirmation" != "I UNDERSTAND" ]]; then
+        print -u2 "Unsigned installation cancelled."
+        exit 1
+    fi
+fi
+
+verify_bundle() {
+    local bundle=$1
+    codesign --verify --deep --strict --verbose=2 "$bundle"
+    if [[ "$unsigned_release" != true ]]; then
+        spctl --assess --type execute --verbose=2 "$bundle"
+    fi
+}
+
+verify_bundle "$source_bundle"
 mkdir -p "$destination_root"
 staging_root=$(mktemp -d "$destination_root/.MetasequoiaIME.installing.XXXXXX")
 backup_root=$(mktemp -d "$destination_root/.MetasequoiaIME.backup.XXXXXX")
@@ -36,8 +57,7 @@ cleanup() {
 
 trap cleanup EXIT
 ditto "$source_bundle" "$staging_bundle"
-codesign --verify --deep --strict --verbose=2 "$staging_bundle"
-spctl --assess --type execute --verbose=2 "$staging_bundle"
+verify_bundle "$staging_bundle"
 pkill -x MetasequoiaIME 2>/dev/null || true
 if [[ -e "$destination_bundle" ]]; then
     mv "$destination_bundle" "$backup_bundle"
@@ -45,8 +65,10 @@ if [[ -e "$destination_bundle" ]]; then
 fi
 mv "$staging_bundle" "$destination_bundle"
 moved_new=true
-codesign --verify --deep --strict --verbose=2 "$destination_bundle"
-spctl --assess --type execute --verbose=2 "$destination_bundle"
+verify_bundle "$destination_bundle"
 install_complete=true
 print "Installed $destination_bundle"
+if [[ "$unsigned_release" == true ]]; then
+    print "If macOS blocks the input method, approve it in System Settings > Privacy & Security before enabling it."
+fi
 print "Log out and back in, then enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit."

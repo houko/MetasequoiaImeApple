@@ -18,10 +18,29 @@ require_release_signing=${METASEQUOIA_REQUIRE_RELEASE_SIGNING:-false}
 application_identity=${METASEQUOIA_DEVELOPER_ID_APPLICATION:-}
 installer_identity=${METASEQUOIA_DEVELOPER_ID_INSTALLER:-}
 notary_profile=${METASEQUOIA_NOTARY_PROFILE:-}
+asset_suffix=${METASEQUOIA_RELEASE_ASSET_SUFFIX:-}
+
+if [[ "$require_release_signing" != true && "$require_release_signing" != false ]]; then
+    print -u2 "METASEQUOIA_REQUIRE_RELEASE_SIGNING must be true or false."
+    exit 1
+fi
 
 if [[ "$require_release_signing" == true ]]; then
     if [[ -z "$application_identity" || -z "$installer_identity" || -z "$notary_profile" ]]; then
         print -u2 "Commercial release signing requires METASEQUOIA_DEVELOPER_ID_APPLICATION, METASEQUOIA_DEVELOPER_ID_INSTALLER, and METASEQUOIA_NOTARY_PROFILE."
+        exit 1
+    fi
+    if [[ -n "$asset_suffix" ]]; then
+        print -u2 "Signed release artifacts must not use an asset suffix."
+        exit 1
+    fi
+else
+    if [[ "$asset_suffix" != -unsigned ]]; then
+        print -u2 "Unsigned release artifacts require METASEQUOIA_RELEASE_ASSET_SUFFIX=-unsigned."
+        exit 1
+    fi
+    if [[ -n "$application_identity" || -n "$installer_identity" || -n "$notary_profile" ]]; then
+        print -u2 "Unsigned release packaging does not accept signing identities or a notary profile."
         exit 1
     fi
 fi
@@ -45,9 +64,9 @@ mkdir -p "$output_dir"
 staging_root=$(mktemp -d "$output_dir/.package.XXXXXX")
 trap 'rm -rf "$staging_root"' EXIT
 package_root="$staging_root/MetasequoiaIME-$tag_name"
-archive_path="$output_dir/MetasequoiaIME-$tag_name-macos-universal.zip"
+archive_path="$output_dir/MetasequoiaIME-$tag_name-macos-universal$asset_suffix.zip"
 checksum_path="$archive_path.sha256"
-installer_path="$output_dir/MetasequoiaIME-$tag_name-macos-universal.pkg"
+installer_path="$output_dir/MetasequoiaIME-$tag_name-macos-universal$asset_suffix.pkg"
 installer_checksum_path="$installer_path.sha256"
 component_package="$staging_root/MetasequoiaIME.pkg"
 distribution_file="$staging_root/Distribution.xml"
@@ -58,6 +77,14 @@ ditto "$source_bundle" "$package_root/MetasequoiaIME.app"
 ditto "$project_root/scripts/install-release.sh" "$package_root/Install.command"
 ditto "$project_root/LICENSE" "$package_root/LICENSE"
 ditto "$project_root/THIRD_PARTY_NOTICES.txt" "$package_root/THIRD_PARTY_NOTICES.txt"
+if [[ "$asset_suffix" == -unsigned ]]; then
+    printf '%s\n' \
+        'UNSIGNED TEST BUILD' \
+        '' \
+        'This build is not Developer ID signed or notarized. macOS may block it until you explicitly allow it in System Settings > Privacy & Security.' \
+        'Install.command requires typed confirmation before installing this build.' \
+        > "$package_root/UNSIGNED_BUILD.txt"
+fi
 chmod +x "$package_root/Install.command"
 rm -f "$archive_path" "$checksum_path" "$installer_path" "$installer_checksum_path"
 if [[ -n "$notary_profile" ]]; then
