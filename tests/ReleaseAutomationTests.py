@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import subprocess
@@ -155,7 +156,14 @@ class ReleaseSigningModeTests(unittest.TestCase):
 
 
 class ReleasePublicationTests(unittest.TestCase):
-    def run_publication(self, signing_enabled, asset_suffix, existing_notes=""):
+    def run_publication(
+        self,
+        signing_enabled,
+        asset_suffix,
+        existing_notes="",
+        corrupt_checksum=False,
+        misdirected_checksum=False,
+    ):
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary = Path(temporary_directory)
             fake_bin = temporary / "bin"
@@ -184,8 +192,17 @@ fi
             dist = temporary / "dist"
             dist.mkdir()
             stem = f"MetasequoiaIME-v1.2.3-macos-universal{asset_suffix}"
-            for extension in (".zip", ".zip.sha256", ".pkg", ".pkg.sha256"):
-                (dist / f"{stem}{extension}").touch()
+            for extension in (".zip", ".pkg"):
+                artifact = dist / f"{stem}{extension}"
+                artifact.write_bytes(f"test {extension} artifact\n".encode())
+                digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+                if corrupt_checksum and extension == ".pkg":
+                    digest = "0" * 64
+                (dist / f"{stem}{extension}.sha256").write_text(f"{digest}  {artifact.name}\n")
+            if misdirected_checksum:
+                archive = dist / f"{stem}.zip"
+                archive_digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+                (dist / f"{stem}.pkg.sha256").write_text(f"{archive_digest}  {archive.name}\n")
             environment = os.environ.copy()
             environment.update(
                 {
@@ -249,6 +266,21 @@ fi
         self.assertIn("metasequoia-release-mode:signed", notes)
         self.assertNotIn("WARNING", notes)
         self.assertIn("macos-universal.pkg", calls)
+
+    def test_corrupt_artifact_is_rejected_before_release_metadata_or_assets_change(self):
+        result, calls, notes = self.run_publication("false", "-unsigned", corrupt_checksum=True)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("FAILED", result.stdout + result.stderr)
+        self.assertEqual(calls, "")
+        self.assertEqual(notes, "")
+
+    def test_checksum_for_another_artifact_is_rejected_before_release_changes(self):
+        result, calls, notes = self.run_publication("false", "-unsigned", misdirected_checksum=True)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(calls, "")
+        self.assertEqual(notes, "")
 
 
 if __name__ == "__main__":
