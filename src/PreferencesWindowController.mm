@@ -1,17 +1,19 @@
 #import "PreferencesWindowController.h"
 
+#include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
 #import "DictionaryInstaller.h"
 
 namespace
 {
 constexpr CGFloat kWindowWidth = 600.0;
-constexpr CGFloat kWindowHeight = 504.0;
+constexpr CGFloat kWindowHeight = 540.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
 NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunctuation";
 NSString * const kCandidatePanelStylePreferenceKey = @"MetasequoiaImeCandidatePanelStyle";
+NSString * const kCandidatePageSizePreferenceKey = @"MetasequoiaImeCandidatePageSize";
 
 NSColor *MetasequoiaBrandColor()
 {
@@ -44,6 +46,7 @@ void ConfigureCard(NSBox *card)
     NSButton *_helpcodeButton;
     NSButton *_chinesePunctuationButton;
     NSPopUpButton *_candidatePanelStyleButton;
+    NSPopUpButton *_candidatePageSizeButton;
     NSTextField *_statusLabel;
 }
 
@@ -123,6 +126,21 @@ void ConfigureCard(NSBox *card)
     [[NSUserDefaults standardUserDefaults] setInteger:normalizedStyle forKey:kCandidatePanelStylePreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaCandidatePanelStyleDidChangeNotification"
                                                         object:@(normalizedStyle)];
+}
+
++ (NSInteger)storedCandidatePageSize
+{
+    const NSInteger value = [[NSUserDefaults standardUserDefaults] integerForKey:kCandidatePageSizePreferenceKey];
+    return static_cast<NSInteger>(metasequoia::mac::NormalizeCandidatePageSize(static_cast<size_t>(value)));
+}
+
++ (void)setCandidatePageSize:(NSInteger)pageSize
+{
+    const NSInteger normalizedPageSize = static_cast<NSInteger>(
+        metasequoia::mac::NormalizeCandidatePageSize(static_cast<size_t>(pageSize)));
+    [[NSUserDefaults standardUserDefaults] setInteger:normalizedPageSize forKey:kCandidatePageSizePreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaCandidatePageSizeDidChangeNotification"
+                                                        object:@(normalizedPageSize)];
 }
 
 - (instancetype)initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner
@@ -238,6 +256,17 @@ void ConfigureCard(NSBox *card)
     _candidatePanelStyleButton.accessibilityLabel = @"候选排列";
     _candidatePanelStyleButton.translatesAutoresizingMaskIntoConstraints = NO;
 
+    NSTextField *candidatePageSizeLabel = [NSTextField labelWithString:@"每页候选"];
+    candidatePageSizeLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
+    candidatePageSizeLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+    _candidatePageSizeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_candidatePageSizeButton addItemsWithTitles:@[@"5 个", @"7 个", @"9 个"]];
+    _candidatePageSizeButton.target = self;
+    _candidatePageSizeButton.action = @selector(candidatePageSizeChanged:);
+    _candidatePageSizeButton.accessibilityLabel = @"每页候选";
+    _candidatePageSizeButton.translatesAutoresizingMaskIntoConstraints = NO;
+
     NSTextField *behaviorSectionLabel = [NSTextField labelWithString:@"输入行为"];
     behaviorSectionLabel.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
     behaviorSectionLabel.textColor = [NSColor secondaryLabelColor];
@@ -290,6 +319,8 @@ void ConfigureCard(NSBox *card)
     [inputCard addSubview:_schemeButton];
     [inputCard addSubview:candidatePanelStyleLabel];
     [inputCard addSubview:_candidatePanelStyleButton];
+    [inputCard addSubview:candidatePageSizeLabel];
+    [inputCard addSubview:_candidatePageSizeButton];
     [settingsPanel addSubview:behaviorSectionLabel];
     [settingsPanel addSubview:behaviorCard];
     [behaviorCard addSubview:_autocorrectButton];
@@ -333,17 +364,22 @@ void ConfigureCard(NSBox *card)
         [inputCard.topAnchor constraintEqualToAnchor:inputSectionLabel.bottomAnchor constant:8.0],
         [inputCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [inputCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [inputCard.heightAnchor constraintEqualToConstant:112.0],
+        [inputCard.heightAnchor constraintEqualToConstant:148.0],
         [schemeLabel.leadingAnchor constraintEqualToAnchor:inputCard.leadingAnchor constant:18.0],
         [schemeLabel.topAnchor constraintEqualToAnchor:inputCard.topAnchor constant:18.0],
         [_schemeButton.centerYAnchor constraintEqualToAnchor:schemeLabel.centerYAnchor],
         [_schemeButton.trailingAnchor constraintEqualToAnchor:inputCard.trailingAnchor constant:-16.0],
         [_schemeButton.widthAnchor constraintEqualToConstant:180.0],
         [candidatePanelStyleLabel.leadingAnchor constraintEqualToAnchor:schemeLabel.leadingAnchor],
-        [candidatePanelStyleLabel.bottomAnchor constraintEqualToAnchor:inputCard.bottomAnchor constant:-18.0],
+        [candidatePanelStyleLabel.topAnchor constraintEqualToAnchor:schemeLabel.topAnchor constant:48.0],
         [_candidatePanelStyleButton.centerYAnchor constraintEqualToAnchor:candidatePanelStyleLabel.centerYAnchor],
         [_candidatePanelStyleButton.trailingAnchor constraintEqualToAnchor:_schemeButton.trailingAnchor],
         [_candidatePanelStyleButton.widthAnchor constraintEqualToAnchor:_schemeButton.widthAnchor],
+        [candidatePageSizeLabel.leadingAnchor constraintEqualToAnchor:schemeLabel.leadingAnchor],
+        [candidatePageSizeLabel.topAnchor constraintEqualToAnchor:candidatePanelStyleLabel.topAnchor constant:48.0],
+        [_candidatePageSizeButton.centerYAnchor constraintEqualToAnchor:candidatePageSizeLabel.centerYAnchor],
+        [_candidatePageSizeButton.trailingAnchor constraintEqualToAnchor:_schemeButton.trailingAnchor],
+        [_candidatePageSizeButton.widthAnchor constraintEqualToAnchor:_schemeButton.widthAnchor],
         [behaviorSectionLabel.topAnchor constraintEqualToAnchor:inputCard.bottomAnchor constant:18.0],
         [behaviorSectionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [behaviorCard.topAnchor constraintEqualToAnchor:behaviorSectionLabel.bottomAnchor constant:8.0],
@@ -377,6 +413,8 @@ void ConfigureCard(NSBox *card)
     _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     [_candidatePanelStyleButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]];
+    [_candidatePageSizeButton selectItemAtIndex:static_cast<NSInteger>(metasequoia::mac::CandidatePageSizeOptionIndex(
+                                                        static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidatePageSize])))];
 }
 
 - (void)refreshDictionaryStatus
@@ -435,6 +473,14 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setCandidatePanelStyle:styleButton.indexOfSelectedItem];
 }
 
+- (void)candidatePageSizeChanged:(id)sender
+{
+    NSPopUpButton *pageSizeButton = (NSPopUpButton *)sender;
+    const size_t pageSize =
+        metasequoia::mac::CandidatePageSizeForOptionIndex(static_cast<size_t>(pageSizeButton.indexOfSelectedItem));
+    [MetasequoiaPreferencesWindowController setCandidatePageSize:static_cast<NSInteger>(pageSize)];
+}
+
 - (void)restoreDefaults:(id)sender
 {
     (void)sender;
@@ -443,6 +489,7 @@ void ConfigureCard(NSBox *card)
     [MetasequoiaPreferencesWindowController setHelpcodeEnabled:YES];
     [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:YES];
     [MetasequoiaPreferencesWindowController setCandidatePanelStyle:0];
+    [MetasequoiaPreferencesWindowController setCandidatePageSize:9];
     [self refreshControls];
 }
 

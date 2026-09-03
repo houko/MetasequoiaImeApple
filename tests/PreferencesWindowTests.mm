@@ -42,8 +42,11 @@ int main()
     {
         [NSApplication sharedApplication];
         [MetasequoiaPreferencesWindowController setCandidatePanelStyle:1];
+        [MetasequoiaPreferencesWindowController setCandidatePageSize:5];
         require([MetasequoiaPreferencesWindowController storedCandidatePanelStyle] == 1,
                 "The vertical candidate layout preference was not stored.");
+        require([MetasequoiaPreferencesWindowController storedCandidatePageSize] == 5,
+                "The five-candidate page-size preference was not stored.");
 
         MetasequoiaPreferencesWindowController *controller =
             [[MetasequoiaPreferencesWindowController alloc] init];
@@ -59,16 +62,36 @@ int main()
         require(styleButton.indexOfSelectedItem == 1,
                 "The candidate layout control did not reflect the stored vertical layout.");
 
+        NSView *pageSizeView = FindViewWithAccessibilityLabel(controller.window.contentView, @"每页候选");
+        require([pageSizeView isKindOfClass:[NSPopUpButton class]],
+                "The settings window did not expose the candidate page-size control.");
+        NSPopUpButton *pageSizeButton = (NSPopUpButton *)pageSizeView;
+        require(pageSizeButton.numberOfItems == 3 &&
+                    [[pageSizeButton itemTitleAtIndex:0] isEqualToString:@"5 个"] &&
+                    [[pageSizeButton itemTitleAtIndex:1] isEqualToString:@"7 个"] &&
+                    [[pageSizeButton itemTitleAtIndex:2] isEqualToString:@"9 个"],
+                "The candidate page-size control did not contain all supported values.");
+        require(pageSizeButton.indexOfSelectedItem == 0,
+                "The candidate page-size control did not reflect the stored value.");
+
         [styleButton selectItemAtIndex:0];
         require([NSApp sendAction:styleButton.action to:styleButton.target from:styleButton],
                 "The candidate layout control did not dispatch its action.");
         require([MetasequoiaPreferencesWindowController storedCandidatePanelStyle] == 0,
                 "The candidate layout control did not store the selected horizontal layout.");
 
+        [pageSizeButton selectItemAtIndex:1];
+        require([NSApp sendAction:pageSizeButton.action to:pageSizeButton.target from:pageSizeButton],
+                "The candidate page-size control did not dispatch its action.");
+        require([MetasequoiaPreferencesWindowController storedCandidatePageSize] == 7,
+                "The candidate page-size control did not store the selected value.");
+
         [MetasequoiaPreferencesWindowController setCandidatePanelStyle:99];
         require([MetasequoiaPreferencesWindowController storedCandidatePanelStyle] == 0,
                 "An unsupported candidate layout preference was not normalized safely.");
-
+        [MetasequoiaPreferencesWindowController setCandidatePageSize:99];
+        require([MetasequoiaPreferencesWindowController storedCandidatePageSize] == 9,
+                "An unsupported candidate page size was not normalized safely.");
     }
     return 0;
 }

@@ -223,6 +223,23 @@ int main()
         require(page_digit.handled && page_digit.commit == first_candidate_on_second_page,
                 "The 1 key did not commit the first candidate on the visible page.");
 
+        metasequoia::mac::InputSession compact_page_session;
+        type(compact_page_session, "nihao");
+        const std::string compact_page_candidate = compact_page_session.candidates()[5].word;
+        candidate_selection.begin_navigation();
+        candidate_selection.update(5, compact_page_candidate);
+        const auto compact_page_digit = candidate_selection.commit_number(compact_page_session, '1', 5);
+        require(compact_page_digit.handled && compact_page_digit.commit == compact_page_candidate,
+                "The 1 key did not use the configured five-candidate page boundary.");
+
+        metasequoia::mac::InputSession hidden_compact_candidate_session;
+        type(hidden_compact_candidate_session, "nihao");
+        candidate_selection.reset();
+        const auto hidden_compact_candidate =
+            candidate_selection.commit_number(hidden_compact_candidate_session, '6', 5);
+        require(!hidden_compact_candidate.handled && hidden_compact_candidate_session.has_composition(),
+                "A number key selected a candidate hidden by the configured page size.");
+
         metasequoia::mac::InputSession middle_of_page_session;
         type(middle_of_page_session, "nihao");
         const std::string first_candidate_from_middle = middle_of_page_session.candidates()[9].word;

@@ -1,6 +1,7 @@
 #import "MetasequoiaInputController.h"
 
 #import "DictionaryInstaller.h"
+#include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
 #import "InputMenu.h"
 #import "PreferencesWindowController.h"
@@ -28,6 +29,7 @@ struct SessionPreferences
     bool helpcodeEnabled;
     bool chinesePunctuationEnabled;
     metasequoia::mac::CandidatePanelStyle candidatePanelStyle;
+    size_t candidatePageSize;
 };
 
 SessionPreferences ReadSessionPreferences()
@@ -40,6 +42,8 @@ SessionPreferences ReadSessionPreferences()
         [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] == YES,
         metasequoia::mac::NormalizeCandidatePanelStyle(
             [MetasequoiaPreferencesWindowController storedCandidatePanelStyle]),
+        metasequoia::mac::NormalizeCandidatePageSize(
+            static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidatePageSize])),
     };
 }
 
@@ -86,6 +90,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 
     const SessionPreferences preferences = ReadSessionPreferences();
     [_candidatePanel setPanelType:metasequoia::mac::CandidatePanelTypeForStyle(preferences.candidatePanelStyle)];
+    [_candidatePanel setSelectionKeys:metasequoia::mac::CandidateSelectionKeys(preferences.candidatePageSize)];
     if (_session != nullptr && SessionMatchesPreferences(*_session, preferences))
     {
         return;
@@ -347,7 +352,8 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
             }
             else if (character >= '1' && character <= '9')
             {
-                result = _candidateSelection.commit_number(*_session, static_cast<char>(character));
+                result = _candidateSelection.commit_number(
+                    *_session, static_cast<char>(character), _candidatePanel.selectionKeys.count);
                 if (!result.handled && _session->has_composition())
                 {
                     return YES;

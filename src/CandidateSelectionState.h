@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CandidatePageSize.h"
 #include "InputSession.h"
 
 #include <cstddef>
@@ -52,9 +53,16 @@ class CandidateSelectionState
         return session.handle_command(Command::CommitCandidate);
     }
 
-    KeyResult commit_number(InputSession &session, char character) const
+    KeyResult commit_number(InputSession &session, char character, size_t pageSize = candidates_per_page) const
     {
         if (character < '1' || character > '9')
+        {
+            return {};
+        }
+
+        pageSize = NormalizeCandidatePageSize(pageSize);
+        const size_t candidateOffset = static_cast<size_t>(character - '1');
+        if (candidateOffset >= pageSize)
         {
             return {};
         }
@@ -66,8 +74,8 @@ class CandidateSelectionState
             return session.handle_candidate_key(character);
         }
 
-        const size_t pageStart = selected_candidate_->index / candidates_per_page * candidates_per_page;
-        return session.select_candidate(pageStart + static_cast<size_t>(character - '1'));
+        const size_t pageStart = selected_candidate_->index / pageSize * pageSize;
+        return session.select_candidate(pageStart + candidateOffset);
     }
 
   private:
