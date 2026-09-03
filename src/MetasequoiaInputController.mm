@@ -131,7 +131,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         break;
     default:
     {
-        NSString *characters = event.charactersIgnoringModifiers;
+        NSString *characters = event.characters;
         if (characters.length == 1)
         {
             const unichar character = [characters characterAtIndex:0];
