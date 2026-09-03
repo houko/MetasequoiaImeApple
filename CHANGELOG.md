@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.18.0...v0.19.0) (2026-09-03)
+
+
+### Features
+
+* **settings:** clear learned data ([#70](https://github.com/houko/MetasequoiaImeMac/issues/70)) ([8ef0c3f](https://github.com/houko/MetasequoiaImeMac/commit/8ef0c3f51b7fc46f27976e9dbf5b97e15721212f))
+
 ## [0.18.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.17.0...v0.18.0) (2026-09-03)
 
 
