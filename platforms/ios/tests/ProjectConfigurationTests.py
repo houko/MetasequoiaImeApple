@@ -9,6 +9,29 @@ IOS_ROOT = Path(__file__).resolve().parents[1]
 
 
 class ProjectConfigurationTests(unittest.TestCase):
+    def test_host_and_keyboard_bundle_the_required_reason_privacy_manifest(self):
+        project = (IOS_ROOT / "project.yml").read_text()
+        manifest_path = IOS_ROOT / "SharedResources/PrivacyInfo.xcprivacy"
+
+        with manifest_path.open("rb") as manifest_file:
+            manifest = plistlib.load(manifest_file)
+
+        self.assertFalse(manifest["NSPrivacyTracking"])
+        self.assertEqual(manifest["NSPrivacyCollectedDataTypes"], [])
+        self.assertEqual(
+            manifest["NSPrivacyAccessedAPITypes"],
+            [
+                {
+                    "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+                    "NSPrivacyAccessedAPITypeReasons": ["CA92.1", "1C8F.1"],
+                }
+            ],
+        )
+        self.assertEqual(
+            project.count("platforms/ios/SharedResources/PrivacyInfo.xcprivacy"),
+            2,
+        )
+
     def test_host_and_keyboard_share_the_input_scheme_through_an_app_group(self):
         project = (IOS_ROOT / "project.yml").read_text()
         shared_preference = (IOS_ROOT / "SharedUI/InputSchemePreference.swift").read_text()
