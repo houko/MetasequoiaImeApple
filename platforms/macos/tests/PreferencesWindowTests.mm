@@ -7,6 +7,8 @@
 
 @interface MetasequoiaPreferencesWindowController (Testing)
 - (void)refreshControls;
+- (void)selectPreferencesPage:(id)sender;
+- (void)openWebsite:(id)sender;
 @end
 
 namespace
@@ -89,6 +91,13 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
+        [MetasequoiaPreferencesWindowController setStoredScheme:2];
+        require([MetasequoiaPreferencesWindowController storedScheme] == 2,
+                "The Wubi input scheme preference was not stored.");
+        [MetasequoiaPreferencesWindowController setStoredScheme:99];
+        require([MetasequoiaPreferencesWindowController storedScheme] == 0,
+                "An unsupported input scheme preference was not normalized safely.");
+        [MetasequoiaPreferencesWindowController setStoredScheme:2];
         require([MetasequoiaPreferencesWindowController storedCandidatePanelStyle] == 1,
                 "The vertical candidate layout preference was not stored.");
         require([MetasequoiaPreferencesWindowController storedCandidatePageSize] == 5,
@@ -105,6 +114,72 @@ int main()
         MetasequoiaPreferencesWindowController *controller =
             [[MetasequoiaPreferencesWindowController alloc] init];
         [controller refreshControls];
+        NSButton *generalNavigationButton = FindButtonWithTitle(controller.window.contentView, @"键盘输入");
+        NSButton *appearanceNavigationButton = FindButtonWithTitle(controller.window.contentView, @"外观");
+        NSButton *dataNavigationButton = FindButtonWithTitle(controller.window.contentView, @"词库与数据");
+        require(generalNavigationButton != nil && appearanceNavigationButton != nil && dataNavigationButton != nil,
+                "The settings window did not expose all sidebar destinations.");
+        NSColor *generalTitleColor = [generalNavigationButton.attributedTitle attribute:NSForegroundColorAttributeName
+                                                                                atIndex:0
+                                                                         effectiveRange:nil];
+        require([generalTitleColor isEqual:[NSColor whiteColor]],
+                "The settings sidebar did not render navigation titles in white.");
+        require(generalNavigationButton.state == NSControlStateValueOn &&
+                    appearanceNavigationButton.state == NSControlStateValueOff &&
+                    dataNavigationButton.state == NSControlStateValueOff &&
+                    [generalNavigationButton.accessibilityValue integerValue] == 1 &&
+                    [appearanceNavigationButton.accessibilityValue integerValue] == 0,
+                "The settings sidebar did not mark the initial page as selected.");
+        NSView *generalPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"键盘输入设置页");
+        NSView *appearancePage = FindViewWithAccessibilityLabel(controller.window.contentView, @"外观设置页");
+        NSView *dataPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"词库与数据设置页");
+        require(generalPage != nil && appearancePage != nil && dataPage != nil,
+                "The settings window did not create all functional pages.");
+        require(!generalPage.hidden && appearancePage.hidden && dataPage.hidden,
+                "The settings window did not open on the keyboard-input page.");
+        [appearanceNavigationButton performClick:nil];
+        require(generalPage.hidden && !appearancePage.hidden && dataPage.hidden &&
+                    appearanceNavigationButton.state == NSControlStateValueOn &&
+                    generalNavigationButton.state == NSControlStateValueOff,
+                "The appearance sidebar item did not reveal and select the appearance page.");
+        [dataNavigationButton performClick:nil];
+        require(generalPage.hidden && appearancePage.hidden && !dataPage.hidden &&
+                    dataNavigationButton.state == NSControlStateValueOn,
+                "The data sidebar item did not reveal and select the data page.");
+        [generalNavigationButton performClick:nil];
+
+        NSButton *quanpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"全拼输入");
+        NSButton *shuangpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"小鹤双拼");
+        NSButton *wubiSchemeButton = FindButtonWithTitle(controller.window.contentView, @"五笔输入（86 五笔）");
+        require(quanpinSchemeButton != nil && shuangpinSchemeButton != nil && wubiSchemeButton != nil,
+                "The keyboard-input page did not expose every supported input scheme.");
+        require(wubiSchemeButton.state == NSControlStateValueOn,
+                "The keyboard-input page did not reflect the stored Wubi scheme.");
+        [shuangpinSchemeButton performClick:nil];
+        require([MetasequoiaPreferencesWindowController storedScheme] == 1,
+                "The Shuangpin scheme choice did not persist its selection.");
+        [wubiSchemeButton performClick:nil];
+        require([MetasequoiaPreferencesWindowController storedScheme] == 2,
+                "The Wubi scheme choice did not persist its selection.");
+
+        NSButton *websiteButton = FindButtonWithTitle(controller.window.contentView, @"msime.app");
+        require(websiteButton != nil && websiteButton.action == @selector(openWebsite:) &&
+                    websiteButton.target == controller,
+                "The settings sidebar did not expose the canonical product website.");
+        NSColor *websiteTitleColor = [websiteButton.attributedTitle attribute:NSForegroundColorAttributeName
+                                                                      atIndex:0
+                                                               effectiveRange:nil];
+        require([websiteTitleColor isEqual:[NSColor whiteColor]],
+                "The canonical website link was unreadable against the sidebar.");
+
+        [controller.window.contentView layoutSubtreeIfNeeded];
+        NSView *schemeCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"输入方式卡片");
+        NSView *behaviorCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"中英文状态切换卡片");
+        NSView *learningCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"候选与学习卡片");
+        require(schemeCard.frame.size.width == behaviorCard.frame.size.width &&
+                    schemeCard.frame.size.width == learningCard.frame.size.width,
+                "The settings cards did not consistently fill the content width.");
+
         NSView *view = FindViewWithAccessibilityLabel(controller.window.contentView, @"候选排列");
         require([view isKindOfClass:[NSPopUpButton class]],
                 "The settings window did not expose the candidate layout control.");
@@ -165,7 +240,7 @@ int main()
                 "The settings window did not expose the software-update control.");
         require([((NSButton *)updateView).title containsString:@"检查更新"],
                 "The software-update control did not show the installed-version state.");
-        require([((NSButton *)updateView).accessibilityHelp containsString:@"检查 GitHub"],
+        require([((NSButton *)updateView).accessibilityHelp containsString:@"msime.app"],
                 "The software-update control did not expose its current state to assistive technology.");
         require(((NSButton *)updateView).action == @selector(checkForUpdates:) &&
                     ((NSButton *)updateView).target == controller,

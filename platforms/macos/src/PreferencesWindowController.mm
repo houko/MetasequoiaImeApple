@@ -3,6 +3,7 @@
 #include "CandidateFontSize.h"
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
+#include "InputSchemePreference.h"
 #import "DictionaryInstaller.h"
 #import "UpdateController.h"
 
@@ -20,8 +21,8 @@ bool MetasequoiaShouldShowPreferences(int argc, const char *argv[])
 
 namespace
 {
-constexpr CGFloat kWindowWidth = 600.0;
-constexpr CGFloat kWindowHeight = 720.0;
+constexpr CGFloat kWindowWidth = 720.0;
+constexpr CGFloat kWindowHeight = 560.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
@@ -55,11 +56,90 @@ void ConfigureCard(NSBox *card)
     card.fillColor = [NSColor controlBackgroundColor];
     card.translatesAutoresizingMaskIntoConstraints = NO;
 }
+
+NSTextField *SectionLabel(NSString *title)
+{
+    NSTextField *label = [NSTextField labelWithString:title];
+    label.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
+    label.textColor = [NSColor secondaryLabelColor];
+    return label;
+}
+
+NSView *PreferenceRow(NSString *title, NSView *control)
+{
+    NSView *row = [[NSView alloc] initWithFrame:NSZeroRect];
+    NSTextField *label = [NSTextField labelWithString:title];
+    label.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    control.translatesAutoresizingMaskIntoConstraints = NO;
+    [row addSubview:label];
+    [row addSubview:control];
+    [NSLayoutConstraint activateConstraints:@[
+        [row.heightAnchor constraintEqualToConstant:34.0],
+        [label.leadingAnchor constraintEqualToAnchor:row.leadingAnchor],
+        [label.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+        [label.trailingAnchor constraintLessThanOrEqualToAnchor:control.leadingAnchor constant:-12.0],
+        [control.trailingAnchor constraintEqualToAnchor:row.trailingAnchor],
+        [control.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+        [control.widthAnchor constraintEqualToConstant:188.0],
+    ]];
+    return row;
+}
+
+NSBox *CardWithViews(NSArray<NSView *> *views, CGFloat spacing)
+{
+    NSBox *card = [[NSBox alloc] initWithFrame:NSZeroRect];
+    ConfigureCard(card);
+    NSStackView *stack = [NSStackView stackViewWithViews:views];
+    stack.orientation = NSUserInterfaceLayoutOrientationVertical;
+    stack.alignment = NSLayoutAttributeLeading;
+    stack.distribution = NSStackViewDistributionFill;
+    stack.spacing = spacing;
+    stack.translatesAutoresizingMaskIntoConstraints = NO;
+    [card addSubview:stack];
+    [NSLayoutConstraint activateConstraints:@[
+        [stack.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:16.0],
+        [stack.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-16.0],
+        [stack.topAnchor constraintEqualToAnchor:card.topAnchor constant:12.0],
+        [stack.bottomAnchor constraintEqualToAnchor:card.bottomAnchor constant:-12.0],
+    ]];
+    return card;
+}
+
+NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *content)
+{
+    NSView *page = [[NSView alloc] initWithFrame:NSZeroRect];
+    page.translatesAutoresizingMaskIntoConstraints = NO;
+    NSTextField *titleLabel = [NSTextField labelWithString:title];
+    titleLabel.font = [NSFont systemFontOfSize:24.0 weight:NSFontWeightSemibold];
+    NSTextField *descriptionLabel = [NSTextField labelWithString:summary];
+    descriptionLabel.textColor = [NSColor secondaryLabelColor];
+    descriptionLabel.maximumNumberOfLines = 2;
+    NSStackView *stack = [NSStackView stackViewWithViews:@[ titleLabel, descriptionLabel ]];
+    stack.orientation = NSUserInterfaceLayoutOrientationVertical;
+    stack.alignment = NSLayoutAttributeLeading;
+    stack.distribution = NSStackViewDistributionFill;
+    stack.spacing = 7.0;
+    for (NSView *view in content)
+    {
+        [stack addArrangedSubview:view];
+        [view.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+    }
+    [stack setCustomSpacing:22.0 afterView:descriptionLabel];
+    stack.translatesAutoresizingMaskIntoConstraints = NO;
+    [page addSubview:stack];
+    [NSLayoutConstraint activateConstraints:@[
+        [stack.leadingAnchor constraintEqualToAnchor:page.leadingAnchor constant:30.0],
+        [stack.trailingAnchor constraintEqualToAnchor:page.trailingAnchor constant:-30.0],
+        [stack.topAnchor constraintEqualToAnchor:page.topAnchor constant:28.0],
+    ]];
+    return page;
+}
 } // namespace
 
 @implementation MetasequoiaPreferencesWindowController
 {
-    NSPopUpButton *_schemeButton;
+    NSArray<NSButton *> *_schemeButtons;
     NSButton *_autocorrectButton;
     NSButton *_helpcodeButton;
     NSButton *_chinesePunctuationButton;
@@ -71,6 +151,8 @@ void ConfigureCard(NSBox *card)
     NSButton *_resetLearningButton;
     NSTextField *_statusLabel;
     NSButton *_updateButton;
+    NSArray<NSView *> *_preferencePages;
+    NSArray<NSButton *> *_navigationButtons;
     BOOL _standaloneLaunch;
 }
 
@@ -93,12 +175,12 @@ void ConfigureCard(NSBox *card)
 + (NSInteger)storedScheme
 {
     const NSInteger scheme = [[NSUserDefaults standardUserDefaults] integerForKey:kSchemePreferenceKey];
-    return scheme == 1 ? scheme : 0;
+    return metasequoia::mac::NormalizeStoredInputScheme(static_cast<int>(scheme));
 }
 
 + (void)setStoredScheme:(NSInteger)scheme
 {
-    const NSInteger normalizedScheme = scheme == 1 ? scheme : 0;
+    const NSInteger normalizedScheme = metasequoia::mac::NormalizeStoredInputScheme(static_cast<int>(scheme));
     [[NSUserDefaults standardUserDefaults] setInteger:normalizedScheme forKey:kSchemePreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaInputSchemeDidChangeNotification"
                                                         object:@(normalizedScheme)];
@@ -261,16 +343,15 @@ void ConfigureCard(NSBox *card)
     window.delegate = self;
 
     NSView *contentView = [[NSView alloc] initWithFrame:frame];
-    contentView.translatesAutoresizingMaskIntoConstraints = NO;
     window.contentView = contentView;
 
-    NSBox *brandPanel = [[NSBox alloc] initWithFrame:NSZeroRect];
-    brandPanel.boxType = NSBoxCustom;
-    brandPanel.titlePosition = NSNoTitle;
-    brandPanel.borderWidth = 0.0;
-    brandPanel.fillColor = MetasequoiaBrandColor();
-    brandPanel.accessibilityLabel = @"水杉输入法品牌";
-    brandPanel.translatesAutoresizingMaskIntoConstraints = NO;
+    NSBox *sidebar = [[NSBox alloc] initWithFrame:NSZeroRect];
+    sidebar.boxType = NSBoxCustom;
+    sidebar.titlePosition = NSNoTitle;
+    sidebar.borderWidth = 0.0;
+    sidebar.fillColor = MetasequoiaBrandColor();
+    sidebar.accessibilityLabel = @"水杉输入法导航";
+    sidebar.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSImageView *iconView = [[NSImageView alloc] initWithFrame:NSZeroRect];
     iconView.image = NSApp.applicationIconImage;
@@ -278,138 +359,161 @@ void ConfigureCard(NSBox *card)
     iconView.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSTextField *brandTitle = [NSTextField labelWithString:@"水杉输入法"];
-    brandTitle.font = [NSFont systemFontOfSize:23.0 weight:NSFontWeightSemibold];
+    brandTitle.font = [NSFont systemFontOfSize:20.0 weight:NSFontWeightSemibold];
     brandTitle.textColor = [NSColor whiteColor];
     brandTitle.alignment = NSTextAlignmentCenter;
     brandTitle.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSTextField *brandDescription = [NSTextField labelWithString:@"轻巧、专注的中文输入体验"];
-    brandDescription.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightRegular];
-    brandDescription.textColor = [[NSColor whiteColor] colorWithAlphaComponent:0.95];
+    brandDescription.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightRegular];
+    brandDescription.textColor = [[NSColor whiteColor] colorWithAlphaComponent:0.9];
     brandDescription.alignment = NSTextAlignmentCenter;
-    brandDescription.maximumNumberOfLines = 2;
-    brandDescription.lineBreakMode = NSLineBreakByWordWrapping;
     brandDescription.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSArray<NSString *> *navigationTitles = @[ @"键盘输入", @"外观", @"词库与数据" ];
+    NSArray<NSString *> *navigationSymbols = @[ @"keyboard", @"paintpalette", @"books.vertical" ];
+    NSMutableArray<NSButton *> *navigationButtons = [NSMutableArray arrayWithCapacity:navigationTitles.count];
+    for (NSInteger index = 0; index < static_cast<NSInteger>(navigationTitles.count); ++index)
+    {
+        NSButton *button = [NSButton buttonWithTitle:navigationTitles[index]
+                                              target:self
+                                              action:@selector(selectPreferencesPage:)];
+        [button setButtonType:NSButtonTypeToggle];
+        button.tag = index;
+        button.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
+        button.attributedTitle =
+            [[NSAttributedString alloc] initWithString:navigationTitles[index]
+                                            attributes:@{
+                                                NSFontAttributeName : button.font,
+                                                NSForegroundColorAttributeName : [NSColor whiteColor],
+                                            }];
+        button.alignment = NSTextAlignmentLeft;
+        button.bordered = NO;
+        button.contentTintColor = [NSColor whiteColor];
+        button.imagePosition = NSImageLeading;
+        button.image = [NSImage imageWithSystemSymbolName:navigationSymbols[index]
+                                 accessibilityDescription:navigationTitles[index]];
+        button.accessibilityLabel = navigationTitles[index];
+        button.wantsLayer = YES;
+        button.layer.cornerRadius = 8.0;
+        button.translatesAutoresizingMaskIntoConstraints = NO;
+        [button.heightAnchor constraintEqualToConstant:38.0].active = YES;
+        [navigationButtons addObject:button];
+    }
+    _navigationButtons = [navigationButtons copy];
+
+    NSStackView *navigationStack = [NSStackView stackViewWithViews:_navigationButtons];
+    navigationStack.orientation = NSUserInterfaceLayoutOrientationVertical;
+    navigationStack.alignment = NSLayoutAttributeLeading;
+    navigationStack.distribution = NSStackViewDistributionFill;
+    navigationStack.spacing = 6.0;
+    navigationStack.translatesAutoresizingMaskIntoConstraints = NO;
+    for (NSButton *button in _navigationButtons)
+    {
+        [button.widthAnchor constraintEqualToAnchor:navigationStack.widthAnchor].active = YES;
+    }
+
+    NSButton *websiteButton = [NSButton buttonWithTitle:@"msime.app" target:self action:@selector(openWebsite:)];
+    websiteButton.bordered = NO;
+    websiteButton.contentTintColor = [NSColor whiteColor];
+    websiteButton.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightMedium];
+    websiteButton.attributedTitle =
+        [[NSAttributedString alloc] initWithString:@"msime.app"
+                                        attributes:@{
+                                            NSFontAttributeName : websiteButton.font,
+                                            NSForegroundColorAttributeName : [NSColor whiteColor],
+                                        }];
+    websiteButton.toolTip = @"打开水杉输入法官网";
+    websiteButton.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSTextField *brandTag = [NSTextField labelWithString:@"METASEQUOIA  ·  macOS"];
     brandTag.font = [NSFont monospacedSystemFontOfSize:9.0 weight:NSFontWeightMedium];
-    brandTag.textColor = [NSColor whiteColor];
+    brandTag.textColor = [[NSColor whiteColor] colorWithAlphaComponent:0.8];
     brandTag.alignment = NSTextAlignmentCenter;
     brandTag.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSView *settingsPanel = [[NSView alloc] initWithFrame:NSZeroRect];
     settingsPanel.translatesAutoresizingMaskIntoConstraints = NO;
+    NSView *pageContainer = [[NSView alloc] initWithFrame:NSZeroRect];
+    pageContainer.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSTextField *titleLabel = [NSTextField labelWithString:@"输入设置"];
-    titleLabel.font = [NSFont systemFontOfSize:24.0 weight:NSFontWeightSemibold];
-    titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    NSArray<NSString *> *schemeTitles = @[ @"全拼输入", @"小鹤双拼", @"五笔输入（86 五笔）" ];
+    NSMutableArray<NSButton *> *schemeButtons = [NSMutableArray arrayWithCapacity:schemeTitles.count];
+    NSMutableArray<NSView *> *schemeRows = [NSMutableArray arrayWithCapacity:schemeTitles.count];
+    for (NSInteger index = 0; index < static_cast<NSInteger>(schemeTitles.count); ++index)
+    {
+        NSButton *button = [NSButton radioButtonWithTitle:schemeTitles[index]
+                                                  target:self
+                                                  action:@selector(schemeChanged:)];
+        button.tag = index;
+        button.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
+        button.accessibilityLabel = schemeTitles[index];
+        button.translatesAutoresizingMaskIntoConstraints = NO;
+        [button.heightAnchor constraintEqualToConstant:34.0].active = YES;
+        [schemeButtons addObject:button];
+        [schemeRows addObject:button];
+    }
+    _schemeButtons = [schemeButtons copy];
 
-    NSTextField *descriptionLabel = [NSTextField labelWithString:@"选择输入方案，并调整候选与标点行为。"];
-    descriptionLabel.textColor = [NSColor secondaryLabelColor];
-    descriptionLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *inputSectionLabel = [NSTextField labelWithString:@"输入方案"];
-    inputSectionLabel.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
-    inputSectionLabel.textColor = [NSColor secondaryLabelColor];
-    inputSectionLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSBox *inputCard = [[NSBox alloc] initWithFrame:NSZeroRect];
-    ConfigureCard(inputCard);
-
-    NSTextField *schemeLabel = [NSTextField labelWithString:@"拼音方案"];
-    schemeLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
-    schemeLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    _schemeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
-    [_schemeButton addItemWithTitle:@"全拼"];
-    [_schemeButton addItemWithTitle:@"小鹤双拼"];
-    _schemeButton.target = self;
-    _schemeButton.action = @selector(schemeChanged:);
-    _schemeButton.accessibilityLabel = @"输入方案";
-    _schemeButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *candidatePanelStyleLabel = [NSTextField labelWithString:@"候选排列"];
-    candidatePanelStyleLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
-    candidatePanelStyleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    _candidatePanelStyleButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
-    [_candidatePanelStyleButton addItemWithTitle:@"横向排列"];
-    [_candidatePanelStyleButton addItemWithTitle:@"纵向列表"];
-    _candidatePanelStyleButton.target = self;
-    _candidatePanelStyleButton.action = @selector(candidatePanelStyleChanged:);
-    _candidatePanelStyleButton.accessibilityLabel = @"候选排列";
-    _candidatePanelStyleButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *candidatePageSizeLabel = [NSTextField labelWithString:@"每页候选"];
-    candidatePageSizeLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
-    candidatePageSizeLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    _candidatePageSizeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
-    [_candidatePageSizeButton addItemsWithTitles:@[@"5 个", @"7 个", @"9 个"]];
-    _candidatePageSizeButton.target = self;
-    _candidatePageSizeButton.action = @selector(candidatePageSizeChanged:);
-    _candidatePageSizeButton.accessibilityLabel = @"每页候选";
-    _candidatePageSizeButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *candidateFontSizeLabel = [NSTextField labelWithString:@"候选字号"];
-    candidateFontSizeLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
-    candidateFontSizeLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    _candidateFontSizeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
-    [_candidateFontSizeButton addItemsWithTitles:@[@"小（16 pt）", @"标准（18 pt）", @"大（20 pt）"]];
-    _candidateFontSizeButton.target = self;
-    _candidateFontSizeButton.action = @selector(candidateFontSizeChanged:);
-    _candidateFontSizeButton.accessibilityLabel = @"候选字号";
-    _candidateFontSizeButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *behaviorSectionLabel = [NSTextField labelWithString:@"输入行为"];
-    behaviorSectionLabel.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
-    behaviorSectionLabel.textColor = [NSColor secondaryLabelColor];
-    behaviorSectionLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSBox *behaviorCard = [[NSBox alloc] initWithFrame:NSZeroRect];
-    ConfigureCard(behaviorCard);
-
-    _autocorrectButton = [NSButton checkboxWithTitle:@"启用全拼自动纠错" target:self action:@selector(autocorrectChanged:)];
-    _autocorrectButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-    _helpcodeButton = [NSButton checkboxWithTitle:@"启用辅助码" target:self action:@selector(helpcodeChanged:)];
-    _helpcodeButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-    _chinesePunctuationButton = [NSButton checkboxWithTitle:@"使用中文标点" target:self action:@selector(chinesePunctuationChanged:)];
-    _chinesePunctuationButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-    _candidateLearningButton = [NSButton checkboxWithTitle:@"记住候选词频" target:self action:@selector(candidateLearningChanged:)];
-    _candidateLearningButton.translatesAutoresizingMaskIntoConstraints = NO;
-
+    _autocorrectButton = [NSButton checkboxWithTitle:@"启用全拼自动纠错"
+                                              target:self
+                                              action:@selector(autocorrectChanged:)];
+    _chinesePunctuationButton = [NSButton checkboxWithTitle:@"使用中文标点"
+                                                     target:self
+                                                     action:@selector(chinesePunctuationChanged:)];
     _inputModeShortcutButton = [NSButton checkboxWithTitle:@"Shift+Space 切换中英文"
                                                     target:self
                                                     action:@selector(inputModeShortcutChanged:)];
     _inputModeShortcutButton.accessibilityLabel = @"Shift+Space 切换中英文";
-    _inputModeShortcutButton.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSBox *schemeCard = CardWithViews(schemeRows, 2.0);
+    NSBox *behaviorCard =
+        CardWithViews(@[ _autocorrectButton, _chinesePunctuationButton, _inputModeShortcutButton ], 9.0);
+    schemeCard.accessibilityLabel = @"输入方式卡片";
+    behaviorCard.accessibilityLabel = @"中英文状态切换卡片";
+    NSView *generalPage =
+        PreferencesPage(@"键盘输入", @"选择全拼、双拼或 86 五笔，并调整日常输入行为。",
+                        @[ SectionLabel(@"输入方式"), schemeCard, SectionLabel(@"中英文状态切换"), behaviorCard ]);
+    generalPage.accessibilityLabel = @"键盘输入设置页";
+
+    _candidatePanelStyleButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_candidatePanelStyleButton addItemsWithTitles:@[ @"横向排列", @"纵向列表" ]];
+    _candidatePanelStyleButton.target = self;
+    _candidatePanelStyleButton.action = @selector(candidatePanelStyleChanged:);
+    _candidatePanelStyleButton.accessibilityLabel = @"候选排列";
+
+    _candidatePageSizeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_candidatePageSizeButton addItemsWithTitles:@[ @"5 个", @"7 个", @"9 个" ]];
+    _candidatePageSizeButton.target = self;
+    _candidatePageSizeButton.action = @selector(candidatePageSizeChanged:);
+    _candidatePageSizeButton.accessibilityLabel = @"每页候选";
+
+    _candidateFontSizeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_candidateFontSizeButton addItemsWithTitles:@[ @"小（16 pt）", @"标准（18 pt）", @"大（20 pt）" ]];
+    _candidateFontSizeButton.target = self;
+    _candidateFontSizeButton.action = @selector(candidateFontSizeChanged:);
+    _candidateFontSizeButton.accessibilityLabel = @"候选字号";
+
+    NSBox *appearanceCard =
+        CardWithViews(@[
+            PreferenceRow(@"候选排列", _candidatePanelStyleButton),
+            PreferenceRow(@"每页候选", _candidatePageSizeButton),
+            PreferenceRow(@"候选字号", _candidateFontSizeButton),
+        ],
+                      4.0);
+    appearanceCard.accessibilityLabel = @"候选窗口卡片";
+    NSView *appearancePage = PreferencesPage(@"外观", @"调整原生候选窗口的排列、容量与阅读大小。",
+                                             @[ SectionLabel(@"候选窗口"), appearanceCard ]);
+    appearancePage.accessibilityLabel = @"外观设置页";
+
+    _helpcodeButton = [NSButton checkboxWithTitle:@"启用辅助码" target:self action:@selector(helpcodeChanged:)];
+    _candidateLearningButton =
+        [NSButton checkboxWithTitle:@"记住候选词频" target:self action:@selector(candidateLearningChanged:)];
 
     _statusLabel = [NSTextField labelWithString:@"检查词库状态…"];
     _statusLabel.accessibilityLabel = @"词库状态";
     _statusLabel.textColor = [NSColor secondaryLabelColor];
-    _statusLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *dataSectionLabel = [NSTextField labelWithString:@"数据与隐私"];
-    dataSectionLabel.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold];
-    dataSectionLabel.textColor = [NSColor secondaryLabelColor];
-    dataSectionLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSBox *dataCard = [[NSBox alloc] initWithFrame:NSZeroRect];
-    ConfigureCard(dataCard);
-
-    NSTextField *learningDataLabel = [NSTextField labelWithString:@"学习数据"];
-    learningDataLabel.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
-    learningDataLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *learningDataDescription =
-        [NSTextField labelWithString:@"清除候选词频、用户词典与拼音学习记录。"];
-    learningDataDescription.font = [NSFont systemFontOfSize:11.0];
-    learningDataDescription.textColor = [NSColor secondaryLabelColor];
-    learningDataDescription.translatesAutoresizingMaskIntoConstraints = NO;
+    _statusLabel.maximumNumberOfLines = 2;
 
     _resetLearningButton = [NSButton buttonWithTitle:@"清除学习数据…"
                                               target:self
@@ -417,7 +521,18 @@ void ConfigureCard(NSBox *card)
     _resetLearningButton.bezelStyle = NSBezelStyleRounded;
     _resetLearningButton.contentTintColor = [NSColor systemRedColor];
     _resetLearningButton.accessibilityLabel = @"清除学习数据";
-    _resetLearningButton.translatesAutoresizingMaskIntoConstraints = NO;
+
+    NSBox *learningCard = CardWithViews(@[ _helpcodeButton, _candidateLearningButton ], 9.0);
+    NSBox *dictionaryCard = CardWithViews(@[ _statusLabel ], 0.0);
+    NSBox *resetCard = CardWithViews(@[ PreferenceRow(@"候选词频、用户词典与拼音学习记录", _resetLearningButton) ], 0.0);
+    learningCard.accessibilityLabel = @"候选与学习卡片";
+    NSView *dataPage =
+        PreferencesPage(@"词库与数据", @"管理候选学习、辅助码与本机词库状态。",
+                        @[ SectionLabel(@"候选与学习"), learningCard, SectionLabel(@"词库状态"), dictionaryCard,
+                           SectionLabel(@"数据与隐私"), resetCard ]);
+    dataPage.accessibilityLabel = @"词库与数据设置页";
+
+    _preferencePages = @[ generalPage, appearancePage, dataPage ];
 
     NSButton *restoreButton = [NSButton buttonWithTitle:@"恢复默认设置" target:self action:@selector(restoreDefaults:)];
     restoreButton.bezelStyle = NSBezelStyleRounded;
@@ -435,139 +550,69 @@ void ConfigureCard(NSBox *card)
     closeButton.keyEquivalent = @"\r";
     closeButton.translatesAutoresizingMaskIntoConstraints = NO;
 
-    [contentView addSubview:brandPanel];
-    [brandPanel addSubview:iconView];
-    [brandPanel addSubview:brandTitle];
-    [brandPanel addSubview:brandDescription];
-    [brandPanel addSubview:brandTag];
+    [contentView addSubview:sidebar];
+    [sidebar addSubview:iconView];
+    [sidebar addSubview:brandTitle];
+    [sidebar addSubview:brandDescription];
+    [sidebar addSubview:navigationStack];
+    [sidebar addSubview:websiteButton];
+    [sidebar addSubview:brandTag];
     [contentView addSubview:settingsPanel];
-    [settingsPanel addSubview:titleLabel];
-    [settingsPanel addSubview:descriptionLabel];
-    [settingsPanel addSubview:inputSectionLabel];
-    [settingsPanel addSubview:inputCard];
-    [inputCard addSubview:schemeLabel];
-    [inputCard addSubview:_schemeButton];
-    [inputCard addSubview:candidatePanelStyleLabel];
-    [inputCard addSubview:_candidatePanelStyleButton];
-    [inputCard addSubview:candidatePageSizeLabel];
-    [inputCard addSubview:_candidatePageSizeButton];
-    [inputCard addSubview:candidateFontSizeLabel];
-    [inputCard addSubview:_candidateFontSizeButton];
-    [settingsPanel addSubview:behaviorSectionLabel];
-    [settingsPanel addSubview:behaviorCard];
-    [behaviorCard addSubview:_autocorrectButton];
-    [behaviorCard addSubview:_helpcodeButton];
-    [behaviorCard addSubview:_chinesePunctuationButton];
-    [behaviorCard addSubview:_inputModeShortcutButton];
-    [behaviorCard addSubview:_candidateLearningButton];
-    [settingsPanel addSubview:_statusLabel];
-    [settingsPanel addSubview:dataSectionLabel];
-    [settingsPanel addSubview:dataCard];
-    [dataCard addSubview:learningDataLabel];
-    [dataCard addSubview:learningDataDescription];
-    [dataCard addSubview:_resetLearningButton];
+    [settingsPanel addSubview:pageContainer];
+    for (NSView *page in _preferencePages)
+    {
+        [pageContainer addSubview:page];
+        [NSLayoutConstraint activateConstraints:@[
+            [page.leadingAnchor constraintEqualToAnchor:pageContainer.leadingAnchor],
+            [page.trailingAnchor constraintEqualToAnchor:pageContainer.trailingAnchor],
+            [page.topAnchor constraintEqualToAnchor:pageContainer.topAnchor],
+            [page.bottomAnchor constraintEqualToAnchor:pageContainer.bottomAnchor],
+        ]];
+    }
     [settingsPanel addSubview:restoreButton];
     [settingsPanel addSubview:_updateButton];
     [settingsPanel addSubview:closeButton];
 
     [NSLayoutConstraint activateConstraints:@[
-        [brandPanel.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor],
-        [brandPanel.topAnchor constraintEqualToAnchor:contentView.topAnchor],
-        [brandPanel.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor],
-        [brandPanel.widthAnchor constraintEqualToConstant:176.0],
-        [iconView.topAnchor constraintEqualToAnchor:brandPanel.topAnchor constant:48.0],
-        [iconView.centerXAnchor constraintEqualToAnchor:brandPanel.centerXAnchor],
-        [iconView.widthAnchor constraintEqualToConstant:64.0],
-        [iconView.heightAnchor constraintEqualToConstant:64.0],
-        [brandTitle.topAnchor constraintEqualToAnchor:iconView.bottomAnchor constant:20.0],
-        [brandTitle.leadingAnchor constraintEqualToAnchor:brandPanel.leadingAnchor constant:16.0],
-        [brandTitle.trailingAnchor constraintEqualToAnchor:brandPanel.trailingAnchor constant:-16.0],
-        [brandDescription.topAnchor constraintEqualToAnchor:brandTitle.bottomAnchor constant:10.0],
-        [brandDescription.leadingAnchor constraintEqualToAnchor:brandPanel.leadingAnchor constant:22.0],
-        [brandDescription.trailingAnchor constraintEqualToAnchor:brandPanel.trailingAnchor constant:-22.0],
-        [brandTag.leadingAnchor constraintEqualToAnchor:brandPanel.leadingAnchor constant:12.0],
-        [brandTag.trailingAnchor constraintEqualToAnchor:brandPanel.trailingAnchor constant:-12.0],
-        [brandTag.bottomAnchor constraintEqualToAnchor:brandPanel.bottomAnchor constant:-28.0],
-        [settingsPanel.leadingAnchor constraintEqualToAnchor:brandPanel.trailingAnchor],
+        [sidebar.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor],
+        [sidebar.topAnchor constraintEqualToAnchor:contentView.topAnchor],
+        [sidebar.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor],
+        [sidebar.widthAnchor constraintEqualToConstant:190.0],
+        [iconView.topAnchor constraintEqualToAnchor:sidebar.topAnchor constant:44.0],
+        [iconView.centerXAnchor constraintEqualToAnchor:sidebar.centerXAnchor],
+        [iconView.widthAnchor constraintEqualToConstant:52.0],
+        [iconView.heightAnchor constraintEqualToConstant:52.0],
+        [brandTitle.topAnchor constraintEqualToAnchor:iconView.bottomAnchor constant:16.0],
+        [brandTitle.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:16.0],
+        [brandTitle.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-16.0],
+        [brandDescription.topAnchor constraintEqualToAnchor:brandTitle.bottomAnchor constant:8.0],
+        [brandDescription.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:16.0],
+        [brandDescription.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-16.0],
+        [navigationStack.topAnchor constraintEqualToAnchor:brandDescription.bottomAnchor constant:26.0],
+        [navigationStack.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:16.0],
+        [navigationStack.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-16.0],
+        [websiteButton.centerXAnchor constraintEqualToAnchor:sidebar.centerXAnchor],
+        [websiteButton.bottomAnchor constraintEqualToAnchor:brandTag.topAnchor constant:-10.0],
+        [brandTag.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:12.0],
+        [brandTag.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-12.0],
+        [brandTag.bottomAnchor constraintEqualToAnchor:sidebar.bottomAnchor constant:-20.0],
+        [settingsPanel.leadingAnchor constraintEqualToAnchor:sidebar.trailingAnchor],
         [settingsPanel.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor],
         [settingsPanel.topAnchor constraintEqualToAnchor:contentView.topAnchor],
         [settingsPanel.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor],
-        [titleLabel.topAnchor constraintEqualToAnchor:settingsPanel.topAnchor constant:28.0],
-        [titleLabel.leadingAnchor constraintEqualToAnchor:settingsPanel.leadingAnchor constant:28.0],
-        [titleLabel.trailingAnchor constraintLessThanOrEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [descriptionLabel.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:8.0],
-        [descriptionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [descriptionLabel.trailingAnchor constraintLessThanOrEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [inputSectionLabel.topAnchor constraintEqualToAnchor:descriptionLabel.bottomAnchor constant:24.0],
-        [inputSectionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [inputCard.topAnchor constraintEqualToAnchor:inputSectionLabel.bottomAnchor constant:8.0],
-        [inputCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [inputCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [inputCard.heightAnchor constraintEqualToConstant:196.0],
-        [schemeLabel.leadingAnchor constraintEqualToAnchor:inputCard.leadingAnchor constant:18.0],
-        [schemeLabel.topAnchor constraintEqualToAnchor:inputCard.topAnchor constant:18.0],
-        [_schemeButton.centerYAnchor constraintEqualToAnchor:schemeLabel.centerYAnchor],
-        [_schemeButton.trailingAnchor constraintEqualToAnchor:inputCard.trailingAnchor constant:-16.0],
-        [_schemeButton.widthAnchor constraintEqualToConstant:180.0],
-        [candidatePanelStyleLabel.leadingAnchor constraintEqualToAnchor:schemeLabel.leadingAnchor],
-        [candidatePanelStyleLabel.topAnchor constraintEqualToAnchor:schemeLabel.topAnchor constant:48.0],
-        [_candidatePanelStyleButton.centerYAnchor constraintEqualToAnchor:candidatePanelStyleLabel.centerYAnchor],
-        [_candidatePanelStyleButton.trailingAnchor constraintEqualToAnchor:_schemeButton.trailingAnchor],
-        [_candidatePanelStyleButton.widthAnchor constraintEqualToAnchor:_schemeButton.widthAnchor],
-        [candidatePageSizeLabel.leadingAnchor constraintEqualToAnchor:schemeLabel.leadingAnchor],
-        [candidatePageSizeLabel.topAnchor constraintEqualToAnchor:candidatePanelStyleLabel.topAnchor constant:48.0],
-        [_candidatePageSizeButton.centerYAnchor constraintEqualToAnchor:candidatePageSizeLabel.centerYAnchor],
-        [_candidatePageSizeButton.trailingAnchor constraintEqualToAnchor:_schemeButton.trailingAnchor],
-        [_candidatePageSizeButton.widthAnchor constraintEqualToAnchor:_schemeButton.widthAnchor],
-        [candidateFontSizeLabel.leadingAnchor constraintEqualToAnchor:schemeLabel.leadingAnchor],
-        [candidateFontSizeLabel.topAnchor constraintEqualToAnchor:candidatePageSizeLabel.topAnchor constant:48.0],
-        [_candidateFontSizeButton.centerYAnchor constraintEqualToAnchor:candidateFontSizeLabel.centerYAnchor],
-        [_candidateFontSizeButton.trailingAnchor constraintEqualToAnchor:_schemeButton.trailingAnchor],
-        [_candidateFontSizeButton.widthAnchor constraintEqualToAnchor:_schemeButton.widthAnchor],
-        [behaviorSectionLabel.topAnchor constraintEqualToAnchor:inputCard.bottomAnchor constant:18.0],
-        [behaviorSectionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [behaviorCard.topAnchor constraintEqualToAnchor:behaviorSectionLabel.bottomAnchor constant:8.0],
-        [behaviorCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [behaviorCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [behaviorCard.heightAnchor constraintEqualToConstant:148.0],
-        [_autocorrectButton.leadingAnchor constraintEqualToAnchor:behaviorCard.leadingAnchor constant:18.0],
-        [_autocorrectButton.topAnchor constraintEqualToAnchor:behaviorCard.topAnchor constant:16.0],
-        [_helpcodeButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
-        [_helpcodeButton.topAnchor constraintEqualToAnchor:_autocorrectButton.bottomAnchor constant:8.0],
-        [_chinesePunctuationButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
-        [_chinesePunctuationButton.topAnchor constraintEqualToAnchor:_helpcodeButton.bottomAnchor constant:8.0],
-        [_inputModeShortcutButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
-        [_inputModeShortcutButton.topAnchor constraintEqualToAnchor:_chinesePunctuationButton.bottomAnchor constant:8.0],
-        [_candidateLearningButton.leadingAnchor constraintEqualToAnchor:_autocorrectButton.leadingAnchor],
-        [_candidateLearningButton.topAnchor constraintEqualToAnchor:_inputModeShortcutButton.bottomAnchor constant:8.0],
-        [_statusLabel.topAnchor constraintEqualToAnchor:behaviorCard.bottomAnchor constant:12.0],
-        [_statusLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [_statusLabel.trailingAnchor constraintLessThanOrEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [dataSectionLabel.topAnchor constraintEqualToAnchor:_statusLabel.bottomAnchor constant:16.0],
-        [dataSectionLabel.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [dataCard.topAnchor constraintEqualToAnchor:dataSectionLabel.bottomAnchor constant:8.0],
-        [dataCard.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
-        [dataCard.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [dataCard.heightAnchor constraintEqualToConstant:72.0],
-        [learningDataLabel.leadingAnchor constraintEqualToAnchor:dataCard.leadingAnchor constant:18.0],
-        [learningDataLabel.topAnchor constraintEqualToAnchor:dataCard.topAnchor constant:15.0],
-        [learningDataLabel.trailingAnchor constraintLessThanOrEqualToAnchor:_resetLearningButton.leadingAnchor
-                                                                   constant:-12.0],
-        [learningDataDescription.leadingAnchor constraintEqualToAnchor:learningDataLabel.leadingAnchor],
-        [learningDataDescription.topAnchor constraintEqualToAnchor:learningDataLabel.bottomAnchor constant:5.0],
-        [learningDataDescription.trailingAnchor constraintLessThanOrEqualToAnchor:_resetLearningButton.leadingAnchor
-                                                                         constant:-12.0],
-        [_resetLearningButton.trailingAnchor constraintEqualToAnchor:dataCard.trailingAnchor constant:-16.0],
-        [_resetLearningButton.centerYAnchor constraintEqualToAnchor:dataCard.centerYAnchor],
-        [_resetLearningButton.widthAnchor constraintGreaterThanOrEqualToConstant:118.0],
-        [restoreButton.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
+        [pageContainer.leadingAnchor constraintEqualToAnchor:settingsPanel.leadingAnchor],
+        [pageContainer.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor],
+        [pageContainer.topAnchor constraintEqualToAnchor:settingsPanel.topAnchor],
+        [pageContainer.bottomAnchor constraintEqualToAnchor:restoreButton.topAnchor constant:-16.0],
+        [restoreButton.leadingAnchor constraintEqualToAnchor:settingsPanel.leadingAnchor constant:30.0],
         [restoreButton.bottomAnchor constraintEqualToAnchor:settingsPanel.bottomAnchor constant:-20.0],
         [_updateButton.centerXAnchor constraintEqualToAnchor:settingsPanel.centerXAnchor],
         [_updateButton.centerYAnchor constraintEqualToAnchor:restoreButton.centerYAnchor],
-        [closeButton.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
-        [closeButton.bottomAnchor constraintEqualToAnchor:settingsPanel.bottomAnchor constant:-20.0],
+        [closeButton.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-30.0],
+        [closeButton.centerYAnchor constraintEqualToAnchor:restoreButton.centerYAnchor],
         [closeButton.widthAnchor constraintGreaterThanOrEqualToConstant:80.0],
     ]];
+    [self selectPreferencesPage:_navigationButtons.firstObject];
     [self refreshUpdateButton];
     return self;
 }
@@ -576,10 +621,10 @@ void ConfigureCard(NSBox *card)
 {
     NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
     _updateButton.title = version.length == 0 ? @"检查更新…" : [NSString stringWithFormat:@"检查更新（v%@）…", version];
-    _updateButton.toolTip = @"从 GitHub 检查水杉输入法的最新正式版本";
+    _updateButton.toolTip = @"通过 msime.app 检查水杉输入法的最新正式版本";
     _updateButton.accessibilityHelp = version.length == 0
-                                          ? @"检查 GitHub 上的最新正式版本"
-                                          : [NSString stringWithFormat:@"当前版本 v%@，检查 GitHub 上的最新正式版本", version];
+                                          ? @"通过 msime.app 检查最新正式版本"
+                                          : [NSString stringWithFormat:@"当前版本 v%@，通过 msime.app 检查最新正式版本", version];
     _updateButton.contentTintColor = nil;
     _updateButton.enabled = YES;
 }
@@ -589,9 +634,40 @@ void ConfigureCard(NSBox *card)
     [[MetasequoiaUpdateController sharedController] checkForUpdates:sender];
 }
 
+- (void)selectPreferencesPage:(id)sender
+{
+    NSButton *selectedButton = [sender isKindOfClass:[NSButton class]] ? (NSButton *)sender : nil;
+    const NSInteger selectedIndex = selectedButton == nil ? 0 : selectedButton.tag;
+    for (NSInteger index = 0; index < static_cast<NSInteger>(_preferencePages.count); ++index)
+    {
+        const BOOL selected = index == selectedIndex;
+        _preferencePages[index].hidden = !selected;
+        NSButton *button = _navigationButtons[index];
+        button.state = selected ? NSControlStateValueOn : NSControlStateValueOff;
+        button.accessibilityValue = @(selected);
+        NSColor *backgroundColor =
+            selected ? [[NSColor whiteColor] colorWithAlphaComponent:0.16] : [NSColor clearColor];
+        button.layer.backgroundColor = backgroundColor.CGColor;
+    }
+}
+
+- (void)openWebsite:(id)sender
+{
+    (void)sender;
+    NSURL *website = [NSURL URLWithString:@"https://msime.app/"];
+    if (website != nil)
+    {
+        [[NSWorkspace sharedWorkspace] openURL:website];
+    }
+}
+
 - (void)refreshControls
 {
-    [_schemeButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedScheme]];
+    const NSInteger storedScheme = [MetasequoiaPreferencesWindowController storedScheme];
+    for (NSInteger index = 0; index < static_cast<NSInteger>(_schemeButtons.count); ++index)
+    {
+        _schemeButtons[index].state = index == storedScheme ? NSControlStateValueOn : NSControlStateValueOff;
+    }
     _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
@@ -689,8 +765,8 @@ void ConfigureCard(NSBox *card)
 
 - (void)schemeChanged:(id)sender
 {
-    NSPopUpButton *schemeButton = (NSPopUpButton *)sender;
-    [MetasequoiaPreferencesWindowController setStoredScheme:schemeButton.indexOfSelectedItem];
+    NSButton *schemeButton = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setStoredScheme:schemeButton.tag];
 }
 
 - (void)candidatePanelStyleChanged:(id)sender
