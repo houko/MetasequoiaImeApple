@@ -32,6 +32,15 @@ NSArray<NSString *> *MutableDictionaryFileNames()
     return fileNames;
 }
 
+NSArray<NSString *> *HelpcodeFileNames()
+{
+    static NSArray<NSString *> *fileNames = @[
+        @"helpcode.txt", @"zrm_helpcode_big_unique.txt", @"shouyou2_0_helpcode.txt",
+        @"shouyouplus_helpcode.txt", @"xiaohe_helpcode.txt"
+    ];
+    return fileNames;
+}
+
 BOOL Fail(NSError **error, NSInteger code, NSString *description)
 {
     if (error != nullptr)
@@ -799,6 +808,94 @@ BOOL PrepareMetasequoiaDictionary(NSURL *source, NSURL *dataDirectory, NSString 
     return Fail(error, 4, @"No usable Metasequoia dictionary is available.");
 }
 
+BOOL InstallMetasequoiaHelpCodes(NSURL *sourceDirectory, NSURL *dataDirectory, NSError **error)
+{
+    if (error != nullptr)
+    {
+        *error = nil;
+    }
+    if (sourceDirectory == nil || dataDirectory == nil)
+    {
+        return Fail(error, 10, @"The bundled helpcode metadata is incomplete.");
+    }
+
+    @synchronized([NSFileManager class])
+    {
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        for (NSString *fileName in HelpcodeFileNames())
+        {
+            NSURL *source = [sourceDirectory URLByAppendingPathComponent:fileName isDirectory:NO];
+            NSDictionary<NSFileAttributeKey, id> *attributes =
+                [fileManager attributesOfItemAtPath:source.path error:error];
+            if (attributes == nil || ![attributes.fileType isEqualToString:NSFileTypeRegular] ||
+                attributes.fileSize == 0)
+            {
+                if (attributes != nil)
+                {
+                    Fail(error, 10,
+                         [NSString stringWithFormat:@"The bundled helpcode table %@ is invalid.", fileName]);
+                }
+                return NO;
+            }
+        }
+
+        if (![fileManager createDirectoryAtURL:dataDirectory
+                    withIntermediateDirectories:YES
+                                     attributes:nil
+                                          error:error])
+        {
+            return NO;
+        }
+
+        NSString *identifier = NSUUID.UUID.UUIDString;
+        NSURL *destination = [dataDirectory URLByAppendingPathComponent:@"helpcodes" isDirectory:YES];
+        NSURL *staging = [dataDirectory
+            URLByAppendingPathComponent:[@".helpcodes.installing." stringByAppendingString:identifier]
+                             isDirectory:YES];
+        NSURL *backup = [dataDirectory
+            URLByAppendingPathComponent:[@".helpcodes.backup." stringByAppendingString:identifier]
+                             isDirectory:YES];
+        if (![fileManager createDirectoryAtURL:staging
+                    withIntermediateDirectories:NO
+                                     attributes:nil
+                                          error:error])
+        {
+            return NO;
+        }
+        for (NSString *fileName in HelpcodeFileNames())
+        {
+            NSURL *source = [sourceDirectory URLByAppendingPathComponent:fileName isDirectory:NO];
+            NSURL *stagedFile = [staging URLByAppendingPathComponent:fileName isDirectory:NO];
+            if (![fileManager copyItemAtURL:source toURL:stagedFile error:error])
+            {
+                [fileManager removeItemAtURL:staging error:nil];
+                return NO;
+            }
+        }
+
+        BOOL hadDestination = [fileManager fileExistsAtPath:destination.path];
+        if (hadDestination && ![fileManager moveItemAtURL:destination toURL:backup error:error])
+        {
+            [fileManager removeItemAtURL:staging error:nil];
+            return NO;
+        }
+        if (![fileManager moveItemAtURL:staging toURL:destination error:error])
+        {
+            if (hadDestination)
+            {
+                [fileManager moveItemAtURL:backup toURL:destination error:nil];
+            }
+            [fileManager removeItemAtURL:staging error:nil];
+            return NO;
+        }
+        if (hadDestination && ![fileManager removeItemAtURL:backup error:error])
+        {
+            return NO;
+        }
+        return YES;
+    }
+}
+
 BOOL EnsureMetasequoiaDictionary(NSError **error)
 {
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -813,6 +910,12 @@ BOOL EnsureMetasequoiaDictionary(NSError **error)
     }
 
     NSURL *dataDirectory = [applicationSupport URLByAppendingPathComponent:@"metasequoiaime" isDirectory:YES];
+    NSURL *helpcodeSource = [NSBundle.mainBundle.resourceURL URLByAppendingPathComponent:@"helpcodes"
+                                                                    isDirectory:YES];
+    if (!InstallMetasequoiaHelpCodes(helpcodeSource, dataDirectory, error))
+    {
+        return NO;
+    }
     NSURL *source = [[NSBundle mainBundle] URLForResource:@"msime" withExtension:@"db"];
     NSString *fingerprint = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"MetasequoiaDictionarySHA256"];
     return PrepareMetasequoiaDictionary(source, dataDirectory, fingerprint, error);

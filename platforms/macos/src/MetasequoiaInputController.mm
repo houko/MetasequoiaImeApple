@@ -2,6 +2,7 @@
 
 #import "DictionaryInstaller.h"
 #include "CandidateFontSize.h"
+#include "CandidateDisplay.h"
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
 #import "InputMenu.h"
@@ -516,7 +517,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     NSMutableArray *data = [NSMutableArray arrayWithCapacity:_session->candidates().size()];
     for (const WordItem &candidate : _session->candidates())
     {
-        [data addObject:MetasequoiaStringFromUtf8(candidate.word)];
+        [data addObject:MetasequoiaStringFromUtf8(metasequoia::mac::CandidateDisplayText(
+                            candidate, _session->scheme_type(), _session->helpcode_enabled()))];
     }
     _candidateData = [data copy];
     [_candidatePanel setCandidateData:_candidateData];

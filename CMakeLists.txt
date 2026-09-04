@@ -121,6 +121,12 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
     configure_file(${METASEQUOIA_MACOS_ROOT}/scripts/uninstall.sh ${METASEQUOIA_IME_UNINSTALLER} COPYONLY)
 
     set(METASEQUOIA_IME_ICONS ${METASEQUOIA_MACOS_ROOT}/resources/MetasequoiaIME.icns ${METASEQUOIA_MACOS_ROOT}/resources/MetasequoiaIMEMenuIcon.tiff)
+    set(METASEQUOIA_IME_HELPCODES
+        vendor/MetasequoiaImeHelpCode/helpcodes/helpcode.txt
+        vendor/MetasequoiaImeHelpCode/helpcodes/zrm_helpcode_big_unique.txt
+        vendor/MetasequoiaImeHelpCode/helpcodes/shouyou2_0_helpcode.txt
+        vendor/MetasequoiaImeHelpCode/helpcodes/shouyouplus_helpcode.txt
+        vendor/MetasequoiaImeHelpCode/helpcodes/xiaohe_helpcode.txt)
     set(METASEQUOIA_IME_LOCALIZATIONS ${METASEQUOIA_MACOS_ROOT}/resources/en.lproj/InfoPlist.strings ${METASEQUOIA_MACOS_ROOT}/resources/zh-Hans.lproj/InfoPlist.strings)
     set(METASEQUOIA_IME_LEGAL_RESOURCES
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/GPL-3.0.txt
@@ -130,9 +136,11 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Sparkle-LICENSE.txt)
-    add_executable(MetasequoiaIME MACOSX_BUNDLE ${METASEQUOIA_MACOS_ROOT}/src/main.mm ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm ${METASEQUOIA_MACOS_ROOT}/src/InputSourceRegistration.mm ${METASEQUOIA_MACOS_ROOT}/src/MetasequoiaInputController.mm ${METASEQUOIA_MACOS_ROOT}/src/PreferencesWindowController.mm ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/UpdateController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICONS} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
+    add_executable(MetasequoiaIME MACOSX_BUNDLE ${METASEQUOIA_MACOS_ROOT}/src/main.mm ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm ${METASEQUOIA_MACOS_ROOT}/src/InputSourceRegistration.mm ${METASEQUOIA_MACOS_ROOT}/src/MetasequoiaInputController.mm ${METASEQUOIA_MACOS_ROOT}/src/PreferencesWindowController.mm ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/UpdateController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICONS} ${METASEQUOIA_IME_HELPCODES} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
     set_source_files_properties(${METASEQUOIA_IME_DICTIONARY} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(${METASEQUOIA_IME_ICONS} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_source_files_properties(${METASEQUOIA_IME_HELPCODES}
+        PROPERTIES MACOSX_PACKAGE_LOCATION Resources/helpcodes)
     set_source_files_properties(${METASEQUOIA_MACOS_ROOT}/resources/en.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/en.lproj)
     set_source_files_properties(${METASEQUOIA_MACOS_ROOT}/resources/zh-Hans.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/zh-Hans.lproj)
     set_source_files_properties(${METASEQUOIA_IME_LEGAL_RESOURCES}

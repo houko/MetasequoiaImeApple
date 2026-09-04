@@ -149,6 +149,36 @@ int main()
         Require([fileManager createDirectoryAtURL:root withIntermediateDirectories:YES attributes:nil error:&error],
                 error.localizedDescription.UTF8String);
 
+        NSURL *helpcodeSource = CreateDirectory(root, @"bundled-helpcodes");
+        NSArray<NSString *> *helpcodeNames = @[
+            @"helpcode.txt", @"zrm_helpcode_big_unique.txt", @"shouyou2_0_helpcode.txt",
+            @"shouyouplus_helpcode.txt", @"xiaohe_helpcode.txt"
+        ];
+        for (NSString *name in helpcodeNames)
+        {
+            WriteString([@"你=rx\n" stringByAppendingString:name],
+                        [helpcodeSource URLByAppendingPathComponent:name]);
+        }
+        NSURL *helpcodeData = CreateDirectory(root, @"helpcode-data");
+        Require(InstallMetasequoiaHelpCodes(helpcodeSource, helpcodeData, &error),
+                error.localizedDescription.UTF8String);
+        for (NSString *name in helpcodeNames)
+        {
+            Require(ReadString([[helpcodeData URLByAppendingPathComponent:@"helpcodes" isDirectory:YES]
+                                   URLByAppendingPathComponent:name]) ==
+                        [@"你=rx\n" stringByAppendingString:name].UTF8String,
+                    "A bundled helpcode table was not installed.");
+        }
+        NSURL *incompleteHelpcodeSource = CreateDirectory(root, @"incomplete-helpcodes");
+        WriteString(@"你=rx\n", [incompleteHelpcodeSource URLByAppendingPathComponent:@"helpcode.txt"]);
+        error = nil;
+        Require(!InstallMetasequoiaHelpCodes(incompleteHelpcodeSource, helpcodeData, &error) && error != nil,
+                "An incomplete helpcode resource set was accepted.");
+        Require(ReadString([[helpcodeData URLByAppendingPathComponent:@"helpcodes" isDirectory:YES]
+                               URLByAppendingPathComponent:@"xiaohe_helpcode.txt"]) ==
+                    [@"你=rx\nxiaohe_helpcode.txt" UTF8String],
+                "A rejected helpcode update damaged the installed resource set.");
+
         NSURL *sameSizeDirectory = CreateDirectory(root, @"same-size");
         NSURL *sameSizeSource = [root URLByAppendingPathComponent:@"same-size-source.db"];
         NSURL *sameSizeDestination = [sameSizeDirectory URLByAppendingPathComponent:@"msime.db"];

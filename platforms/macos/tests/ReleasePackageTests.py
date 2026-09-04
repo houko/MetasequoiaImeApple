@@ -641,6 +641,20 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertTrue((iconset / "icon_128x128@2x.png").is_file())
         menu_icon = bundle / "Contents/Resources" / menu_icon_name
         self.assertTrue(menu_icon.is_file())
+        helpcode_directory = bundle / "Contents/Resources/helpcodes"
+        self.assertEqual(
+            {path.name for path in helpcode_directory.iterdir() if path.is_file()},
+            {
+                "helpcode.txt",
+                "zrm_helpcode_big_unique.txt",
+                "shouyou2_0_helpcode.txt",
+                "shouyouplus_helpcode.txt",
+                "xiaohe_helpcode.txt",
+            },
+        )
+        for helpcode_table in helpcode_directory.iterdir():
+            if helpcode_table.is_file():
+                self.assertGreater(helpcode_table.stat().st_size, 0)
         menu_icon_properties = subprocess.run(
             [
                 "sips",
