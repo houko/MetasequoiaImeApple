@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.27.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.26.0...v0.27.0) (2026-09-04)
+
+
+### Features
+
+* **ios:** adapt return key to input traits ([#159](https://github.com/metasequoiaime/MSIME-Apple/issues/159)) ([a3153ad](https://github.com/metasequoiaime/MSIME-Apple/commit/a3153adbc224ae1e55ff9b5207730279bfe32ff2))
+* **ios:** follow automatic capitalization traits ([#160](https://github.com/metasequoiaime/MSIME-Apple/issues/160)) ([3d53f89](https://github.com/metasequoiaime/MSIME-Apple/commit/3d53f898a16ea45f45ba6ea46d11610e435e12e7))
+
 ## [0.26.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.25.0...v0.26.0) (2026-09-04)
 
 
