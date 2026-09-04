@@ -36,9 +36,24 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Capture existing release branch
+        if: ${{ github.event_name == 'push' }}
+        id: release_branch_before
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_BRANCH: release-please--branches--main--components--MetasequoiaImeApple
+        run: |
+          sha=$(gh api "repos/$GH_REPO/git/matching-refs/heads/$RELEASE_BRANCH" \
+            --jq ".[] | select(.ref == \"refs/heads/$RELEASE_BRANCH\") | .object.sha")
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            sha=0000000000000000000000000000000000000000
+          fi
+          printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
       - name: Prepare release
         if: ${{ github.event_name == 'push' }}
         id: release
+        continue-on-error: true
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -50,8 +65,17 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_PR: ${{ steps.release.outputs.pr }}
         run: bash platforms/macos/scripts/merge-release-pr.sh
+      - name: Promote validated release commit when pull requests are blocked
+        if: ${{ github.event_name == 'push' && steps.release.outcome == 'failure' }}
+        id: promote_release_commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_BRANCH: release-please--branches--main--components--MetasequoiaImeApple
+          EXPECTED_PREVIOUS_RELEASE_SHA: ${{ steps.release_branch_before.outputs.sha }}
+        run: bash platforms/macos/scripts/promote-release-branch.sh
       - name: Finalize automated release
-        if: ${{ github.event_name == 'push' && steps.merge_release_pr.outputs.merged == 'true' }}
+        if: ${{ github.event_name == 'push' && (steps.merge_release_pr.outputs.merged == 'true' || steps.promote_release_commit.outputs.promoted == 'true') }}
         id: finalized_release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         with:

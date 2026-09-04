@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import os
@@ -104,6 +105,241 @@ fi
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("run watch 9001", calls)
         self.assertNotIn("pr merge 42", calls)
+        self.assertEqual(output, "")
+
+
+class ReleaseBranchPromotionTests(unittest.TestCase):
+    def run_promotion(
+        self,
+        current_base=BASE_SHA,
+        current_base_after_ci=None,
+        current_head_after_ci=HEAD_SHA,
+        changed_files=None,
+        ci_exit_code="0",
+        previous_release_sha="0" * 40,
+        commit_message="chore(main): release 1.2.3",
+        parent_shas=None,
+        compare_status="ahead",
+        head_cmake=None,
+    ):
+        changed_files = changed_files or [
+            ".release-please-manifest.json",
+            "CHANGELOG.md",
+            "CMakeLists.txt",
+            "version.txt",
+        ]
+        parent_shas = parent_shas or [BASE_SHA]
+        base_contents = {
+            "version.txt": "1.2.2\n",
+            ".release-please-manifest.json": '{\n  ".": "1.2.2"\n}\n',
+            "CMakeLists.txt": "cmake_minimum_required(VERSION 3.25)\nproject(MetasequoiaImeApple VERSION 1.2.2 LANGUAGES CXX)\n",
+            "CHANGELOG.md": "# Changelog\n\n## [1.2.2](https://example.invalid/1.2.2)\n\n* previous\n",
+        }
+        head_contents = {
+            "version.txt": "1.2.3\n",
+            ".release-please-manifest.json": '{\n  ".": "1.2.3"\n}\n',
+            "CMakeLists.txt": head_cmake
+            or "cmake_minimum_required(VERSION 3.25)\nproject(MetasequoiaImeApple VERSION 1.2.3 LANGUAGES CXX)\n",
+            "CHANGELOG.md": "# Changelog\n\n## [1.2.3](https://example.invalid/1.2.3)\n\n* current\n\n"
+            "## [1.2.2](https://example.invalid/1.2.2)\n\n* previous\n",
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            log = temporary / "gh.log"
+            output = temporary / "github-output"
+            fake_gh = temporary / "gh"
+            fake_gh.write_text(
+                """#!/bin/zsh
+set -euo pipefail
+print -r -- "$*" >> "$FAKE_GH_LOG"
+case "$*" in
+  "api repos/$GH_REPO/git/ref/heads/main --jq .object.sha")
+    count=$(cat "$FAKE_MAIN_REF_COUNT" 2>/dev/null || print -r -- 0)
+    if ((count == 0)); then print -r -- "$FAKE_CURRENT_BASE"; else print -r -- "$FAKE_CURRENT_BASE_AFTER_CI"; fi
+    print -r -- $((count + 1)) > "$FAKE_MAIN_REF_COUNT"
+    ;;
+  "api repos/$GH_REPO/git/ref/heads/$RELEASE_BRANCH --jq .object.sha")
+    count=$(cat "$FAKE_RELEASE_REF_COUNT" 2>/dev/null || print -r -- 0)
+    if ((count == 0)); then print -r -- "$FAKE_HEAD_SHA"; else print -r -- "$FAKE_HEAD_AFTER_CI"; fi
+    print -r -- $((count + 1)) > "$FAKE_RELEASE_REF_COUNT"
+    ;;
+  "api repos/$GH_REPO/git/commits/$FAKE_HEAD_SHA")
+    print -r -- "$FAKE_COMMIT_JSON"
+    ;;
+  "api repos/$GH_REPO/compare/$FAKE_BASE_SHA...$FAKE_HEAD_SHA")
+    print -r -- "$FAKE_COMPARE_JSON"
+    ;;
+  "api repos/$GH_REPO/contents/version.txt?ref=$FAKE_BASE_SHA --jq .content")
+    print -r -- "$FAKE_BASE_VERSION_TXT"
+    ;;
+  "api repos/$GH_REPO/contents/version.txt?ref=$FAKE_HEAD_SHA --jq .content")
+    print -r -- "$FAKE_HEAD_VERSION_TXT"
+    ;;
+  "api repos/$GH_REPO/contents/.release-please-manifest.json?ref=$FAKE_BASE_SHA --jq .content")
+    print -r -- "$FAKE_BASE_RELEASE_PLEASE_MANIFEST_JSON"
+    ;;
+  "api repos/$GH_REPO/contents/.release-please-manifest.json?ref=$FAKE_HEAD_SHA --jq .content")
+    print -r -- "$FAKE_HEAD_RELEASE_PLEASE_MANIFEST_JSON"
+    ;;
+  "api repos/$GH_REPO/contents/CMakeLists.txt?ref=$FAKE_BASE_SHA --jq .content")
+    print -r -- "$FAKE_BASE_CMAKELISTS_TXT"
+    ;;
+  "api repos/$GH_REPO/contents/CMakeLists.txt?ref=$FAKE_HEAD_SHA --jq .content")
+    print -r -- "$FAKE_HEAD_CMAKELISTS_TXT"
+    ;;
+  "api repos/$GH_REPO/contents/CHANGELOG.md?ref=$FAKE_BASE_SHA --jq .content")
+    print -r -- "$FAKE_BASE_CHANGELOG_MD"
+    ;;
+  "api repos/$GH_REPO/contents/CHANGELOG.md?ref=$FAKE_HEAD_SHA --jq .content")
+    print -r -- "$FAKE_HEAD_CHANGELOG_MD"
+    ;;
+  "workflow run ci.yml --repo $GH_REPO --ref $RELEASE_BRANCH")
+    ;;
+  "run list --repo $GH_REPO --workflow ci.yml --branch $RELEASE_BRANCH --event workflow_dispatch --limit 20 --json databaseId,headSha --jq "*)
+    print -r -- "9001"
+    ;;
+  "run watch 9001 --repo $GH_REPO --exit-status --interval 10")
+    exit "$FAKE_CI_EXIT_CODE"
+    ;;
+  "api --method PATCH repos/$GH_REPO/git/refs/heads/main -f sha=$FAKE_HEAD_SHA -F force=false")
+    print -r -- "{}"
+    ;;
+  *)
+    print -u2 -- "Unexpected gh invocation: $*"
+    exit 64
+    ;;
+esac
+"""
+            )
+            fake_gh.chmod(0o755)
+            compare_json = {"status": compare_status, "ahead_by": 1, "behind_by": 0,
+                            "files": [{"filename": filename} for filename in changed_files]}
+            encoded = {
+                f"FAKE_{side.upper()}_{name.strip('.').upper().replace('.', '_').replace('-', '_')}":
+                base64.b64encode(contents[name].encode()).decode()
+                for side, contents in (("base", base_contents), ("head", head_contents))
+                for name in contents
+            }
+            environment = os.environ.copy()
+            current_base_after_ci = current_base_after_ci or current_base
+            environment.update(
+                {
+                    "PATH": f"{temporary}:{environment['PATH']}",
+                    "GH_REPO": "metasequoiaime/MSIME-Apple",
+                    "GITHUB_SHA": BASE_SHA,
+                    "GITHUB_OUTPUT": str(output),
+                    "RELEASE_BRANCH": "release-please--branches--main--components--MetasequoiaImeApple",
+                    "EXPECTED_PREVIOUS_RELEASE_SHA": previous_release_sha,
+                    "FAKE_GH_LOG": str(log),
+                    "FAKE_BASE_SHA": BASE_SHA,
+                    "FAKE_CURRENT_BASE": current_base,
+                    "FAKE_CURRENT_BASE_AFTER_CI": current_base_after_ci,
+                    "FAKE_HEAD_SHA": HEAD_SHA,
+                    "FAKE_HEAD_AFTER_CI": current_head_after_ci,
+                    "FAKE_MAIN_REF_COUNT": str(temporary / "main-ref-count"),
+                    "FAKE_RELEASE_REF_COUNT": str(temporary / "release-ref-count"),
+                    "FAKE_CI_EXIT_CODE": ci_exit_code,
+                    "FAKE_COMPARE_JSON": json.dumps(compare_json),
+                    "FAKE_COMMIT_JSON": json.dumps(
+                        {
+                            "message": commit_message,
+                            "author": {
+                                "name": "github-actions[bot]",
+                                "email": "41898282+github-actions[bot]@users.noreply.github.com",
+                            },
+                            "committer": {"name": "GitHub", "email": "noreply@github.com"},
+                            "parents": [{"sha": sha} for sha in parent_shas],
+                        }
+                    ),
+                    **encoded,
+                }
+            )
+            result = subprocess.run(
+                [MACOS_ROOT / "scripts/promote-release-branch.sh"],
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            return result, log.read_text() if log.exists() else "", output.read_text() if output.exists() else ""
+
+    def test_valid_release_commit_fast_forwards_main(self):
+        result, calls, output = self.run_promotion()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("workflow run ci.yml", calls)
+        self.assertLess(calls.index("run watch 9001"), calls.index("git/refs/heads/main -f sha="))
+        self.assertIn(f"git/refs/heads/main -f sha={HEAD_SHA} -F force=false", calls)
+        self.assertEqual(output, "promoted=true\n")
+
+    def test_unexpected_release_file_is_rejected(self):
+        result, calls, output = self.run_promotion(changed_files=["version.txt", "src/backdoor.mm"])
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unexpected file", result.stderr.lower())
+        self.assertNotIn("git/refs/heads/main -f sha=", calls)
+        self.assertEqual(output, "")
+
+    def test_release_branch_must_advance_during_current_action(self):
+        result, calls, output = self.run_promotion(previous_release_sha=HEAD_SHA)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("did not create a new commit", result.stderr.lower())
+        self.assertNotIn("workflow run ci.yml", calls)
+        self.assertEqual(output, "")
+
+    def test_cmake_may_only_change_the_project_version(self):
+        result, calls, output = self.run_promotion(
+            head_cmake="project(MetasequoiaImeApple VERSION 1.2.3 LANGUAGES CXX)\nexecute_process(COMMAND curl bad.invalid)\n"
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("cmake", result.stderr.lower())
+        self.assertNotIn("workflow run ci.yml", calls)
+        self.assertEqual(output, "")
+
+    def test_non_release_commit_message_is_rejected(self):
+        result, calls, output = self.run_promotion(commit_message="feat: unrelated")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("workflow run ci.yml", calls)
+        self.assertEqual(output, "")
+
+    def test_merge_commit_is_rejected(self):
+        result, calls, output = self.run_promotion(parent_shas=[BASE_SHA, "4" * 40])
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("workflow run ci.yml", calls)
+        self.assertEqual(output, "")
+
+    def test_diverged_release_branch_is_rejected(self):
+        result, calls, output = self.run_promotion(compare_status="diverged")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("workflow run ci.yml", calls)
+        self.assertEqual(output, "")
+
+    def test_failed_ci_prevents_promotion(self):
+        result, calls, output = self.run_promotion(ci_exit_code="1")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("run watch 9001", calls)
+        self.assertNotIn("git/refs/heads/main -f sha=", calls)
+        self.assertEqual(output, "")
+
+    def test_main_advancing_during_ci_prevents_promotion(self):
+        result, calls, output = self.run_promotion(current_base_after_ci="3" * 40)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("advanced while ci was running", result.stderr.lower())
+        self.assertNotIn("git/refs/heads/main -f sha=", calls)
+        self.assertEqual(output, "")
+
+    def test_stale_workflow_cannot_advance_main(self):
+        result, calls, output = self.run_promotion(current_base="3" * 40)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("main advanced", result.stderr.lower())
+        self.assertNotIn("git/refs/heads/main -f sha=", calls)
         self.assertEqual(output, "")
 
 
