@@ -62,6 +62,14 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertTrue((MACOS_ROOT / "resources" / menu_icon).is_file())
         self.assertIn(menu_icon, (PROJECT_ROOT / "CMakeLists.txt").read_text())
 
+        icon_path = MACOS_ROOT / "resources" / menu_icon
+        dpi_output = subprocess.check_output(
+            ["sips", "-g", "dpiWidth", "-g", "dpiHeight", str(icon_path)],
+            text=True,
+        )
+        self.assertRegex(dpi_output, r"dpiWidth:\s*144(?:\.0+)?")
+        self.assertRegex(dpi_output, r"dpiHeight:\s*144(?:\.0+)?")
+
     def test_release_version_matches_cmake_project_version(self):
         manifest = json.loads((PROJECT_ROOT / ".release-please-manifest.json").read_text())
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
