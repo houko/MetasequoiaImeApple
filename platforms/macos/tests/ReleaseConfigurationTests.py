@@ -192,6 +192,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("Developer ID Application", readme)
         self.assertIn("notarized", readme.lower())
         self.assertIn("全拼、小鹤双拼 or 86 五笔", readme)
+        self.assertIn("candidate paging", readme)
         self.assertIn("enable full-pinyin autocorrection", readme)
         self.assertIn("native 水杉输入法设置 panel", readme)
         self.assertIn("current user's copy in `~/Library/Input Methods`", readme)
@@ -290,7 +291,10 @@ class ReleaseConfigurationTests(unittest.TestCase):
             controller_initialization.index("prepareSessionIfNeeded"),
         )
         self.assertIn("NSString *characters = event.characters;", input_controller)
-        self.assertNotIn("charactersIgnoringModifiers", input_controller)
+        self.assertIn("NSString *charactersIgnoringModifiers = event.charactersIgnoringModifiers;", handle_event)
+        self.assertIn("candidatePageShortcutModified", handle_event)
+        character_input = handle_event.split("ControllerKeyAction::Character:", 1)[1]
+        self.assertNotIn("charactersIgnoringModifiers", character_input)
         commit_composition = input_controller.split("- (void)commitComposition:(id)sender", 1)[1].split(
             "- (void)deactivateServer:(id)sender", 1
         )[0]

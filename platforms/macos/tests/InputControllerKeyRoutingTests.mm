@@ -70,6 +70,7 @@ int main()
     using metasequoia::mac::CandidatePanelTypeForStyle;
     using metasequoia::mac::CandidatePageSizeForOptionIndex;
     using metasequoia::mac::CandidatePageSizeOptionIndex;
+    using metasequoia::mac::CandidatePageShortcut;
     using metasequoia::mac::CandidateSelectionKeys;
     using metasequoia::mac::ClassifyControllerKey;
     using metasequoia::mac::IsPrimaryCandidateDirection;
@@ -194,6 +195,11 @@ int main()
                 metasequoia::mac::CandidateFontSizeOptionIndex(18) == 1 &&
                 metasequoia::mac::CandidateFontSizeOptionIndex(20) == 2,
             "The candidate font-size options did not map to persisted values.");
+    require(metasequoia::mac::NormalizeCandidatePageShortcut(0) == CandidatePageShortcut::MinusEqual &&
+                metasequoia::mac::NormalizeCandidatePageShortcut(1) == CandidatePageShortcut::Brackets &&
+                metasequoia::mac::NormalizeCandidatePageShortcut(2) == CandidatePageShortcut::PageKeys &&
+                metasequoia::mac::NormalizeCandidatePageShortcut(99) == CandidatePageShortcut::MinusEqual,
+            "The candidate page shortcut preference was not normalized safely.");
     NSDictionary *candidateAttributes = metasequoia::mac::CandidatePanelAttributes(20);
     require([candidateAttributes[IMKCandidatesSendServerKeyEventFirst] boolValue] &&
                 [candidateAttributes[NSFontAttributeName] isKindOfClass:[NSFont class]] &&
@@ -215,6 +221,29 @@ int main()
             "Space did not remain a leading-candidate commit while candidates were visible.");
     require(ClassifyControllerKey(kVK_ANSI_2, true) == ControllerKeyAction::Character,
             "Number keys no longer reached controller-side candidate selection.");
+    require(ClassifyControllerKey(kVK_ANSI_Minus, true, CandidatePageShortcut::MinusEqual, '-', false) ==
+                    ControllerKeyAction::MoveCandidatePageUp &&
+                ClassifyControllerKey(kVK_ANSI_Equal, true, CandidatePageShortcut::MinusEqual, '=', false) ==
+                    ControllerKeyAction::MoveCandidatePageDown &&
+                ClassifyControllerKey(kVK_ANSI_LeftBracket, true, CandidatePageShortcut::Brackets, '[', false) ==
+                    ControllerKeyAction::MoveCandidatePageUp &&
+                ClassifyControllerKey(kVK_ANSI_RightBracket, true, CandidatePageShortcut::Brackets, ']', false) ==
+                    ControllerKeyAction::MoveCandidatePageDown,
+            "A configured candidate page shortcut did not map to its paging action.");
+    require(ClassifyControllerKey(kVK_ANSI_Minus, true, CandidatePageShortcut::Brackets, '-', false) ==
+                    ControllerKeyAction::Character &&
+                ClassifyControllerKey(kVK_ANSI_LeftBracket, true, CandidatePageShortcut::PageKeys, '[', false) ==
+                    ControllerKeyAction::Character &&
+                ClassifyControllerKey(kVK_ANSI_Minus, true, CandidatePageShortcut::MinusEqual, '-', true) ==
+                    ControllerKeyAction::Character &&
+                ClassifyControllerKey(kVK_ANSI_Minus, false, CandidatePageShortcut::MinusEqual, '-', false) ==
+                    ControllerKeyAction::Character,
+            "An inactive, modified, or unconfigured candidate page shortcut was swallowed.");
+    require(ClassifyControllerKey(kVK_ANSI_Minus, true, CandidatePageShortcut::MinusEqual, '^', false) ==
+                    ControllerKeyAction::Character &&
+                ClassifyControllerKey(kVK_ANSI_A, true, CandidatePageShortcut::MinusEqual, '-', false) ==
+                    ControllerKeyAction::MoveCandidatePageUp,
+            "Candidate paging followed a US physical key instead of the active keyboard layout.");
 
     const std::initializer_list<std::pair<unsigned short, ControllerKeyAction>> navigationKeys = {
         {kVK_LeftArrow, ControllerKeyAction::MoveCandidateLeft},

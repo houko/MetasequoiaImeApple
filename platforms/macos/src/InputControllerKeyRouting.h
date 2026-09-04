@@ -24,6 +24,26 @@ enum class ControllerKeyAction
     CommitCandidate,
 };
 
+enum class CandidatePageShortcut
+{
+    MinusEqual = 0,
+    Brackets = 1,
+    PageKeys = 2,
+};
+
+constexpr CandidatePageShortcut NormalizeCandidatePageShortcut(int value)
+{
+    switch (value)
+    {
+    case 1:
+        return CandidatePageShortcut::Brackets;
+    case 2:
+        return CandidatePageShortcut::PageKeys;
+    default:
+        return CandidatePageShortcut::MinusEqual;
+    }
+}
+
 constexpr size_t CandidatePageStart(size_t selectedIndex, size_t candidateCount, size_t pageSize)
 {
     if (candidateCount == 0 || pageSize == 0)
@@ -43,7 +63,10 @@ constexpr size_t CandidatePageEnd(size_t selectedIndex, size_t candidateCount, s
                     candidateCount - 1);
 }
 
-constexpr ControllerKeyAction ClassifyControllerKey(unsigned short keyCode, bool candidatePanelVisible)
+constexpr ControllerKeyAction ClassifyControllerKey(
+    unsigned short keyCode, bool candidatePanelVisible,
+    CandidatePageShortcut pageShortcut = CandidatePageShortcut::MinusEqual, char pageShortcutCharacter = '\0',
+    bool pageShortcutModified = false)
 {
     if (candidatePanelVisible)
     {
@@ -67,6 +90,20 @@ constexpr ControllerKeyAction ClassifyControllerKey(unsigned short keyCode, bool
             return ControllerKeyAction::MoveCandidateEnd;
         default:
             break;
+        }
+
+        if (!pageShortcutModified)
+        {
+            if ((pageShortcut == CandidatePageShortcut::MinusEqual && pageShortcutCharacter == '-') ||
+                (pageShortcut == CandidatePageShortcut::Brackets && pageShortcutCharacter == '['))
+            {
+                return ControllerKeyAction::MoveCandidatePageUp;
+            }
+            if ((pageShortcut == CandidatePageShortcut::MinusEqual && pageShortcutCharacter == '=') ||
+                (pageShortcut == CandidatePageShortcut::Brackets && pageShortcutCharacter == ']'))
+            {
+                return ControllerKeyAction::MoveCandidatePageDown;
+            }
         }
     }
 

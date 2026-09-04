@@ -3,6 +3,7 @@
 #include "CandidateFontSize.h"
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
+#include "InputControllerKeyRouting.h"
 #include "InputSchemePreference.h"
 #import "DictionaryInstaller.h"
 #import "UpdateController.h"
@@ -30,6 +31,7 @@ NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunct
 NSString * const kCandidatePanelStylePreferenceKey = @"MetasequoiaImeCandidatePanelStyle";
 NSString * const kCandidatePageSizePreferenceKey = @"MetasequoiaImeCandidatePageSize";
 NSString * const kCandidateFontSizePreferenceKey = @"MetasequoiaImeCandidateFontSize";
+NSString * const kCandidatePageShortcutPreferenceKey = @"MetasequoiaImeCandidatePageShortcut";
 NSString * const kCandidateLearningPreferenceKey = @"MetasequoiaImeCandidateLearning";
 NSString * const kEnglishInputModePreferenceKey = @"MetasequoiaImeEnglishInputMode";
 NSString * const kInputModeShortcutPreferenceKey = @"MetasequoiaImeInputModeShortcutEnabled";
@@ -339,6 +341,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSPopUpButton *_candidatePanelStyleButton;
     NSPopUpButton *_candidatePageSizeButton;
     NSPopUpButton *_candidateFontSizeButton;
+    NSPopUpButton *_candidatePageShortcutButton;
     MetasequoiaCandidatePreviewView *_candidatePreview;
     NSButton *_candidateLearningButton;
     NSButton *_inputModeShortcutButton;
@@ -463,6 +466,22 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [[NSUserDefaults standardUserDefaults] setInteger:normalizedFontSize forKey:kCandidateFontSizePreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaCandidateFontSizeDidChangeNotification"
                                                         object:@(normalizedFontSize)];
+}
+
++ (NSInteger)storedCandidatePageShortcut
+{
+    const NSInteger value = [[NSUserDefaults standardUserDefaults] integerForKey:kCandidatePageShortcutPreferenceKey];
+    return static_cast<NSInteger>(metasequoia::mac::NormalizeCandidatePageShortcut(static_cast<int>(value)));
+}
+
++ (void)setCandidatePageShortcut:(NSInteger)shortcut
+{
+    const NSInteger normalizedShortcut =
+        static_cast<NSInteger>(metasequoia::mac::NormalizeCandidatePageShortcut(static_cast<int>(shortcut)));
+    [[NSUserDefaults standardUserDefaults] setInteger:normalizedShortcut forKey:kCandidatePageShortcutPreferenceKey];
+    [[NSNotificationCenter defaultCenter]
+        postNotificationName:@"MetasequoiaCandidatePageShortcutDidChangeNotification"
+                      object:@(normalizedShortcut)];
 }
 
 + (BOOL)storedCandidateLearningEnabled
@@ -679,14 +698,25 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                                     action:@selector(inputModeShortcutChanged:)];
     _inputModeShortcutButton.accessibilityLabel = @"Shift+Space 切换中英文";
 
+    _candidatePageShortcutButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_candidatePageShortcutButton addItemsWithTitles:@[ @"- / =", @"[ / ]", @"Page Up / Page Down" ]];
+    _candidatePageShortcutButton.target = self;
+    _candidatePageShortcutButton.action = @selector(candidatePageShortcutChanged:);
+    _candidatePageShortcutButton.accessibilityLabel = @"候选翻页快捷键";
+
     NSBox *schemeCard = CardWithViews(schemeRows, 2.0);
     NSBox *behaviorCard =
         CardWithViews(@[ _autocorrectButton, _chinesePunctuationButton, _inputModeShortcutButton ], 9.0);
+    NSBox *shortcutCard = CardWithViews(@[ PreferenceRow(@"上翻 / 下翻", _candidatePageShortcutButton) ], 0.0);
     schemeCard.accessibilityLabel = @"输入方式卡片";
     behaviorCard.accessibilityLabel = @"中英文状态切换卡片";
+    shortcutCard.accessibilityLabel = @"候选翻页快捷键卡片";
     NSView *generalPage =
         PreferencesPage(@"键盘输入", @"选择全拼、双拼或 86 五笔，并调整日常输入行为。",
-                        @[ SectionLabel(@"输入方式"), schemeCard, SectionLabel(@"中英文状态切换"), behaviorCard ]);
+                        @[
+                            SectionLabel(@"输入方式"), schemeCard, SectionLabel(@"中英文状态切换"), behaviorCard,
+                            SectionLabel(@"候选翻页快捷键"), shortcutCard
+                        ]);
     generalPage.accessibilityLabel = @"键盘输入设置页";
 
     NSButton *backToKeyboardButton = [NSButton buttonWithTitle:@"返回键盘输入"
@@ -936,6 +966,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                                         static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidatePageSize])))];
     [_candidateFontSizeButton selectItemAtIndex:static_cast<NSInteger>(metasequoia::mac::CandidateFontSizeOptionIndex(
                                                         static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidateFontSize])))];
+    [_candidatePageShortcutButton
+        selectItemAtIndex:[MetasequoiaPreferencesWindowController storedCandidatePageShortcut]];
     [_candidatePreview updatePanelStyle:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]
                                pageSize:[MetasequoiaPreferencesWindowController storedCandidatePageSize]
                                fontSize:[MetasequoiaPreferencesWindowController storedCandidateFontSize]];
@@ -1072,6 +1104,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:button.state == NSControlStateValueOn];
 }
 
+- (void)candidatePageShortcutChanged:(id)sender
+{
+    NSPopUpButton *shortcutButton = (NSPopUpButton *)sender;
+    [MetasequoiaPreferencesWindowController setCandidatePageShortcut:shortcutButton.indexOfSelectedItem];
+}
+
 - (void)inputModeShortcutChanged:(id)sender
 {
     NSButton *button = (NSButton *)sender;
@@ -1140,6 +1178,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
              kCandidatePanelStylePreferenceKey,
              kCandidatePageSizePreferenceKey,
              kCandidateFontSizePreferenceKey,
+             kCandidatePageShortcutPreferenceKey,
              kCandidateLearningPreferenceKey,
              kInputModeShortcutPreferenceKey,
              kWubiAutoCommitUniquePreferenceKey,
@@ -1163,6 +1202,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                   object:@([MetasequoiaPreferencesWindowController storedCandidatePageSize])];
     [notifications postNotificationName:@"MetasequoiaCandidateFontSizeDidChangeNotification"
                                   object:@([MetasequoiaPreferencesWindowController storedCandidateFontSize])];
+    [notifications postNotificationName:@"MetasequoiaCandidatePageShortcutDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedCandidatePageShortcut])];
     [notifications postNotificationName:@"MetasequoiaCandidateLearningDidChangeNotification"
                                   object:@([MetasequoiaPreferencesWindowController storedCandidateLearningEnabled])];
     [notifications postNotificationName:@"MetasequoiaInputModeShortcutDidChangeNotification"
