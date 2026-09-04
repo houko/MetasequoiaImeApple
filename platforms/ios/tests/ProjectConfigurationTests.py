@@ -124,6 +124,25 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("simctl bootstatus", runner)
         self.assertNotIn("sleep ", runner)
 
+    def test_keyboard_action_row_adapts_to_narrow_screens(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn(
+            "space.widthAnchor.constraint(equalTo: globe.widthAnchor, multiplier: 1.8)",
+            controller,
+        )
+        self.assertIn(
+            "globe.widthAnchor.constraint(greaterThanOrEqualToConstant: 44)",
+            controller,
+        )
+        self.assertIn(
+            "enter.widthAnchor.constraint(equalTo: globe.widthAnchor, multiplier: 1.35)",
+            controller,
+        )
+        self.assertNotIn("layoutToggle.widthAnchor.constraint(equalToConstant: 56)", controller)
+        self.assertNotIn("space.widthAnchor.constraint(greaterThanOrEqualToConstant: 110)", controller)
+        self.assertNotIn("enter.widthAnchor.constraint(equalToConstant: 72)", controller)
+
 
 if __name__ == "__main__":
     unittest.main()

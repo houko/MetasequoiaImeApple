@@ -162,33 +162,36 @@ final class KeyboardViewController: UIInputViewController {
     layoutToggle.titleLabel?.adjustsFontSizeToFitWidth = true
     layoutToggle.titleLabel?.minimumScaleFactor = 0.7
     layoutToggle.titleLabel?.lineBreakMode = .byClipping
-    layoutToggle.widthAnchor.constraint(equalToConstant: 56).isActive = true
     layoutToggleButton = layoutToggle
     row.addArrangedSubview(layoutToggle)
 
     let globe = makeSymbolKey(symbol: "globe", accessibilityLabel: "下一个键盘") { [weak self] in
       self?.switchToNextKeyboard()
     }
-    globe.widthAnchor.constraint(equalToConstant: 50).isActive = true
     row.addArrangedSubview(globe)
 
     let delete = makeSymbolKey(symbol: "delete.left", accessibilityLabel: "删除") { [weak self] in
       self?.handleBackspace()
     }
-    delete.widthAnchor.constraint(equalToConstant: 50).isActive = true
     row.addArrangedSubview(delete)
 
     let space = makeKey(title: "空格", accessibilityLabel: "空格") { [weak self] in
       self?.handleSpace()
     }
-    space.widthAnchor.constraint(greaterThanOrEqualToConstant: 110).isActive = true
     row.addArrangedSubview(space)
 
     let enter = makeKey(title: "换行", accessibilityLabel: "换行", emphasized: true) { [weak self] in
       self?.handleReturn()
     }
-    enter.widthAnchor.constraint(equalToConstant: 72).isActive = true
     row.addArrangedSubview(enter)
+
+    NSLayoutConstraint.activate([
+      layoutToggle.widthAnchor.constraint(equalTo: globe.widthAnchor, multiplier: 1.1),
+      delete.widthAnchor.constraint(equalTo: globe.widthAnchor),
+      space.widthAnchor.constraint(equalTo: globe.widthAnchor, multiplier: 1.8),
+      enter.widthAnchor.constraint(equalTo: globe.widthAnchor, multiplier: 1.35),
+      globe.widthAnchor.constraint(greaterThanOrEqualToConstant: 44),
+    ])
     return row
   }
 
