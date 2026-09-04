@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.22.0...v0.23.0) (2026-09-04)
+
+
+### Features
+
+* **update:** download recommended release archive ([#128](https://github.com/houko/MetasequoiaImeMac/issues/128)) ([ecc8c9b](https://github.com/houko/MetasequoiaImeMac/commit/ecc8c9b1e53f0683039aa11dfc54cc2df1522709))
+
 ## [0.22.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.21.2...v0.22.0) (2026-09-04)
 
 
