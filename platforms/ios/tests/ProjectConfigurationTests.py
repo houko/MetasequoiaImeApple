@@ -89,6 +89,15 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("configuration.background.cornerRadius", controller)
         self.assertIn('button.accessibilityLabel = "候选词 \\(number)：\\(candidate)"', controller)
 
+    def test_apostrophe_reaches_the_engine_before_punctuation_conversion(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        separator_route = 'if symbol == "\'" {'
+        punctuation_route = "let snapshot = session.handlePunctuation(symbol)"
+        self.assertIn(separator_route, controller)
+        self.assertIn("session.handleCharacter(symbol)", controller)
+        self.assertLess(controller.index(separator_route), controller.index(punctuation_route))
+
 
 if __name__ == "__main__":
     unittest.main()
