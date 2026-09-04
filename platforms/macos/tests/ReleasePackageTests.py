@@ -617,7 +617,20 @@ class ReleasePackageTests(unittest.TestCase):
         menu_icon = bundle / "Contents/Resources" / menu_icon_name
         self.assertTrue(menu_icon.is_file())
         menu_icon_properties = subprocess.run(
-            ["sips", "-g", "pixelWidth", "-g", "pixelHeight", "-g", "hasAlpha", menu_icon],
+            [
+                "sips",
+                "-g",
+                "pixelWidth",
+                "-g",
+                "pixelHeight",
+                "-g",
+                "hasAlpha",
+                "-g",
+                "dpiWidth",
+                "-g",
+                "dpiHeight",
+                menu_icon,
+            ],
             check=True,
             capture_output=True,
             text=True,
@@ -625,6 +638,8 @@ class ReleasePackageTests(unittest.TestCase):
         self.assertIn("pixelWidth: 32", menu_icon_properties)
         self.assertIn("pixelHeight: 36", menu_icon_properties)
         self.assertIn("hasAlpha: yes", menu_icon_properties)
+        self.assertIn("dpiWidth: 144", menu_icon_properties)
+        self.assertIn("dpiHeight: 144", menu_icon_properties)
 
         executable = bundle / "Contents/MacOS/MetasequoiaIME"
         for architecture in ("arm64", "x86_64"):
