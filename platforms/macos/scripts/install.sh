@@ -16,6 +16,7 @@ source_bundle=${METASEQUOIA_DEVELOPMENT_BUNDLE:-"$project_root/build/Metasequoia
 source_bundle=${source_bundle:A}
 destination_root="$home_directory/Library/Input Methods"
 destination_bundle="$destination_root/MetasequoiaIME.app"
+registration_command=${METASEQUOIA_REGISTER_INPUT_SOURCE_COMMAND:-"$destination_bundle/Contents/MacOS/MetasequoiaIME"}
 
 if [[ ! -d "$source_bundle" ]]; then
     print -u2 "Build output is missing. Run platforms/macos/scripts/build.sh first."
@@ -118,7 +119,10 @@ fi
 moved_new=true
 mv "$staging_bundle" "$destination_bundle"
 codesign --verify --deep --strict --verbose=2 "$destination_bundle"
-xcrun swift "$project_root/platforms/macos/scripts/register_input_source.swift" "$destination_bundle"
+if ! "$registration_command" --register-input-source; then
+    print -u2 "Input source registration or enable failed; restoring the previous installation."
+    exit 1
+fi
 install_complete=true
 print "Installed $destination_bundle"
-print "Enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit."
+print "Registered and enabled 水杉输入法 with macOS. Select it from the input menu to start typing."

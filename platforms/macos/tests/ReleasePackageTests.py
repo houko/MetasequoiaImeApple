@@ -98,9 +98,9 @@ class ReleasePackageTests(unittest.TestCase):
             fake_pgrep = fake_bin / "pgrep"
             fake_pgrep.write_text("#!/bin/sh\nexit 1\n")
             fake_pgrep.chmod(0o755)
-            fake_xcrun = fake_bin / "xcrun"
-            fake_xcrun.write_text("#!/bin/sh\nexit 47\n")
-            fake_xcrun.chmod(0o755)
+            fake_registrar = fake_bin / "register-input-source"
+            fake_registrar.write_text("#!/bin/sh\nexit 47\n")
+            fake_registrar.chmod(0o755)
 
             test_home = (Path(temporary_directory) / "home").resolve()
             destination = test_home / "Library/Input Methods/MetasequoiaIME.app"
@@ -110,6 +110,7 @@ class ReleasePackageTests(unittest.TestCase):
             environment = os.environ.copy()
             environment["HOME"] = str(test_home)
             environment["PATH"] = f"{fake_bin}:{environment['PATH']}"
+            environment["METASEQUOIA_REGISTER_INPUT_SOURCE_COMMAND"] = str(fake_registrar)
 
             result = subprocess.run(
                 [MACOS_ROOT / "scripts/install.sh"],
