@@ -34,7 +34,7 @@ class ReleaseAutomationTests(unittest.TestCase):
 set -euo pipefail
 print -r -- "$*" >> "$FAKE_GH_LOG"
 if [[ "$1 $2" == "pr view" ]]; then
-    print -r -- "{\\"number\\":42,\\"state\\":\\"OPEN\\",\\"isDraft\\":false,\\"headRefName\\":\\"release-please--branches--main--components--MetasequoiaImeMac\\",\\"headRefOid\\":\\"$FAKE_HEAD_SHA\\",\\"baseRefName\\":\\"main\\",\\"baseRefOid\\":\\"$FAKE_BASE_SHA\\",\\"title\\":\\"chore(main): release 1.2.3\\"}"
+    print -r -- "{\\"number\\":42,\\"state\\":\\"OPEN\\",\\"isDraft\\":false,\\"headRefName\\":\\"release-please--branches--main--components--MetasequoiaImeApple\\",\\"headRefOid\\":\\"$FAKE_HEAD_SHA\\",\\"baseRefName\\":\\"main\\",\\"baseRefOid\\":\\"$FAKE_BASE_SHA\\",\\"title\\":\\"chore(main): release 1.2.3\\"}"
 elif [[ "$1 $2" == "workflow run" ]]; then
     exit 0
 elif [[ "$1 $2" == "run list" ]]; then
@@ -53,14 +53,14 @@ fi
             )
             fake_gh.chmod(0o755)
             release_pr = {
-                "headBranchName": "release-please--branches--main--components--MetasequoiaImeMac",
+                "headBranchName": "release-please--branches--main--components--MetasequoiaImeApple",
                 "number": 42,
             }
             environment = os.environ.copy()
             environment.update(
                 {
                     "PATH": f"{temporary}:{environment['PATH']}",
-                    "GH_REPO": "houko/MetasequoiaImeMac",
+                    "GH_REPO": "houko/MetasequoiaImeApple",
                     "RELEASE_PR": json.dumps(release_pr),
                     "GITHUB_OUTPUT": str(output),
                     "FAKE_GH_LOG": str(log),
@@ -216,7 +216,7 @@ fi
             environment.update(
                 {
                     "PATH": f"{fake_bin}:{environment['PATH']}",
-                    "GH_REPO": "houko/MetasequoiaImeMac",
+                    "GH_REPO": "houko/MetasequoiaImeApple",
                     "TAG_NAME": "v1.2.3",
                     "ASSET_SUFFIX": asset_suffix,
                     "SIGNING_ENABLED": signing_enabled,
@@ -344,7 +344,7 @@ while (($#)); do
     shift
 done
 cat > "$output" <<'XML'
-<?xml version="1.0"?><rss><channel><item><enclosure url="https://github.com/houko/MetasequoiaImeMac/releases/download/v1.2.3/MetasequoiaIME-v1.2.3-macos-universal-unsigned-update.zip" sparkle:edSignature="test-signature" /></item></channel></rss>
+<?xml version="1.0"?><rss><channel><item><enclosure url="https://github.com/houko/MetasequoiaImeApple/releases/download/v1.2.3/MetasequoiaIME-v1.2.3-macos-universal-unsigned-update.zip" sparkle:edSignature="test-signature" /></item></channel></rss>
 XML
 """
             )
@@ -368,7 +368,7 @@ fi
                     "SPARKLE_TOOLS_DIR": str(tools),
                     "SPARKLE_ED_PRIVATE_KEY": private_key,
                     "FAKE_SPARKLE_LOG": str(log),
-                    "GH_REPO": "houko/MetasequoiaImeMac",
+                    "GH_REPO": "houko/MetasequoiaImeApple",
                 }
             )
             result = subprocess.run(

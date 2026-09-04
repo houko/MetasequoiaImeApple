@@ -1,6 +1,17 @@
-# Metasequoia IME for macOS
+# Metasequoia IME for Apple platforms
 
-This repository contains the native macOS frontend for Metasequoia IME. It uses InputMethodKit and AppKit, embeds the shared C++ engine directly, and does not port the Windows TSF or WebView2 host.
+This repository contains the native Apple-platform frontends for Metasequoia IME. The released macOS frontend uses InputMethodKit and AppKit. An iOS host app and custom keyboard extension are being added incrementally. Both platforms consume the same C++ composition engine while keeping their lifecycle, input routing, candidate presentation, settings, and accessibility UI native and independent.
+
+The target module boundaries and migration sequence are documented in [Apple platform architecture](docs/apple-platform-architecture.md). The current `src/`, `resources/`, `scripts/`, and `tests/` directories still contain the macOS implementation; a follow-up pull request will move them under `platforms/macos/` without changing runtime behavior.
+
+## Platform status
+
+| Platform | Status | Native frontend |
+|---|---|---|
+| macOS 12+ | Released | InputMethodKit and AppKit |
+| iOS | In development | Host app and `UIInputViewController` keyboard extension |
+
+The iOS work does not port the Windows TSF or WebView2 host. It reuses `MetasequoiaImeEngine` and supplies an iOS-specific UI and text-document adapter.
 
 The current release supports full-pinyin composition, live candidates from the official Metasequoia dictionary, candidate selection through the native candidate panel or number keys 1–9, Space to commit the leading candidate, Return to commit raw input, Backspace, Escape, composition commit on focus changes, and Shift+Space switching between Chinese and direct English input.
 
@@ -15,8 +26,8 @@ The current release supports full-pinyin composition, live candidates from the o
 ## Build
 
 ```sh
-git clone --recursive https://github.com/houko/MetasequoiaImeMac.git
-cd MetasequoiaImeMac
+git clone --recursive https://github.com/houko/MetasequoiaImeApple.git
+cd MetasequoiaImeApple
 brew install cmake boost fmt spdlog
 ./scripts/build.sh
 ```
@@ -117,8 +128,8 @@ PKG installations keep the same helper inside the installed application bundle, 
 
 ## License
 
-Metasequoia IME for macOS is distributed under the GNU General Public License version 3. Release archives, installer packages, and the application bundle include the applicable GPL and third-party license notices; see `LICENSE` and `THIRD_PARTY_NOTICES.txt`.
+Metasequoia IME for Apple platforms is distributed under the GNU General Public License version 3. Release archives, installer packages, and application bundles include the applicable GPL and third-party license notices; see `LICENSE` and `THIRD_PARTY_NOTICES.txt`.
 
 ## Privacy and security
 
-Input processing and candidate learning are local to the user's Mac; see [PRIVACY.md](PRIVACY.md) for the data-handling details. Report suspected vulnerabilities privately according to [SECURITY.md](SECURITY.md), not through a public issue.
+Input processing and candidate learning are local to the device; see [PRIVACY.md](PRIVACY.md) for the data-handling details. Report suspected vulnerabilities privately according to [SECURITY.md](SECURITY.md), not through a public issue.
