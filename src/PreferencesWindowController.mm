@@ -6,8 +6,17 @@
 #import "DictionaryInstaller.h"
 #import "UpdateChecker.h"
 
+#include <cstring>
+
 NSNotificationName const MetasequoiaWillResetLearnedDataNotification =
     @"MetasequoiaWillResetLearnedDataNotification";
+NSNotificationName const MetasequoiaStandalonePreferencesDidCloseNotification =
+    @"MetasequoiaStandalonePreferencesDidCloseNotification";
+
+bool MetasequoiaShouldShowPreferences(int argc, const char *argv[])
+{
+    return argc == 2 && argv != nullptr && argv[1] != nullptr && std::strcmp(argv[1], "--show-settings") == 0;
+}
 
 namespace
 {
@@ -62,6 +71,7 @@ void ConfigureCard(NSBox *card)
     NSButton *_resetLearningButton;
     NSTextField *_statusLabel;
     NSButton *_updateButton;
+    BOOL _standaloneLaunch;
 }
 
 + (instancetype)sharedController
@@ -248,6 +258,7 @@ void ConfigureCard(NSBox *card)
     {
         return nil;
     }
+    window.delegate = self;
 
     NSView *contentView = [[NSView alloc] initWithFrame:frame];
     contentView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -660,15 +671,53 @@ void ConfigureCard(NSBox *card)
     _statusLabel.toolTip = error.localizedDescription;
 }
 
-- (void)showAndActivate
+- (void)presentAndActivate
 {
     [self refreshControls];
     [self refreshDictionaryStatus];
     [self refreshUpdateButton];
+    if (_standaloneLaunch)
+    {
+        _resetLearningButton.enabled = NO;
+        _resetLearningButton.toolTip = @"请从水杉输入菜单打开设置后再清除学习数据。";
+        _resetLearningButton.accessibilityHelp = @"独立设置不能安全清除学习数据；请从水杉输入菜单打开设置。";
+    }
+    else
+    {
+        _resetLearningButton.enabled = YES;
+        _resetLearningButton.toolTip = nil;
+        _resetLearningButton.accessibilityHelp = nil;
+    }
     [self showWindow:nil];
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
     [NSApp activateIgnoringOtherApps:YES];
+}
+
+- (void)showAndActivate
+{
+    _standaloneLaunch = NO;
+    [self presentAndActivate];
+}
+
+- (void)showAndActivateForStandaloneLaunch
+{
+    _standaloneLaunch = YES;
+    [self presentAndActivate];
+}
+
+- (void)windowWillClose:(NSNotification *)notification
+{
+    (void)notification;
+    if (_standaloneLaunch)
+    {
+        _standaloneLaunch = NO;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter]
+                postNotificationName:MetasequoiaStandalonePreferencesDidCloseNotification
+                              object:self];
+        });
+    }
 }
 
 - (void)autocorrectChanged:(id)sender
@@ -816,8 +865,7 @@ void ConfigureCard(NSBox *card)
 
 - (void)close:(id)sender
 {
-    (void)sender;
-    [self.window orderOut:nil];
+    [self.window performClose:sender];
 }
 
 @end

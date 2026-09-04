@@ -35,6 +35,8 @@ Then enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit. T
 
 In System Settings > Keyboard > Text Input > Edit, select 水杉输入法 and choose its settings action to open the native 水杉输入法设置 panel. The panel lets you choose 全拼 or 小鹤双拼, switch the native candidate window between a horizontal row and vertical list, show 5, 7, or 9 candidates per page, choose a small, standard, or large candidate font, enable full-pinyin autocorrection and auxiliary codes, switch Chinese punctuation conversion, and control whether selected candidates update learned word frequencies. These choices are saved for the current user and apply before the next key event when no composition is active; an active composition keeps its original settings until it is committed or cancelled. Additional input and candidate options will be added incrementally.
 
+The release ZIP also includes `Open Settings.command` as a direct fallback. After installation, open it to launch the same native panel without selecting 水杉 first; closing the panel exits only this standalone settings process and leaves the input method available.
+
 The input method checks GitHub for the latest stable release at most once per day. When a newer version is available, the input menu marks the settings entry and the settings panel provides a link to the fixed GitHub Releases page for that version. You can also check manually from the settings panel.
 
 The text input menu also shows whether 水杉 is in 中文输入 or 英文输入 mode. Choose either item directly, or press Shift+Space; switching to English commits the active Chinese composition before subsequent keys pass through unchanged. The Shift+Space shortcut is enabled by default and can be disabled in settings when it conflicts with another workflow.

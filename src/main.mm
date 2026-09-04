@@ -2,6 +2,7 @@
 #import <InputMethodKit/InputMethodKit.h>
 
 #import "InputSourceRegistration.h"
+#import "PreferencesWindowController.h"
 #import "UpdateChecker.h"
 
 #include <cstdio>
@@ -28,6 +29,21 @@ int main(int argc, const char *argv[])
 
         NSApplication *application = [NSApplication sharedApplication];
         [application setActivationPolicy:NSApplicationActivationPolicyAccessory];
+        if (MetasequoiaShouldShowPreferences(argc, argv))
+        {
+            id closeObserver = [[NSNotificationCenter defaultCenter]
+                addObserverForName:MetasequoiaStandalonePreferencesDidCloseNotification
+                            object:nil
+                             queue:NSOperationQueue.mainQueue
+                        usingBlock:^(NSNotification *notification) {
+                            (void)notification;
+                            [application terminate:nil];
+                        }];
+            [[MetasequoiaPreferencesWindowController sharedController] showAndActivateForStandaloneLaunch];
+            [application run];
+            [[NSNotificationCenter defaultCenter] removeObserver:closeObserver];
+            return 0;
+        }
 
         NSBundle *bundle = [NSBundle mainBundle];
         NSString *connectionName = [bundle objectForInfoDictionaryKey:@"InputMethodConnectionName"];

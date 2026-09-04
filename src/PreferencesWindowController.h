@@ -3,8 +3,11 @@
 #import <AppKit/AppKit.h>
 
 FOUNDATION_EXPORT NSNotificationName const MetasequoiaWillResetLearnedDataNotification;
+FOUNDATION_EXPORT NSNotificationName const MetasequoiaStandalonePreferencesDidCloseNotification;
 
-@interface MetasequoiaPreferencesWindowController : NSWindowController
+bool MetasequoiaShouldShowPreferences(int argc, const char *argv[]);
+
+@interface MetasequoiaPreferencesWindowController : NSWindowController <NSWindowDelegate>
 + (instancetype)sharedController;
 + (void)prepareInputSessionsForLearnedDataReset;
 + (NSInteger)storedScheme;
@@ -28,4 +31,5 @@ FOUNDATION_EXPORT NSNotificationName const MetasequoiaWillResetLearnedDataNotifi
 + (BOOL)storedInputModeShortcutEnabled;
 + (void)setInputModeShortcutEnabled:(BOOL)enabled;
 - (void)showAndActivate;
+- (void)showAndActivateForStandaloneLaunch;
 @end

@@ -91,6 +91,7 @@ jobs:
             resources/InstallerDistribution.xml.in
             scripts/detect-release-signing.sh
             scripts/install-release.sh
+            scripts/open-settings.sh
             scripts/uninstall.sh
             scripts/package_release.sh
             scripts/publish-release.sh
@@ -100,6 +101,7 @@ jobs:
           install -m 0644 .release-automation/resources/InstallerDistribution.xml.in "$RUNNER_TEMP/InstallerDistribution.xml.in"
           install -m 0755 .release-automation/scripts/detect-release-signing.sh "$RUNNER_TEMP/detect-release-signing.sh"
           install -m 0755 .release-automation/scripts/install-release.sh "$RUNNER_TEMP/install-release.sh"
+          install -m 0755 .release-automation/scripts/open-settings.sh "$RUNNER_TEMP/open-settings.sh"
           install -m 0755 .release-automation/scripts/uninstall.sh "$RUNNER_TEMP/uninstall.sh"
           install -m 0755 .release-automation/scripts/package_release.sh "$RUNNER_TEMP/package-release.sh"
           install -m 0755 .release-automation/scripts/publish-release.sh "$RUNNER_TEMP/publish-release.sh"
@@ -179,6 +181,7 @@ jobs:
           METASEQUOIA_RELEASE_ASSET_SUFFIX: ${{ steps.signing.outputs.asset_suffix }}
           METASEQUOIA_PROJECT_ROOT: ${{ github.workspace }}
           METASEQUOIA_RELEASE_INSTALL_SCRIPT: ${{ runner.temp }}/install-release.sh
+          METASEQUOIA_RELEASE_SETTINGS_SCRIPT: ${{ runner.temp }}/open-settings.sh
           METASEQUOIA_RELEASE_UNINSTALL_SCRIPT: ${{ runner.temp }}/uninstall.sh
           METASEQUOIA_INSTALLER_DISTRIBUTION: ${{ runner.temp }}/InstallerDistribution.xml.in
         run: exec "$RUNNER_TEMP/package-release.sh" "$TAG_NAME" build/MetasequoiaIME.app dist
