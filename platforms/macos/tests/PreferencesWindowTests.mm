@@ -3,6 +3,8 @@
 
 #import <AppKit/AppKit.h>
 
+#include <algorithm>
+#include <cmath>
 #include <stdexcept>
 
 @interface MetasequoiaPreferencesWindowController (Testing)
@@ -19,6 +21,32 @@ void require(bool condition, const char *message)
     {
         throw std::runtime_error(message);
     }
+}
+
+double RelativeLuminance(NSColor *color)
+{
+    NSColor *srgb = [color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+    CGFloat red = 0.0;
+    CGFloat green = 0.0;
+    CGFloat blue = 0.0;
+    CGFloat alpha = 0.0;
+    require(srgb != nil, "A candidate preview color could not be converted to sRGB.");
+    [srgb getRed:&red green:&green blue:&blue alpha:&alpha];
+    auto linearChannel = [](CGFloat component) {
+        return component <= 0.03928 ? component / 12.92
+                                    : std::pow((component + 0.055) / 1.055, 2.4);
+    };
+    return (0.2126 * linearChannel(red)) + (0.7152 * linearChannel(green)) +
+           (0.0722 * linearChannel(blue));
+}
+
+double ContrastRatio(NSColor *first, NSColor *second)
+{
+    const double firstLuminance = RelativeLuminance(first);
+    const double secondLuminance = RelativeLuminance(second);
+    const double lighter = std::max(firstLuminance, secondLuminance);
+    const double darker = std::min(firstLuminance, secondLuminance);
+    return (lighter + 0.05) / (darker + 0.05);
 }
 
 bool WaitUntil(BOOL (^condition)(void))
@@ -215,6 +243,36 @@ int main()
         require(fontSizeButton.indexOfSelectedItem == 0,
                 "The candidate font-size control did not reflect the stored value.");
 
+        NSView *candidatePreview =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"候选窗口预览");
+        NSView *appearanceCard =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"候选窗口卡片");
+        require(candidatePreview != nil,
+                "The appearance page did not expose a candidate-window preview.");
+        require(candidatePreview.frame.size.width == appearanceCard.frame.size.width,
+                "The candidate preview did not fill the appearance-page content width.");
+        NSRect appearanceCardRect = [appearancePage convertRect:appearanceCard.bounds fromView:appearanceCard];
+        require(NSMaxY(appearanceCardRect) <= NSMaxY(appearancePage.bounds),
+                "The appearance controls overflowed the settings page below the preview.");
+        require([candidatePreview.accessibilityValue isEqualToString:@"纵向列表，5 个候选，16 pt"],
+                "The candidate preview did not reflect the stored appearance settings.");
+        NSAppearance *darkAppearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+        __block NSColor *darkCanvasColor = nil;
+        __block NSColor *darkPanelColor = nil;
+        __block NSColor *darkAccentColor = nil;
+        [darkAppearance performAsCurrentDrawingAppearance:^{
+            darkCanvasColor = [[NSColor controlBackgroundColor]
+                colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+            darkPanelColor = [[candidatePreview valueForKey:@"previewPanelFillColor"]
+                colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+            darkAccentColor = [[candidatePreview valueForKey:@"previewAccentColor"]
+                colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
+        }];
+        require(std::abs(RelativeLuminance(darkPanelColor) - RelativeLuminance(darkCanvasColor)) >= 0.01,
+                "The candidate panel collapsed into the preview canvas in Dark Aqua.");
+        require(ContrastRatio(darkAccentColor, darkPanelColor) >= 4.5,
+                "The preview preedit color did not remain readable in Dark Aqua.");
+
         NSView *learningView = FindViewWithAccessibilityLabel(controller.window.contentView, @"记住候选词频");
         require([learningView isKindOfClass:[NSButton class]],
                 "The settings window did not expose the candidate-learning control.");
@@ -302,6 +360,8 @@ int main()
                 "The candidate font-size control did not dispatch its action.");
         require([MetasequoiaPreferencesWindowController storedCandidateFontSize] == 20,
                 "The candidate font-size control did not store the selected value.");
+        require([candidatePreview.accessibilityValue isEqualToString:@"横向排列，7 个候选，20 pt"],
+                "The candidate preview did not update after the appearance controls changed.");
 
         learningButton.state = NSControlStateValueOn;
         require([NSApp sendAction:learningButton.action to:learningButton.target from:learningButton],

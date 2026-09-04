@@ -46,6 +46,34 @@ NSColor *MetasequoiaBrandColor()
     }];
 }
 
+NSColor *CandidatePreviewPanelColor()
+{
+    return [NSColor colorWithName:@"MetasequoiaCandidatePreviewPanelColor"
+                  dynamicProvider:^NSColor *(NSAppearance *appearance) {
+        NSString *match =
+            [appearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
+        if ([match isEqualToString:NSAppearanceNameDarkAqua])
+        {
+            return [NSColor colorWithSRGBRed:0.16 green:0.18 blue:0.18 alpha:1.0];
+        }
+        return [NSColor whiteColor];
+    }];
+}
+
+NSColor *CandidatePreviewAccentColor()
+{
+    return [NSColor colorWithName:@"MetasequoiaCandidatePreviewAccentColor"
+                  dynamicProvider:^NSColor *(NSAppearance *appearance) {
+        NSString *match =
+            [appearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
+        if ([match isEqualToString:NSAppearanceNameDarkAqua])
+        {
+            return [NSColor colorWithSRGBRed:0.35 green:0.85 blue:0.78 alpha:1.0];
+        }
+        return MetasequoiaBrandColor();
+    }];
+}
+
 void ConfigureCard(NSBox *card)
 {
     card.boxType = NSBoxCustom;
@@ -137,6 +165,170 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 }
 } // namespace
 
+@interface MetasequoiaCandidatePreviewView : NSView
+- (void)updatePanelStyle:(NSInteger)panelStyle pageSize:(NSInteger)pageSize fontSize:(NSInteger)fontSize;
+- (NSColor *)previewPanelFillColor;
+- (NSColor *)previewAccentColor;
+@end
+
+@implementation MetasequoiaCandidatePreviewView
+{
+    NSInteger _panelStyle;
+    NSInteger _pageSize;
+    CGFloat _candidateFontSize;
+}
+
+- (instancetype)initWithFrame:(NSRect)frameRect
+{
+    self = [super initWithFrame:frameRect];
+    if (self != nil)
+    {
+        self.translatesAutoresizingMaskIntoConstraints = NO;
+        self.accessibilityLabel = @"候选窗口预览";
+        self.accessibilityRole = NSAccessibilityGroupRole;
+        [self.heightAnchor constraintEqualToConstant:190.0].active = YES;
+        [self updatePanelStyle:0 pageSize:9 fontSize:18];
+    }
+    return self;
+}
+
+- (BOOL)isFlipped
+{
+    return YES;
+}
+
+- (NSColor *)previewPanelFillColor
+{
+    return CandidatePreviewPanelColor();
+}
+
+- (NSColor *)previewAccentColor
+{
+    return CandidatePreviewAccentColor();
+}
+
+- (void)updatePanelStyle:(NSInteger)panelStyle pageSize:(NSInteger)pageSize fontSize:(NSInteger)fontSize
+{
+    _panelStyle = panelStyle;
+    _pageSize = pageSize;
+    _candidateFontSize = fontSize;
+    NSString *layout = panelStyle == 1 ? @"纵向列表" : @"横向排列";
+    self.accessibilityValue = [NSString stringWithFormat:@"%@，%ld 个候选，%ld pt", layout,
+                                                         static_cast<long>(pageSize),
+                                                         static_cast<long>(fontSize)];
+    self.accessibilityHelp = @"预览会随候选排列、每页候选和候选字号实时变化";
+    self.needsDisplay = YES;
+}
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    [super drawRect:dirtyRect];
+    NSRect canvas = NSInsetRect(self.bounds, 1.0, 1.0);
+    NSBezierPath *canvasPath = [NSBezierPath bezierPathWithRoundedRect:canvas xRadius:12.0 yRadius:12.0];
+    [[NSColor controlBackgroundColor] setFill];
+    [canvasPath fill];
+    [[NSColor separatorColor] setStroke];
+    canvasPath.lineWidth = 1.0;
+    [canvasPath stroke];
+
+    NSDictionary<NSAttributedStringKey, id> *captionAttributes = @{
+        NSFontAttributeName : [NSFont systemFontOfSize:11.0 weight:NSFontWeightSemibold],
+        NSForegroundColorAttributeName : [NSColor secondaryLabelColor],
+    };
+    [@"输入效果" drawAtPoint:NSMakePoint(15.0, 12.0) withAttributes:captionAttributes];
+    NSString *pageSummary = [NSString stringWithFormat:@"每页 %ld 个", static_cast<long>(_pageSize)];
+    NSSize pageSummarySize = [pageSummary sizeWithAttributes:captionAttributes];
+    [pageSummary drawAtPoint:NSMakePoint(NSMaxX(canvas) - pageSummarySize.width - 14.0, 12.0)
+              withAttributes:captionAttributes];
+
+    NSRect panelRect = NSMakeRect(14.0, 35.0, NSWidth(self.bounds) - 28.0, NSHeight(self.bounds) - 49.0);
+    NSShadow *shadow = [[NSShadow alloc] init];
+    shadow.shadowBlurRadius = 8.0;
+    shadow.shadowOffset = NSMakeSize(0.0, 2.0);
+    shadow.shadowColor = [[NSColor blackColor] colorWithAlphaComponent:0.12];
+    [NSGraphicsContext saveGraphicsState];
+    [shadow set];
+    NSBezierPath *panelPath = [NSBezierPath bezierPathWithRoundedRect:panelRect xRadius:9.0 yRadius:9.0];
+    [[self previewPanelFillColor] setFill];
+    [panelPath fill];
+    [NSGraphicsContext restoreGraphicsState];
+    [[NSColor separatorColor] setStroke];
+    panelPath.lineWidth = 1.0;
+    [panelPath stroke];
+
+    NSDictionary<NSAttributedStringKey, id> *preeditAttributes = @{
+        NSFontAttributeName : [NSFont systemFontOfSize:12.0 weight:NSFontWeightRegular],
+        NSForegroundColorAttributeName : [self previewAccentColor],
+    };
+    [@"shuǐ shān shū rù fǎ" drawAtPoint:NSMakePoint(NSMinX(panelRect) + 12.0, NSMinY(panelRect) + 9.0)
+                           withAttributes:preeditAttributes];
+
+    NSArray<NSString *> *samples = @[ @"水杉", @"输入法", @"水仙", @"水山", @"水衫", @"水善", @"谁删", @"税闪", @"水扇" ];
+    NSDictionary<NSAttributedStringKey, id> *numberAttributes = @{
+        NSFontAttributeName : [NSFont monospacedDigitSystemFontOfSize:10.0 weight:NSFontWeightRegular],
+        NSForegroundColorAttributeName : [NSColor tertiaryLabelColor],
+    };
+    NSDictionary<NSAttributedStringKey, id> *candidateAttributes = @{
+        NSFontAttributeName : [NSFont systemFontOfSize:_candidateFontSize weight:NSFontWeightRegular],
+        NSForegroundColorAttributeName : [NSColor labelColor],
+    };
+    const NSInteger candidateCount = MIN(_pageSize, static_cast<NSInteger>(samples.count));
+    if (_panelStyle == 1)
+    {
+        const NSInteger visibleCount = MIN(candidateCount, 5);
+        const CGFloat rowSpacing = MIN(_candidateFontSize + 3.0, 22.0);
+        for (NSInteger index = 0; index < visibleCount; ++index)
+        {
+            const CGFloat y = NSMinY(panelRect) + 27.0 + (index * rowSpacing);
+            [[NSString stringWithFormat:@"%ld", static_cast<long>(index + 1)]
+                drawAtPoint:NSMakePoint(NSMinX(panelRect) + 12.0, y + 4.0)
+              withAttributes:numberAttributes];
+            [samples[index] drawAtPoint:NSMakePoint(NSMinX(panelRect) + 34.0, y)
+                          withAttributes:candidateAttributes];
+        }
+        if (candidateCount > visibleCount)
+        {
+            NSString *remaining = [NSString stringWithFormat:@"另有 %ld 个",
+                                                               static_cast<long>(candidateCount - visibleCount)];
+            NSSize remainingSize = [remaining sizeWithAttributes:captionAttributes];
+            [remaining drawAtPoint:NSMakePoint(NSMaxX(panelRect) - remainingSize.width - 12.0,
+                                                NSMaxY(panelRect) - remainingSize.height - 8.0)
+                     withAttributes:captionAttributes];
+        }
+    }
+    else
+    {
+        CGFloat x = NSMinX(panelRect) + 12.0;
+        const CGFloat y = NSMinY(panelRect) + 53.0;
+        NSSize ellipsisSize = [@"…" sizeWithAttributes:candidateAttributes];
+        const CGFloat contentMaxX = NSMaxX(panelRect) - 12.0;
+        for (NSInteger index = 0; index < candidateCount; ++index)
+        {
+            NSString *number = [NSString stringWithFormat:@"%ld", static_cast<long>(index + 1)];
+            NSString *candidate = samples[index];
+            NSSize numberSize = [number sizeWithAttributes:numberAttributes];
+            NSSize candidateSize = [candidate sizeWithAttributes:candidateAttributes];
+            const CGFloat itemWidth = numberSize.width + 4.0 + candidateSize.width;
+            const BOOL hasFollowingCandidate = index + 1 < candidateCount;
+            const CGFloat truncationReserve = hasFollowingCandidate ? 8.0 + ellipsisSize.width : 0.0;
+            if (x + itemWidth + truncationReserve > contentMaxX)
+            {
+                if (x + ellipsisSize.width <= contentMaxX)
+                {
+                    [@"…" drawAtPoint:NSMakePoint(x, y) withAttributes:candidateAttributes];
+                }
+                break;
+            }
+            [number drawAtPoint:NSMakePoint(x, y + 4.0) withAttributes:numberAttributes];
+            x += numberSize.width + 4.0;
+            [candidate drawAtPoint:NSMakePoint(x, y) withAttributes:candidateAttributes];
+            x += candidateSize.width + (hasFollowingCandidate ? 14.0 : 0.0);
+        }
+    }
+}
+
+@end
+
 @implementation MetasequoiaPreferencesWindowController
 {
     NSArray<NSButton *> *_schemeButtons;
@@ -146,6 +338,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSPopUpButton *_candidatePanelStyleButton;
     NSPopUpButton *_candidatePageSizeButton;
     NSPopUpButton *_candidateFontSizeButton;
+    MetasequoiaCandidatePreviewView *_candidatePreview;
     NSButton *_candidateLearningButton;
     NSButton *_inputModeShortcutButton;
     NSButton *_resetLearningButton;
@@ -494,6 +687,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     _candidateFontSizeButton.action = @selector(candidateFontSizeChanged:);
     _candidateFontSizeButton.accessibilityLabel = @"候选字号";
 
+    _candidatePreview = [[MetasequoiaCandidatePreviewView alloc] initWithFrame:NSZeroRect];
     NSBox *appearanceCard =
         CardWithViews(@[
             PreferenceRow(@"候选排列", _candidatePanelStyleButton),
@@ -503,7 +697,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                       4.0);
     appearanceCard.accessibilityLabel = @"候选窗口卡片";
     NSView *appearancePage = PreferencesPage(@"外观", @"调整原生候选窗口的排列、容量与阅读大小。",
-                                             @[ SectionLabel(@"候选窗口"), appearanceCard ]);
+                                             @[ SectionLabel(@"效果预览"), _candidatePreview,
+                                                SectionLabel(@"候选窗口"), appearanceCard ]);
     appearancePage.accessibilityLabel = @"外观设置页";
 
     _helpcodeButton = [NSButton checkboxWithTitle:@"启用辅助码" target:self action:@selector(helpcodeChanged:)];
@@ -676,6 +871,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                                         static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidatePageSize])))];
     [_candidateFontSizeButton selectItemAtIndex:static_cast<NSInteger>(metasequoia::mac::CandidateFontSizeOptionIndex(
                                                         static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidateFontSize])))];
+    [_candidatePreview updatePanelStyle:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]
+                               pageSize:[MetasequoiaPreferencesWindowController storedCandidatePageSize]
+                               fontSize:[MetasequoiaPreferencesWindowController storedCandidateFontSize]];
     _candidateLearningButton.state = [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _inputModeShortcutButton.state = [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
 }
@@ -773,6 +971,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     NSPopUpButton *styleButton = (NSPopUpButton *)sender;
     [MetasequoiaPreferencesWindowController setCandidatePanelStyle:styleButton.indexOfSelectedItem];
+    [_candidatePreview updatePanelStyle:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]
+                               pageSize:[MetasequoiaPreferencesWindowController storedCandidatePageSize]
+                               fontSize:[MetasequoiaPreferencesWindowController storedCandidateFontSize]];
 }
 
 - (void)candidatePageSizeChanged:(id)sender
@@ -781,6 +982,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     const size_t pageSize =
         metasequoia::mac::CandidatePageSizeForOptionIndex(static_cast<size_t>(pageSizeButton.indexOfSelectedItem));
     [MetasequoiaPreferencesWindowController setCandidatePageSize:static_cast<NSInteger>(pageSize)];
+    [_candidatePreview updatePanelStyle:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]
+                               pageSize:[MetasequoiaPreferencesWindowController storedCandidatePageSize]
+                               fontSize:[MetasequoiaPreferencesWindowController storedCandidateFontSize]];
 }
 
 - (void)candidateFontSizeChanged:(id)sender
@@ -789,6 +993,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     const size_t fontSize =
         metasequoia::mac::CandidateFontSizeForOptionIndex(static_cast<size_t>(fontSizeButton.indexOfSelectedItem));
     [MetasequoiaPreferencesWindowController setCandidateFontSize:static_cast<NSInteger>(fontSize)];
+    [_candidatePreview updatePanelStyle:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]
+                               pageSize:[MetasequoiaPreferencesWindowController storedCandidatePageSize]
+                               fontSize:[MetasequoiaPreferencesWindowController storedCandidateFontSize]];
 }
 
 - (void)candidateLearningChanged:(id)sender
