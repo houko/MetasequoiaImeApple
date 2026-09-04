@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      mac_only:
+        description: "Run only the macOS validation jobs"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
@@ -54,6 +60,7 @@ jobs:
 
   ios:
     name: iOS Simulator
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.mac_only != true }}
     runs-on: macos-15
     steps:
       - name: Check out source

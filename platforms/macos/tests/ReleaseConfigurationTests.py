@@ -149,6 +149,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("persist-credentials: false", workflow)
         self.assertIn("GH_REPO: ${{ github.repository }}", workflow)
         self.assertIn("gh workflow run ci.yml", merge_release_pr)
+        self.assertIn("--field mac_only=true", promote_release_branch)
         self.assertIn("gh run watch", merge_release_pr)
         self.assertIn("--match-head-commit", merge_release_pr)
         self.assertTrue(merge_release_pr.startswith("#!/usr/bin/env bash\n"))
