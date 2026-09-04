@@ -199,6 +199,15 @@ fi
                 if corrupt_checksum and extension == ".pkg":
                     digest = "0" * 64
                 (dist / f"{stem}{extension}.sha256").write_text(f"{digest}  {artifact.name}\n")
+            update_archive = dist / f"{stem}-update.zip"
+            update_archive.write_bytes(b"test Sparkle update artifact\n")
+            update_digest = hashlib.sha256(update_archive.read_bytes()).hexdigest()
+            (dist / f"{stem}-update.zip.sha256").write_text(
+                f"{update_digest}  {update_archive.name}\n"
+            )
+            (dist / "appcast.xml").write_text(
+                "<?xml version=\"1.0\"?><rss><channel><item>test</item></channel></rss>\n"
+            )
             if misdirected_checksum:
                 archive = dist / f"{stem}.zip"
                 archive_digest = hashlib.sha256(archive.read_bytes()).hexdigest()
@@ -243,6 +252,8 @@ fi
         self.assertIn("System Settings", notes)
         self.assertLess(calls.index("--notes-file"), calls.index("release upload"))
         self.assertIn("macos-universal-unsigned.pkg", calls)
+        self.assertIn("macos-universal-unsigned-update.zip", calls)
+        self.assertIn("appcast.xml", calls)
         self.assertIn("--draft=false", calls)
 
     def test_same_mode_retry_keeps_notes_and_reuploads_with_clobber(self):
@@ -303,6 +314,104 @@ fi
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(calls, "")
         self.assertEqual(notes, "")
+
+
+class SparkleAppcastTests(unittest.TestCase):
+    def run_generator(self, private_key="test-private-key", archive_name=None):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            tools = temporary / "tools"
+            tools.mkdir()
+            log = temporary / "tools.log"
+            archive_name = archive_name or "MetasequoiaIME-v1.2.3-macos-universal-unsigned-update.zip"
+            archive = temporary / archive_name
+            archive.write_bytes(b"update archive")
+            output = temporary / "appcast.xml"
+
+            generate_appcast = tools / "generate_appcast"
+            generate_appcast.write_text(
+                """#!/bin/bash
+set -euo pipefail
+read -r secret
+printf 'generate:%s:%s\\n' "$secret" "$*" >> "$FAKE_SPARKLE_LOG"
+output=
+while (($#)); do
+    if [[ "$1" == "-o" ]]; then
+        output=$2
+        shift 2
+        continue
+    fi
+    shift
+done
+cat > "$output" <<'XML'
+<?xml version="1.0"?><rss><channel><item><enclosure url="https://github.com/houko/MetasequoiaImeMac/releases/download/v1.2.3/MetasequoiaIME-v1.2.3-macos-universal-unsigned-update.zip" sparkle:edSignature="test-signature" /></item></channel></rss>
+XML
+"""
+            )
+            generate_appcast.chmod(0o755)
+            sign_update = tools / "sign_update"
+            sign_update.write_text(
+                """#!/bin/bash
+set -euo pipefail
+read -r secret
+printf 'sign:%s:%s\\n' "$secret" "$*" >> "$FAKE_SPARKLE_LOG"
+if [[ "${!#}" == *.zip ]]; then
+    printf '%s\\n' 'sparkle:edSignature="test-signature" length="14"'
+fi
+"""
+            )
+            sign_update.chmod(0o755)
+
+            environment = os.environ.copy()
+            environment.update(
+                {
+                    "SPARKLE_TOOLS_DIR": str(tools),
+                    "SPARKLE_ED_PRIVATE_KEY": private_key,
+                    "FAKE_SPARKLE_LOG": str(log),
+                    "GH_REPO": "houko/MetasequoiaImeMac",
+                }
+            )
+            result = subprocess.run(
+                [
+                    PROJECT_ROOT / "scripts/generate-sparkle-appcast.sh",
+                    "v1.2.3",
+                    archive,
+                    output,
+                ],
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            return (
+                result,
+                output.read_text() if output.exists() else "",
+                log.read_text() if log.exists() else "",
+            )
+
+    def test_generates_and_signs_appcast_for_exact_release_archive(self):
+        result, appcast, calls = self.run_generator()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("releases/download/v1.2.3/", appcast)
+        self.assertIn("test-signature", appcast)
+        self.assertIn("generate:test-private-key:", calls)
+        self.assertIn("sign:test-private-key:", calls)
+
+    def test_rejects_archive_that_does_not_match_release_tag(self):
+        result, appcast, calls = self.run_generator(
+            archive_name="MetasequoiaIME-v9.9.9-macos-universal-unsigned-update.zip"
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(appcast, "")
+        self.assertEqual(calls, "")
+
+    def test_rejects_missing_private_key(self):
+        result, appcast, calls = self.run_generator(private_key="")
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(appcast, "")
+        self.assertEqual(calls, "")
 
 
 if __name__ == "__main__":

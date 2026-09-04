@@ -94,6 +94,7 @@ jobs:
             scripts/open-settings.sh
             scripts/uninstall.sh
             scripts/package_release.sh
+            scripts/generate-sparkle-appcast.sh
             scripts/publish-release.sh
           persist-credentials: false
       - name: Stage trusted release automation
@@ -104,6 +105,7 @@ jobs:
           install -m 0755 .release-automation/scripts/open-settings.sh "$RUNNER_TEMP/open-settings.sh"
           install -m 0755 .release-automation/scripts/uninstall.sh "$RUNNER_TEMP/uninstall.sh"
           install -m 0755 .release-automation/scripts/package_release.sh "$RUNNER_TEMP/package-release.sh"
+          install -m 0755 .release-automation/scripts/generate-sparkle-appcast.sh "$RUNNER_TEMP/generate-sparkle-appcast.sh"
           install -m 0755 .release-automation/scripts/publish-release.sh "$RUNNER_TEMP/publish-release.sh"
       - name: Determine release signing mode
         id: signing
@@ -185,6 +187,27 @@ jobs:
           METASEQUOIA_RELEASE_UNINSTALL_SCRIPT: ${{ runner.temp }}/uninstall.sh
           METASEQUOIA_INSTALLER_DISTRIBUTION: ${{ runner.temp }}/InstallerDistribution.xml.in
         run: exec "$RUNNER_TEMP/package-release.sh" "$TAG_NAME" build/MetasequoiaIME.app dist
+      - name: Generate signed Sparkle appcast
+        env:
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+          ASSET_SUFFIX: ${{ steps.signing.outputs.asset_suffix }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          sparkle_archive="$RUNNER_TEMP/Sparkle-2.9.6.tar.xz"
+          sparkle_root="$RUNNER_TEMP/Sparkle-2.9.6"
+          curl --fail --location --retry 3 \
+            https://github.com/sparkle-project/Sparkle/releases/download/2.9.6/Sparkle-2.9.6.tar.xz \
+            --output "$sparkle_archive"
+          printf '%s  %s\n' \
+            '52bf9e88cdd972fc0c81501377a880e90d47031bd8ca5462488f843e2609e192' \
+            "$sparkle_archive" | shasum -a 256 --check
+          mkdir -p "$sparkle_root"
+          tar -xJf "$sparkle_archive" -C "$sparkle_root"
+          update_archive="dist/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX-update.zip"
+          SPARKLE_TOOLS_DIR="$sparkle_root/bin" \
+            exec "$RUNNER_TEMP/generate-sparkle-appcast.sh" "$TAG_NAME" "$update_archive" dist/appcast.xml
       - name: Upload and publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

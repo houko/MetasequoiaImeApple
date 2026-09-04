@@ -90,13 +90,18 @@ mkdir -p "$output_dir"
 staging_root=$(mktemp -d "$output_dir/.package.XXXXXX")
 package_root="$staging_root/MetasequoiaIME-$tag_name"
 archive_name="MetasequoiaIME-$tag_name-macos-universal$asset_suffix.zip"
+update_archive_name="MetasequoiaIME-$tag_name-macos-universal$asset_suffix-update.zip"
 installer_name="MetasequoiaIME-$tag_name-macos-universal$asset_suffix.pkg"
 archive_path="$staging_root/$archive_name"
 checksum_path="$archive_path.sha256"
+update_archive_path="$staging_root/$update_archive_name"
+update_checksum_path="$update_archive_path.sha256"
 installer_path="$staging_root/$installer_name"
 installer_checksum_path="$installer_path.sha256"
 final_archive_path="$output_dir/$archive_name"
 final_checksum_path="$final_archive_path.sha256"
+final_update_archive_path="$output_dir/$update_archive_name"
+final_update_checksum_path="$final_update_archive_path.sha256"
 final_installer_path="$output_dir/$installer_name"
 final_installer_checksum_path="$final_installer_path.sha256"
 component_package="$staging_root/MetasequoiaIME.pkg"
@@ -106,9 +111,9 @@ installer_readme="$installer_resources/InstallerReadMe.txt"
 backup_root="$staging_root/PreviousAssets"
 publish_started=false
 publish_complete=false
-staged_assets=("$archive_path" "$checksum_path" "$installer_path" "$installer_checksum_path")
-final_assets=("$final_archive_path" "$final_checksum_path" "$final_installer_path" "$final_installer_checksum_path")
-backup_assets=("$backup_root/$archive_name" "$backup_root/$archive_name.sha256" "$backup_root/$installer_name" "$backup_root/$installer_name.sha256")
+staged_assets=("$archive_path" "$checksum_path" "$update_archive_path" "$update_checksum_path" "$installer_path" "$installer_checksum_path")
+final_assets=("$final_archive_path" "$final_checksum_path" "$final_update_archive_path" "$final_update_checksum_path" "$final_installer_path" "$final_installer_checksum_path")
+backup_assets=("$backup_root/$archive_name" "$backup_root/$archive_name.sha256" "$backup_root/$update_archive_name" "$backup_root/$update_archive_name.sha256" "$backup_root/$installer_name" "$backup_root/$installer_name.sha256")
 
 cleanup() {
     local exit_status=$?
@@ -116,7 +121,7 @@ cleanup() {
     local rollback_failed=false
     local index
     if [[ "$publish_started" == true && "$publish_complete" != true ]]; then
-        for index in 1 2 3 4; do
+        for index in 1 2 3 4 5 6; do
             if [[ ! -e "${staged_assets[$index]}" && -e "${final_assets[$index]}" ]] &&
                 ! rm -f -- "${final_assets[$index]}"; then
                 rollback_failed=true
@@ -179,6 +184,8 @@ if [[ -n "$notary_profile" ]]; then
     xcrun stapler staple "$packaged_bundle"
     xcrun stapler validate "$packaged_bundle"
 fi
+ditto -c -k --keepParent "$packaged_bundle" "$update_archive_path"
+(cd "$staging_root" && shasum -a 256 "$update_archive_name") > "$update_checksum_path"
 ditto -c -k --keepParent "$package_root" "$archive_path"
 (cd "$staging_root" && shasum -a 256 "$archive_name") > "$checksum_path"
 pkgbuild --component "$packaged_bundle" --identifier com.houko.inputmethod.MetasequoiaIME.pkg --version "$version" --install-location "Library/Input Methods" "$component_package"
@@ -229,16 +236,18 @@ fi
 (cd "$staging_root" && shasum -a 256 "$installer_name") > "$installer_checksum_path"
 mkdir -p "$backup_root"
 publish_started=true
-for index in 1 2 3 4; do
+for index in 1 2 3 4 5 6; do
     if [[ -e "${final_assets[$index]}" ]]; then
         mv "${final_assets[$index]}" "${backup_assets[$index]}"
     fi
 done
-for index in 1 2 3 4; do
+for index in 1 2 3 4 5 6; do
     mv -f "${staged_assets[$index]}" "${final_assets[$index]}"
 done
 publish_complete=true
 print "$final_archive_path"
 print "$final_checksum_path"
+print "$final_update_archive_path"
+print "$final_update_checksum_path"
 print "$final_installer_path"
 print "$final_installer_checksum_path"
