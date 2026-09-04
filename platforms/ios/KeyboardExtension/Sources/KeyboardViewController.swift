@@ -6,11 +6,20 @@ final class KeyboardViewController: UIInputViewController {
   private let preeditLabel = UILabel()
   private let candidateScrollView = UIScrollView()
   private let candidateStack = UIStackView()
+  private var letterRowViews: [UIView] = []
+  private var symbolRowViews: [UIView] = []
+  private var layoutToggleButton: UIButton?
+  private var showsSymbols = false
 
   private let letterRows = [
     Array("qwertyuiop"),
     Array("asdfghjkl"),
     Array("zxcvbnm"),
+  ]
+  private let symbolRows = [
+    Array("1234567890").map(String.init),
+    [",", ".", "?", "!", ";", ":", "'", "\""],
+    ["(", ")", "[", "]", "<", ">", "\\", "-"],
   ]
 
   override func viewDidLoad() {
@@ -42,7 +51,15 @@ final class KeyboardViewController: UIInputViewController {
 
     root.addArrangedSubview(makeCandidateStrip())
     for row in letterRows {
-      root.addArrangedSubview(makeLetterRow(row))
+      let rowView = makeLetterRow(row)
+      letterRowViews.append(rowView)
+      root.addArrangedSubview(rowView)
+    }
+    for row in symbolRows {
+      let rowView = makeSymbolRow(row)
+      rowView.isHidden = true
+      symbolRowViews.append(rowView)
+      root.addArrangedSubview(rowView)
     }
     root.addArrangedSubview(makeActionRow())
   }
@@ -102,26 +119,67 @@ final class KeyboardViewController: UIInputViewController {
     return row
   }
 
-  private func makeActionRow() -> UIStackView {
+  private func makeSymbolRow(_ symbols: [String]) -> UIStackView {
     let row = makeRow()
-    row.addArrangedSubview(
-      makeSymbolKey(symbol: "globe", accessibilityLabel: "下一个键盘") { [weak self] in
-        self?.switchToNextKeyboard()
-      })
-    row.addArrangedSubview(
-      makeSymbolKey(symbol: "delete.left", accessibilityLabel: "删除") { [weak self] in
-        self?.handleBackspace()
-      })
+    for symbol in symbols {
+      row.addArrangedSubview(
+        makeKey(title: symbol, accessibilityLabel: "符号 \(symbol)") { [weak self] in
+          self?.handleSymbol(symbol)
+        })
+    }
+    return row
+  }
+
+  private func makeActionRow() -> UIStackView {
+    let row = UIStackView()
+    row.axis = .horizontal
+    row.alignment = .fill
+    row.distribution = .fill
+    row.spacing = 6
+
+    let layoutToggle = makeKey(title: "123", accessibilityLabel: "切换到数字和符号") {
+      [weak self] in self?.toggleLayout()
+    }
+    if var configuration = layoutToggle.configuration {
+      configuration.contentInsets = NSDirectionalEdgeInsets(
+        top: 0, leading: 4, bottom: 0, trailing: 4)
+      configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer {
+        attributes in
+        var attributes = attributes
+        attributes.font = .systemFont(ofSize: 17, weight: .medium)
+        return attributes
+      }
+      layoutToggle.configuration = configuration
+    }
+    layoutToggle.titleLabel?.adjustsFontSizeToFitWidth = true
+    layoutToggle.titleLabel?.minimumScaleFactor = 0.7
+    layoutToggle.titleLabel?.lineBreakMode = .byClipping
+    layoutToggle.widthAnchor.constraint(equalToConstant: 56).isActive = true
+    layoutToggleButton = layoutToggle
+    row.addArrangedSubview(layoutToggle)
+
+    let globe = makeSymbolKey(symbol: "globe", accessibilityLabel: "下一个键盘") { [weak self] in
+      self?.switchToNextKeyboard()
+    }
+    globe.widthAnchor.constraint(equalToConstant: 50).isActive = true
+    row.addArrangedSubview(globe)
+
+    let delete = makeSymbolKey(symbol: "delete.left", accessibilityLabel: "删除") { [weak self] in
+      self?.handleBackspace()
+    }
+    delete.widthAnchor.constraint(equalToConstant: 50).isActive = true
+    row.addArrangedSubview(delete)
 
     let space = makeKey(title: "空格", accessibilityLabel: "空格") { [weak self] in
       self?.handleSpace()
     }
-    space.widthAnchor.constraint(greaterThanOrEqualToConstant: 120).isActive = true
+    space.widthAnchor.constraint(greaterThanOrEqualToConstant: 110).isActive = true
     row.addArrangedSubview(space)
 
     let enter = makeKey(title: "换行", accessibilityLabel: "换行", emphasized: true) { [weak self] in
       self?.handleReturn()
     }
+    enter.widthAnchor.constraint(equalToConstant: 72).isActive = true
     row.addArrangedSubview(enter)
     return row
   }
@@ -137,6 +195,38 @@ final class KeyboardViewController: UIInputViewController {
 
   private func handleCharacter(_ character: String) {
     render(session.handleCharacter(character))
+  }
+
+  private func handleSymbol(_ symbol: String) {
+    if symbol.count == 1, symbol >= "1", symbol <= "9" {
+      let snapshot = session.handleCandidateKey(symbol)
+      if !snapshot.isHandled && snapshot.preedit.isEmpty {
+        textDocumentProxy.insertText(symbol)
+      }
+      render(snapshot)
+      return
+    }
+
+    let snapshot = session.handlePunctuation(symbol)
+    if snapshot.isHandled {
+      render(snapshot)
+      return
+    }
+
+    render(session.commitRaw())
+    textDocumentProxy.insertText(symbol)
+  }
+
+  private func toggleLayout() {
+    showsSymbols.toggle()
+    letterRowViews.forEach { $0.isHidden = showsSymbols }
+    symbolRowViews.forEach { $0.isHidden = !showsSymbols }
+    if var configuration = layoutToggleButton?.configuration {
+      configuration.title = showsSymbols ? "ABC" : "123"
+      layoutToggleButton?.configuration = configuration
+    }
+    layoutToggleButton?.accessibilityLabel =
+      showsSymbols ? "切换到字母" : "切换到数字和符号"
   }
 
   private func handleBackspace() {

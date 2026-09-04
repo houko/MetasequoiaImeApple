@@ -18,6 +18,8 @@ NS_ASSUME_NONNULL_BEGIN
 @interface MetasequoiaInputSessionBridge : NSObject
 
 - (MetasequoiaInputSnapshot *)handleCharacter:(NSString *)character;
+- (MetasequoiaInputSnapshot *)handleCandidateKey:(NSString *)character;
+- (MetasequoiaInputSnapshot *)handlePunctuation:(NSString *)character;
 - (MetasequoiaInputSnapshot *)handleBackspace;
 - (MetasequoiaInputSnapshot *)commitCandidate;
 - (MetasequoiaInputSnapshot *)commitRaw;

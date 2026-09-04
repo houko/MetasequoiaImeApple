@@ -18,4 +18,6 @@ xcodebuild -project build/ios/MetasequoiaImeIOS.xcodeproj -scheme MetasequoiaIme
 
 `BREW_PREFIX` defaults to `/opt/homebrew` in `project.yml`; override that build setting when dependencies are installed under another prefix.
 
-The keyboard routes letter input, composition editing, raw/candidate commit, cancellation, and candidate selection through the shared engine. `prepare_dictionary.py` first builds the canonical database, then retains all single-syllable entries and common multi-syllable entries with weight 2000 or greater. The generated database and its SHA-256 sidecar are ignored build artifacts. At runtime the extension atomically installs a changed bundled database into its private writable Application Support directory, keeping dictionary access local without requesting Open Access.
+The keyboard routes letter input, composition editing, raw/candidate commit, cancellation, numbered candidate selection, and Chinese punctuation through the shared engine. The native `123` / `ABC` layer owns only key layout; it does not duplicate the engine's composition or punctuation policy.
+
+`prepare_dictionary.py` first builds the canonical database, then retains all single-syllable entries and common multi-syllable entries with weight 2000 or greater. The generated database and its SHA-256 sidecar are ignored build artifacts. At runtime the extension atomically installs a changed bundled database into its private writable Application Support directory, keeping dictionary access local without requesting Open Access.

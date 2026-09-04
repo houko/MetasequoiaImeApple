@@ -153,6 +153,22 @@ void ConfigureDataDirectory() {
   return [self snapshotFrom:_adapter->handle_character(utf8[0])];
 }
 
+- (MetasequoiaInputSnapshot *)handleCandidateKey:(NSString *)character {
+  const char *utf8 = character.UTF8String;
+  if (utf8 == nullptr || utf8[0] == '\0' || utf8[1] != '\0') {
+    return [self snapshotFrom:_adapter->handle_candidate_key('\0')];
+  }
+  return [self snapshotFrom:_adapter->handle_candidate_key(utf8[0])];
+}
+
+- (MetasequoiaInputSnapshot *)handlePunctuation:(NSString *)character {
+  const char *utf8 = character.UTF8String;
+  if (utf8 == nullptr || utf8[0] == '\0' || utf8[1] != '\0') {
+    return [self snapshotFrom:_adapter->handle_punctuation('\0')];
+  }
+  return [self snapshotFrom:_adapter->handle_punctuation(utf8[0])];
+}
+
 - (MetasequoiaInputSnapshot *)handleBackspace {
   return [self snapshotFrom:_adapter->handle_backspace()];
 }

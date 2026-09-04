@@ -33,6 +33,16 @@ InputSnapshot InputSessionAdapter::handle_character(char character) {
                       impl_->session.handle_character(character));
 }
 
+InputSnapshot InputSessionAdapter::handle_candidate_key(char character) {
+  return MakeSnapshot(impl_->session,
+                      impl_->session.handle_candidate_key(character));
+}
+
+InputSnapshot InputSessionAdapter::handle_punctuation(char character) {
+  return MakeSnapshot(impl_->session,
+                      impl_->session.handle_punctuation(character));
+}
+
 InputSnapshot InputSessionAdapter::handle_backspace() {
   return MakeSnapshot(impl_->session,
                       impl_->session.handle_command(Command::Backspace));
