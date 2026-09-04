@@ -156,12 +156,14 @@ class ProjectConfigurationTests(unittest.TestCase):
 
         self.assertIn("private weak var enterButton: UIButton?", controller)
         self.assertIn("override func textDidChange", controller)
-        self.assertIn("switch textDocumentProxy.returnKeyType", controller)
+        self.assertIn("switch textDocumentProxy.returnKeyType ?? .default", controller)
         self.assertIn("case .go:", controller)
         self.assertIn("case .google, .search, .yahoo:", controller)
         self.assertIn("case .send:", controller)
         self.assertIn("case .done:", controller)
         self.assertIn("enterButton?.accessibilityLabel = title", controller)
+
+        self.assertIn("switch textDocumentProxy.autocapitalizationType ?? .sentences", controller)
 
     def test_project_and_ci_run_native_onboarding_ui_tests(self):
         project = (IOS_ROOT / "project.yml").read_text()

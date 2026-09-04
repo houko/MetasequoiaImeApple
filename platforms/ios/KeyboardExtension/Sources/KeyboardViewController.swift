@@ -345,7 +345,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     let mode: EnglishCapitalizationMode
-    switch textDocumentProxy.autocapitalizationType {
+    switch textDocumentProxy.autocapitalizationType ?? .sentences {
     case .none:
       mode = .none
     case .words:
@@ -419,7 +419,7 @@ final class KeyboardViewController: UIInputViewController {
 
   private func updateReturnKey() {
     let title: String
-    switch textDocumentProxy.returnKeyType {
+    switch textDocumentProxy.returnKeyType ?? .default {
     case .default:
       title = "换行"
     case .go:
