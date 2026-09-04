@@ -9,6 +9,28 @@ IOS_ROOT = Path(__file__).resolve().parents[1]
 
 
 class ProjectConfigurationTests(unittest.TestCase):
+    def test_host_and_keyboard_share_the_input_scheme_through_an_app_group(self):
+        project = (IOS_ROOT / "project.yml").read_text()
+        shared_preference = (IOS_ROOT / "SharedUI/InputSchemePreference.swift").read_text()
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+        group_identifier = "group.com.houko.metasequoiaime.ios"
+
+        for relative_path in (
+            "App/Resources/MetasequoiaImeIOS.entitlements",
+            "KeyboardExtension/Resources/MetasequoiaKeyboard.entitlements",
+        ):
+            with (IOS_ROOT / relative_path).open("rb") as entitlement_file:
+                entitlements = plistlib.load(entitlement_file)
+            self.assertEqual(entitlements["com.apple.security.application-groups"], [group_identifier])
+            self.assertIn(relative_path, project)
+
+        self.assertIn(f'static let appGroupIdentifier = "{group_identifier}"', shared_preference)
+        self.assertIn('private static let key = "inputSchemeUsesShuangpin"', shared_preference)
+        self.assertIn("UserDefaults(suiteName: appGroupIdentifier)", shared_preference)
+        self.assertIn("UserDefaults.standard.object(forKey: key)", shared_preference)
+        self.assertIn("InputSchemePreference.usesShuangpin", controller)
+        self.assertNotIn("schemePreferenceKey", controller)
+
     def test_english_capitalization_policy(self):
         policy = IOS_ROOT / "KeyboardExtension/Sources/EnglishCapitalizationPolicy.swift"
         tests = IOS_ROOT / "tests/EnglishCapitalizationPolicyTests.swift"
@@ -230,8 +252,8 @@ class ProjectConfigurationTests(unittest.TestCase):
 
         self.assertIn("schemeButton", controller)
         self.assertIn("toggleScheme", controller)
-        self.assertIn("UserDefaults.standard.bool(forKey: schemePreferenceKey)", controller)
-        self.assertIn("UserDefaults.standard.set(usesShuangpin, forKey: schemePreferenceKey)", controller)
+        self.assertIn("usesShuangpin = InputSchemePreference.usesShuangpin", controller)
+        self.assertIn("InputSchemePreference.usesShuangpin = usesShuangpin", controller)
         self.assertIn("session.switch(toShuangpin: usesShuangpin)", controller)
         self.assertIn('usesShuangpin ? "小鹤" : "全拼"', controller)
         self.assertIn('schemeButton.accessibilityIdentifier = "schemeButton"', controller)

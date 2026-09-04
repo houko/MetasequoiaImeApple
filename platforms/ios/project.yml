@@ -78,6 +78,7 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: $(PROJECT_DIR)/../../platforms/ios/App/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: $(PROJECT_DIR)/../../platforms/ios/App/Resources/MetasequoiaImeIOS.entitlements
         PRODUCT_BUNDLE_IDENTIFIER: com.houko.metasequoiaime.ios
         PRODUCT_NAME: MetasequoiaIME
     dependencies:
@@ -97,6 +98,7 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: $(PROJECT_DIR)/../../platforms/ios/KeyboardExtension/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: $(PROJECT_DIR)/../../platforms/ios/KeyboardExtension/Resources/MetasequoiaKeyboard.entitlements
         PRODUCT_BUNDLE_IDENTIFIER: com.houko.metasequoiaime.ios.keyboard
         PRODUCT_NAME: MetasequoiaKeyboard
         SWIFT_OBJC_BRIDGING_HEADER: $(PROJECT_DIR)/../../platforms/ios/KeyboardExtension/Sources/MetasequoiaKeyboard-Bridging-Header.h
