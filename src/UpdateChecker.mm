@@ -5,11 +5,13 @@ NSNotificationName const MetasequoiaUpdateAvailabilityDidChangeNotification =
 
 namespace
 {
-constexpr NSTimeInterval kAutomaticCheckInterval = 24.0 * 60.0 * 60.0;
+constexpr NSTimeInterval kSuccessfulCheckInterval = 24.0 * 60.0 * 60.0;
+constexpr NSTimeInterval kFailedCheckRetryInterval = 60.0 * 60.0;
 NSString *const kAvailableVersionKey = @"MetasequoiaImeAvailableUpdateVersion";
 NSString *const kAvailableArchiveVariantKey = @"MetasequoiaImeAvailableUpdateArchiveVariant";
 NSString *const kAvailableUpdateKey = @"MetasequoiaImeAvailableUpdate";
 NSString *const kLastUpdateCheckKey = @"MetasequoiaImeLastUpdateCheck";
+NSString *const kLastSuccessfulUpdateCheckKey = @"MetasequoiaImeLastSuccessfulUpdateCheck";
 NSString *const kLatestReleaseEndpoint =
     @"https://api.github.com/repos/houko/MetasequoiaImeMac/releases/latest";
 NSString *const kReleasePagePrefix = @"https://github.com/houko/MetasequoiaImeMac/releases/tag/v";
@@ -46,6 +48,16 @@ NSArray<NSNumber *> *VersionComponents(NSString *version)
 BOOL ArchiveVariantIsValid(NSString *variant)
 {
     return [variant isEqualToString:kSignedArchiveVariant] || [variant isEqualToString:kUnsignedArchiveVariant];
+}
+
+BOOL DateIsWithinInterval(NSDate *now, id value, NSTimeInterval interval)
+{
+    if (![value isKindOfClass:[NSDate class]])
+    {
+        return NO;
+    }
+    NSTimeInterval elapsed = [now timeIntervalSinceDate:(NSDate *)value];
+    return elapsed >= 0.0 && elapsed < interval;
 }
 
 NSString *ArchiveName(NSString *version, NSString *variant)
@@ -276,14 +288,11 @@ NSURL *MetasequoiaRecommendedDownloadURLFromData(NSData *data)
 - (void)checkForUpdatesIfNeeded
 {
     NSDate *now = _clock();
-    NSDate *lastCheck = [_defaults objectForKey:kLastUpdateCheckKey];
-    if ([lastCheck isKindOfClass:[NSDate class]])
+    if (DateIsWithinInterval(now, [_defaults objectForKey:kLastSuccessfulUpdateCheckKey],
+                             kSuccessfulCheckInterval) ||
+        DateIsWithinInterval(now, [_defaults objectForKey:kLastUpdateCheckKey], kFailedCheckRetryInterval))
     {
-        NSTimeInterval elapsed = [now timeIntervalSinceDate:lastCheck];
-        if (elapsed >= 0.0 && elapsed < kAutomaticCheckInterval)
-        {
-            return;
-        }
+        return;
     }
     [self checkForUpdates:nil];
 }
@@ -342,6 +351,7 @@ NSURL *MetasequoiaRecommendedDownloadURLFromData(NSData *data)
                         [self->_defaults removeObjectForKey:kAvailableArchiveVariantKey];
                         state = MetasequoiaUpdateCheckStateCurrent;
                     }
+                    [self->_defaults setObject:self->_clock() forKey:kLastSuccessfulUpdateCheckKey];
                 }
             }
             self->_checking = NO;
