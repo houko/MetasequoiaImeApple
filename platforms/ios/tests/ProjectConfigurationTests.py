@@ -30,7 +30,7 @@ class ProjectConfigurationTests(unittest.TestCase):
 
         self.assertIn("textDocumentProxy.insertText", controller)
         self.assertIn("textDocumentProxy.deleteBackward", controller)
-        self.assertIn("advanceToNextInputMode()", controller)
+        self.assertIn("handleInputModeList(from:", controller)
         self.assertNotIn("URLSession", controller)
 
     def test_onboarding_exposes_a_regular_text_field_for_keyboard_tryout(self):
@@ -157,6 +157,16 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn('schemeButton.accessibilityIdentifier = "schemeButton"', controller)
         self.assertIn("switchToShuangpin", bridge_header)
         self.assertIn("switch_to_shuangpin", adapter_header)
+
+    def test_globe_key_uses_the_system_input_mode_list(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("#selector(handleInputModeButton(_:event:))", controller)
+        self.assertIn("for: .allTouchEvents", controller)
+        self.assertIn("touch.phase == .began", controller)
+        self.assertIn("render(session.commitRaw())", controller)
+        self.assertIn("handleInputModeList(from: sender, with: event)", controller)
+        self.assertNotIn("advanceToNextInputMode()", controller)
 
 
 if __name__ == "__main__":
