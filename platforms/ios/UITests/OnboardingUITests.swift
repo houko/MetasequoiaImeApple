@@ -5,6 +5,7 @@ final class OnboardingUITests: XCTestCase {
     continueAfterFailure = false
   }
 
+  @MainActor
   func testOnboardingExposesEnablementPathAndTryoutField() {
     let app = XCUIApplication()
     app.launch()
