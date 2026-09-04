@@ -17,6 +17,7 @@ final class KeyboardViewController: UIInputViewController {
   private var symbolRowViews: [UIView] = []
   private var layoutToggleButton: UIButton?
   private weak var shiftButton: UIButton?
+  private weak var enterButton: UIButton?
   private var isChineseMode = true
   private var usesShuangpin = false
   private var showsSymbols = false
@@ -43,12 +44,18 @@ final class KeyboardViewController: UIInputViewController {
     }
     view.backgroundColor = MetasequoiaTheme.keyboardBackground
     installKeyboard()
+    updateReturnKey()
     updateCandidateStrip(preedit: "", candidates: [])
   }
 
   override func textWillChange(_ textInput: UITextInput?) {
     super.textWillChange(textInput)
     render(session.cancel())
+  }
+
+  override func textDidChange(_ textInput: UITextInput?) {
+    super.textDidChange(textInput)
+    updateReturnKey()
   }
 
   private func installKeyboard() {
@@ -213,6 +220,10 @@ final class KeyboardViewController: UIInputViewController {
     let enter = makeKey(title: "换行", accessibilityLabel: "换行", emphasized: true) { [weak self] in
       self?.handleReturn()
     }
+    enter.accessibilityIdentifier = "returnKey"
+    enter.titleLabel?.adjustsFontSizeToFitWidth = true
+    enter.titleLabel?.minimumScaleFactor = 0.65
+    enterButton = enter
     row.addArrangedSubview(enter)
 
     NSLayoutConstraint.activate([
@@ -356,6 +367,40 @@ final class KeyboardViewController: UIInputViewController {
     languageModeButton.accessibilityLabel =
       isChineseMode ? "切换到英文输入" : "切换到中文输入"
     languageModeButton.accessibilityValue = isChineseMode ? "中文输入" : "英文输入"
+  }
+
+  private func updateReturnKey() {
+    let title: String
+    switch textDocumentProxy.returnKeyType {
+    case .default:
+      title = "换行"
+    case .go:
+      title = "前往"
+    case .google, .search, .yahoo:
+      title = "搜索"
+    case .join:
+      title = "加入"
+    case .next:
+      title = "下一项"
+    case .route:
+      title = "路线"
+    case .send:
+      title = "发送"
+    case .done:
+      title = "完成"
+    case .emergencyCall:
+      title = "紧急呼叫"
+    case .continue:
+      title = "继续"
+    @unknown default:
+      title = "换行"
+    }
+
+    if var configuration = enterButton?.configuration {
+      configuration.title = title
+      enterButton?.configuration = configuration
+    }
+    enterButton?.accessibilityLabel = title
   }
 
   private func toggleScheme() {
