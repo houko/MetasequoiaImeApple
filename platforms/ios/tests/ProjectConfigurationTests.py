@@ -1,4 +1,6 @@
 import plistlib
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -7,6 +9,18 @@ IOS_ROOT = Path(__file__).resolve().parents[1]
 
 
 class ProjectConfigurationTests(unittest.TestCase):
+    def test_english_capitalization_policy(self):
+        policy = IOS_ROOT / "KeyboardExtension/Sources/EnglishCapitalizationPolicy.swift"
+        tests = IOS_ROOT / "tests/EnglishCapitalizationPolicyTests.swift"
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            executable = Path(temporary_directory) / "EnglishCapitalizationPolicyTests"
+            subprocess.run(
+                ["swiftc", str(policy), str(tests), "-o", str(executable)],
+                check=True,
+            )
+            subprocess.run([str(executable)], check=True)
+
     def test_project_defines_distinct_host_and_keyboard_identifiers(self):
         project = (IOS_ROOT / "project.yml").read_text()
 

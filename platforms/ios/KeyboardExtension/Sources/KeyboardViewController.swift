@@ -22,6 +22,7 @@ final class KeyboardViewController: UIInputViewController {
   private var usesShuangpin = false
   private var showsSymbols = false
   private var letterCaseState = LetterCaseState.lowercase
+  private var isAutomaticShift = false
   private var lastShiftTapTime: TimeInterval?
   private let schemePreferenceKey = "inputSchemeUsesShuangpin"
 
@@ -56,6 +57,7 @@ final class KeyboardViewController: UIInputViewController {
   override func textDidChange(_ textInput: UITextInput?) {
     super.textDidChange(textInput)
     updateReturnKey()
+    updateAutomaticCapitalization()
   }
 
   private func installKeyboard() {
@@ -296,15 +298,17 @@ final class KeyboardViewController: UIInputViewController {
     let snapshot = isChineseMode ? session.commitCandidate() : session.cancel()
     isChineseMode.toggle()
     letterCaseState = .lowercase
+    isAutomaticShift = false
     lastShiftTapTime = nil
     updateLanguageModeButton()
-    updateLetterCaseControls()
+    updateAutomaticCapitalization()
     render(snapshot)
   }
 
   private func toggleLetterCase() {
     guard !isChineseMode else { return }
 
+    isAutomaticShift = false
     let now = ProcessInfo.processInfo.systemUptime
     if letterCaseState == .shifted,
       let lastShiftTapTime,
@@ -315,6 +319,39 @@ final class KeyboardViewController: UIInputViewController {
       letterCaseState = letterCaseState == .lowercase ? .shifted : .lowercase
     }
     self.lastShiftTapTime = now
+    updateLetterCaseControls()
+  }
+
+  private func updateAutomaticCapitalization() {
+    guard !isChineseMode else {
+      isAutomaticShift = false
+      updateLetterCaseControls()
+      return
+    }
+    guard letterCaseState != .capsLock else {
+      updateLetterCaseControls()
+      return
+    }
+
+    let mode: EnglishCapitalizationMode
+    switch textDocumentProxy.autocapitalizationType {
+    case .none:
+      mode = .none
+    case .words:
+      mode = .words
+    case .sentences:
+      mode = .sentences
+    case .allCharacters:
+      mode = .allCharacters
+    @unknown default:
+      mode = .sentences
+    }
+
+    isAutomaticShift = EnglishCapitalizationPolicy.shouldShift(
+      for: mode,
+      contextBeforeInput: textDocumentProxy.documentContextBeforeInput)
+    letterCaseState = isAutomaticShift ? .shifted : .lowercase
+    lastShiftTapTime = nil
     updateLetterCaseControls()
   }
 
@@ -343,7 +380,7 @@ final class KeyboardViewController: UIInputViewController {
       configuration.background.backgroundColor =
         MetasequoiaTheme.forestUIColor.withAlphaComponent(0.22)
       button.accessibilityLabel = "大写"
-      button.accessibilityValue = "下一字母"
+      button.accessibilityValue = isAutomaticShift ? "自动开启" : "下一字母"
     case .capsLock:
       configuration.image = UIImage(systemName: "capslock.fill")
       configuration.background.backgroundColor =
