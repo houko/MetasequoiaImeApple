@@ -348,9 +348,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSButton *_wubiAutoCommitButton;
     NSButton *_resetLearningButton;
     NSTextField *_statusLabel;
-    NSButton *_updateButton;
+    NSTextField *_versionLabel;
+    NSTextField *_automaticUpdateLabel;
+    NSButton *_updatePageButton;
     NSArray<NSView *> *_preferencePages;
     NSArray<NSButton *> *_navigationButtons;
+    MetasequoiaUpdateController *_updateController;
     BOOL _standaloneLaunch;
 }
 
@@ -549,6 +552,11 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 
 - (instancetype)init
 {
+    return [self initWithUpdateController:[MetasequoiaUpdateController sharedController]];
+}
+
+- (instancetype)initWithUpdateController:(MetasequoiaUpdateController *)updateController
+{
     NSRect frame = NSMakeRect(0.0, 0.0, kWindowWidth, kWindowHeight);
     NSWindow *window = [[NSWindow alloc] initWithContentRect:frame
                                                    styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable)
@@ -567,6 +575,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         return nil;
     }
     window.delegate = self;
+    _updateController = updateController;
 
     NSView *contentView = [[NSView alloc] initWithFrame:frame];
     window.contentView = contentView;
@@ -596,8 +605,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     brandDescription.alignment = NSTextAlignmentCenter;
     brandDescription.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSArray<NSString *> *navigationTitles = @[ @"键盘输入", @"外观", @"词库与数据" ];
-    NSArray<NSString *> *navigationSymbols = @[ @"keyboard", @"paintpalette", @"books.vertical" ];
+    NSArray<NSString *> *navigationTitles = @[ @"键盘输入", @"外观", @"词库与数据", @"更新与反馈" ];
+    NSArray<NSString *> *navigationSymbols =
+        @[ @"keyboard", @"paintpalette", @"books.vertical", @"exclamationmark.bubble" ];
     NSMutableArray<NSButton *> *navigationButtons = [NSMutableArray arrayWithCapacity:navigationTitles.count];
     for (NSInteger index = 0; index < static_cast<NSInteger>(navigationTitles.count); ++index)
     {
@@ -617,8 +627,13 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         button.bordered = NO;
         button.contentTintColor = [NSColor whiteColor];
         button.imagePosition = NSImageLeading;
-        button.image = [NSImage imageWithSystemSymbolName:navigationSymbols[index]
-                                 accessibilityDescription:navigationTitles[index]];
+        NSImage *navigationImage = [NSImage imageWithSystemSymbolName:navigationSymbols[index]
+                                             accessibilityDescription:navigationTitles[index]];
+        navigationImage = [navigationImage imageWithSymbolConfiguration:
+                                                [NSImageSymbolConfiguration
+                                                    configurationWithHierarchicalColor:[NSColor whiteColor]]];
+        [navigationImage setTemplate:NO];
+        button.image = navigationImage;
         button.accessibilityLabel = navigationTitles[index];
         button.wantsLayer = YES;
         button.layer.cornerRadius = 8.0;
@@ -800,18 +815,71 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                            SectionLabel(@"数据与隐私"), resetCard ]);
     dataPage.accessibilityLabel = @"词库与数据设置页";
 
-    _preferencePages = @[ generalPage, appearancePage, dataPage, wubiPage ];
+    _versionLabel = [NSTextField labelWithString:@"开发构建"];
+    _versionLabel.textColor = [NSColor secondaryLabelColor];
+    _versionLabel.alignment = NSTextAlignmentRight;
+    _versionLabel.accessibilityLabel = @"当前版本";
+
+    _automaticUpdateLabel = [NSTextField labelWithString:@"检查自动更新状态…"];
+    _automaticUpdateLabel.textColor = [NSColor secondaryLabelColor];
+    _automaticUpdateLabel.alignment = NSTextAlignmentRight;
+    _automaticUpdateLabel.accessibilityLabel = @"自动更新状态";
+
+    _updatePageButton = [NSButton buttonWithTitle:@"检查更新…"
+                                           target:self
+                                           action:@selector(checkForUpdates:)];
+    _updatePageButton.bezelStyle = NSBezelStyleRounded;
+    _updatePageButton.accessibilityLabel = @"立即检查更新";
+
+    NSButton *feedbackButton = [NSButton buttonWithTitle:@"提交反馈…"
+                                                    target:self
+                                                    action:@selector(openFeedback:)];
+    feedbackButton.bezelStyle = NSBezelStyleInline;
+    feedbackButton.accessibilityLabel = @"提交反馈";
+    feedbackButton.contentTintColor = [NSColor linkColor];
+    feedbackButton.attributedTitle =
+        [[NSAttributedString alloc] initWithString:feedbackButton.title
+                                        attributes:@{
+                                            NSFontAttributeName :
+                                                [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium],
+                                            NSForegroundColorAttributeName : [NSColor linkColor],
+                                        }];
+
+    NSButton *productWebsiteButton = [NSButton buttonWithTitle:@"访问 msime.app"
+                                                        target:self
+                                                        action:@selector(openWebsite:)];
+    productWebsiteButton.bezelStyle = NSBezelStyleInline;
+    productWebsiteButton.accessibilityLabel = @"访问水杉官网";
+    productWebsiteButton.contentTintColor = [NSColor linkColor];
+    productWebsiteButton.attributedTitle =
+        [[NSAttributedString alloc] initWithString:productWebsiteButton.title
+                                        attributes:@{
+                                            NSFontAttributeName :
+                                                [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium],
+                                            NSForegroundColorAttributeName : [NSColor linkColor],
+                                        }];
+
+    NSBox *updateCard = CardWithViews(@[
+        PreferenceRow(@"当前版本", _versionLabel),
+        PreferenceRow(@"自动更新", _automaticUpdateLabel),
+        PreferenceRow(@"立即检查", _updatePageButton),
+    ], 4.0);
+    updateCard.accessibilityLabel = @"软件更新卡片";
+    NSBox *feedbackCard = CardWithViews(@[
+        PreferenceRow(@"问题反馈与功能建议", feedbackButton),
+        PreferenceRow(@"产品主页与使用帮助", productWebsiteButton),
+    ], 4.0);
+    feedbackCard.accessibilityLabel = @"反馈与帮助卡片";
+    NSView *updatesPage =
+        PreferencesPage(@"更新与反馈", @"保持水杉输入法为最新版本，并告诉我们哪里还可以做得更好。",
+                        @[ SectionLabel(@"软件更新"), updateCard, SectionLabel(@"反馈与帮助"), feedbackCard ]);
+    updatesPage.accessibilityLabel = @"更新与反馈设置页";
+
+    _preferencePages = @[ generalPage, appearancePage, dataPage, updatesPage, wubiPage ];
 
     NSButton *restoreButton = [NSButton buttonWithTitle:@"恢复默认设置" target:self action:@selector(restoreDefaults:)];
     restoreButton.bezelStyle = NSBezelStyleRounded;
     restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-    _updateButton = [NSButton buttonWithTitle:@"检查更新…"
-                                        target:self
-                                        action:@selector(checkForUpdates:)];
-    _updateButton.bezelStyle = NSBezelStyleInline;
-    _updateButton.accessibilityLabel = @"软件更新";
-    _updateButton.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSButton *closeButton = [NSButton buttonWithTitle:@"关闭" target:self action:@selector(close:)];
     closeButton.bezelStyle = NSBezelStyleRounded;
@@ -838,7 +906,6 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         ]];
     }
     [settingsPanel addSubview:restoreButton];
-    [settingsPanel addSubview:_updateButton];
     [settingsPanel addSubview:closeButton];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -874,32 +941,32 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         [pageContainer.bottomAnchor constraintEqualToAnchor:restoreButton.topAnchor constant:-16.0],
         [restoreButton.leadingAnchor constraintEqualToAnchor:settingsPanel.leadingAnchor constant:30.0],
         [restoreButton.bottomAnchor constraintEqualToAnchor:settingsPanel.bottomAnchor constant:-20.0],
-        [_updateButton.centerXAnchor constraintEqualToAnchor:settingsPanel.centerXAnchor],
-        [_updateButton.centerYAnchor constraintEqualToAnchor:restoreButton.centerYAnchor],
         [closeButton.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-30.0],
         [closeButton.centerYAnchor constraintEqualToAnchor:restoreButton.centerYAnchor],
         [closeButton.widthAnchor constraintGreaterThanOrEqualToConstant:80.0],
     ]];
     [self selectPreferencesPage:_navigationButtons.firstObject];
-    [self refreshUpdateButton];
+    [self refreshUpdateControls];
     return self;
 }
 
-- (void)refreshUpdateButton
+- (void)refreshUpdateControls
 {
     NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-    _updateButton.title = version.length == 0 ? @"检查更新…" : [NSString stringWithFormat:@"检查更新（v%@）…", version];
-    _updateButton.toolTip = @"通过 msime.app 检查水杉输入法的最新正式版本";
-    _updateButton.accessibilityHelp = version.length == 0
-                                          ? @"通过 msime.app 检查最新正式版本"
-                                          : [NSString stringWithFormat:@"当前版本 v%@，通过 msime.app 检查最新正式版本", version];
-    _updateButton.contentTintColor = nil;
-    _updateButton.enabled = YES;
+    _versionLabel.stringValue = version.length == 0 ? @"开发构建" : [NSString stringWithFormat:@"v%@", version];
+    _automaticUpdateLabel.stringValue = _updateController.automaticallyChecksForUpdates
+                                            ? @"已开启自动检查"
+                                            : @"自动检查已关闭";
+    _updatePageButton.toolTip = @"通过 msime.app 检查水杉输入法的最新正式版本";
+    _updatePageButton.accessibilityHelp = version.length == 0
+                                              ? @"通过 msime.app 检查最新正式版本"
+                                              : [NSString stringWithFormat:@"当前版本 v%@，通过 msime.app 检查最新正式版本", version];
+    _updatePageButton.enabled = YES;
 }
 
 - (void)checkForUpdates:(id)sender
 {
-    [[MetasequoiaUpdateController sharedController] checkForUpdates:sender];
+    [_updateController checkForUpdates:sender];
 }
 
 - (void)selectPreferencesPage:(id)sender
@@ -932,7 +999,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     (void)sender;
     [self refreshControls];
-    [self showPreferencesPageAtIndex:3 sidebarIndex:0];
+    [self showPreferencesPageAtIndex:4 sidebarIndex:0];
 }
 
 - (void)backToKeyboardInput:(id)sender
@@ -948,6 +1015,16 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     if (website != nil)
     {
         [[NSWorkspace sharedWorkspace] openURL:website];
+    }
+}
+
+- (void)openFeedback:(id)sender
+{
+    (void)sender;
+    NSURL *feedback = [NSURL URLWithString:@"https://github.com/metasequoiaime/MSIME-Apple/issues/new"];
+    if (feedback != nil)
+    {
+        [[NSWorkspace sharedWorkspace] openURL:feedback];
     }
 }
 
@@ -998,7 +1075,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     [self refreshControls];
     [self refreshDictionaryStatus];
-    [self refreshUpdateButton];
+    [self refreshUpdateControls];
     if (_standaloneLaunch)
     {
         _resetLearningButton.enabled = NO;
