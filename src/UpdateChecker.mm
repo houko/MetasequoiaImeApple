@@ -7,10 +7,17 @@ namespace
 {
 constexpr NSTimeInterval kAutomaticCheckInterval = 24.0 * 60.0 * 60.0;
 NSString *const kAvailableVersionKey = @"MetasequoiaImeAvailableUpdateVersion";
+NSString *const kAvailableArchiveVariantKey = @"MetasequoiaImeAvailableUpdateArchiveVariant";
+NSString *const kAvailableUpdateKey = @"MetasequoiaImeAvailableUpdate";
 NSString *const kLastUpdateCheckKey = @"MetasequoiaImeLastUpdateCheck";
 NSString *const kLatestReleaseEndpoint =
     @"https://api.github.com/repos/houko/MetasequoiaImeMac/releases/latest";
 NSString *const kReleasePagePrefix = @"https://github.com/houko/MetasequoiaImeMac/releases/tag/v";
+NSString *const kReleaseDownloadPrefix = @"https://github.com/houko/MetasequoiaImeMac/releases/download/v";
+NSString *const kReleaseVersionMetadataKey = @"version";
+NSString *const kReleaseArchiveVariantMetadataKey = @"archiveVariant";
+NSString *const kSignedArchiveVariant = @"signed";
+NSString *const kUnsignedArchiveVariant = @"unsigned";
 
 NSArray<NSNumber *> *VersionComponents(NSString *version)
 {
@@ -34,6 +41,92 @@ NSArray<NSNumber *> *VersionComponents(NSString *version)
         [components addObject:@(part.integerValue)];
     }
     return components;
+}
+
+BOOL ArchiveVariantIsValid(NSString *variant)
+{
+    return [variant isEqualToString:kSignedArchiveVariant] || [variant isEqualToString:kUnsignedArchiveVariant];
+}
+
+NSString *ArchiveName(NSString *version, NSString *variant)
+{
+    if (!ArchiveVariantIsValid(variant))
+    {
+        return nil;
+    }
+    NSString *suffix = [variant isEqualToString:kUnsignedArchiveVariant] ? @"-unsigned" : @"";
+    return [NSString stringWithFormat:@"MetasequoiaIME-v%@-macos-universal%@.zip", version, suffix];
+}
+
+NSURL *TrustedDownloadURL(NSString *version, NSString *variant)
+{
+    NSString *archiveName = ArchiveName(version, variant);
+    if (archiveName == nil || VersionComponents(version) == nil)
+    {
+        return nil;
+    }
+    NSString *prefix = [kReleaseDownloadPrefix stringByAppendingFormat:@"%@/", version];
+    return [NSURL URLWithString:[prefix stringByAppendingString:archiveName]];
+}
+
+NSDictionary<NSString *, NSString *> *ReleaseMetadataFromData(NSData *data)
+{
+    if (data == nil)
+    {
+        return nil;
+    }
+    id object = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+    if (![object isKindOfClass:[NSDictionary class]])
+    {
+        return nil;
+    }
+    NSDictionary *release = (NSDictionary *)object;
+    NSString *tagName = release[@"tag_name"];
+    NSNumber *draft = release[@"draft"];
+    NSNumber *prerelease = release[@"prerelease"];
+    if (![tagName isKindOfClass:[NSString class]] || ![draft isKindOfClass:[NSNumber class]] ||
+        ![prerelease isKindOfClass:[NSNumber class]] || draft.boolValue || prerelease.boolValue ||
+        ![tagName hasPrefix:@"v"])
+    {
+        return nil;
+    }
+    NSString *version = [tagName substringFromIndex:1];
+    if (VersionComponents(version) == nil)
+    {
+        return nil;
+    }
+
+    NSString *signedArchive = ArchiveName(version, kSignedArchiveVariant);
+    NSString *unsignedArchive = ArchiveName(version, kUnsignedArchiveVariant);
+    BOOL hasSignedArchive = NO;
+    BOOL hasUnsignedArchive = NO;
+    id assetsValue = release[@"assets"];
+    if ([assetsValue isKindOfClass:[NSArray class]])
+    {
+        for (id assetValue in (NSArray *)assetsValue)
+        {
+            if (![assetValue isKindOfClass:[NSDictionary class]])
+            {
+                continue;
+            }
+            id nameValue = ((NSDictionary *)assetValue)[@"name"];
+            if (![nameValue isKindOfClass:[NSString class]])
+            {
+                continue;
+            }
+            hasSignedArchive = hasSignedArchive || [nameValue isEqualToString:signedArchive];
+            hasUnsignedArchive = hasUnsignedArchive || [nameValue isEqualToString:unsignedArchive];
+        }
+    }
+
+    NSMutableDictionary<NSString *, NSString *> *metadata =
+        [NSMutableDictionary dictionaryWithObject:version forKey:kReleaseVersionMetadataKey];
+    if (hasSignedArchive || hasUnsignedArchive)
+    {
+        metadata[kReleaseArchiveVariantMetadataKey] =
+            hasSignedArchive ? kSignedArchiveVariant : kUnsignedArchiveVariant;
+    }
+    return metadata;
 }
 
 MetasequoiaUpdateFetcher ProductionFetcher()
@@ -83,27 +176,13 @@ BOOL MetasequoiaVersionIsNewer(NSString *candidateVersion, NSString *currentVers
 
 NSString *MetasequoiaReleaseVersionFromData(NSData *data)
 {
-    if (data == nil)
-    {
-        return nil;
-    }
-    id object = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-    if (![object isKindOfClass:[NSDictionary class]])
-    {
-        return nil;
-    }
-    NSDictionary *release = (NSDictionary *)object;
-    NSString *tagName = release[@"tag_name"];
-    NSNumber *draft = release[@"draft"];
-    NSNumber *prerelease = release[@"prerelease"];
-    if (![tagName isKindOfClass:[NSString class]] || ![draft isKindOfClass:[NSNumber class]] ||
-        ![prerelease isKindOfClass:[NSNumber class]] || draft.boolValue || prerelease.boolValue ||
-        ![tagName hasPrefix:@"v"])
-    {
-        return nil;
-    }
-    NSString *version = [tagName substringFromIndex:1];
-    return VersionComponents(version) == nil ? nil : version;
+    return ReleaseMetadataFromData(data)[kReleaseVersionMetadataKey];
+}
+
+NSURL *MetasequoiaRecommendedDownloadURLFromData(NSData *data)
+{
+    NSDictionary<NSString *, NSString *> *metadata = ReleaseMetadataFromData(data);
+    return TrustedDownloadURL(metadata[kReleaseVersionMetadataKey], metadata[kReleaseArchiveVariantMetadataKey]);
 }
 
 @interface MetasequoiaUpdateChecker ()
@@ -116,6 +195,7 @@ NSString *MetasequoiaReleaseVersionFromData(NSData *data)
     NSString *_currentVersion;
     MetasequoiaUpdateFetcher _fetcher;
     MetasequoiaUpdateClock _clock;
+    NSString *_archiveVariant;
     BOOL _checking;
     NSMutableArray<MetasequoiaUpdateCheckCompletion> *_pendingCompletions;
 }
@@ -151,15 +231,31 @@ NSString *MetasequoiaReleaseVersionFromData(NSData *data)
     _fetcher = [fetcher copy];
     _clock = [clock copy];
     _pendingCompletions = [NSMutableArray array];
-    NSString *cachedVersion = [_defaults stringForKey:kAvailableVersionKey];
+    id cachedUpdateValue = [_defaults objectForKey:kAvailableUpdateKey];
+    NSDictionary *cachedUpdate =
+        [cachedUpdateValue isKindOfClass:[NSDictionary class]] ? (NSDictionary *)cachedUpdateValue : nil;
+    id cachedVersionValue = cachedUpdate[kReleaseVersionMetadataKey];
+    NSString *cachedVersion = [cachedVersionValue isKindOfClass:[NSString class]]
+        ? (NSString *)cachedVersionValue
+        : [_defaults stringForKey:kAvailableVersionKey];
     if (MetasequoiaVersionIsNewer(cachedVersion, _currentVersion))
     {
         self.availableVersion = cachedVersion;
+        id cachedArchiveVariantValue = cachedUpdate[kReleaseArchiveVariantMetadataKey];
+        NSString *cachedArchiveVariant = [cachedArchiveVariantValue isKindOfClass:[NSString class]]
+            ? (NSString *)cachedArchiveVariantValue
+            : nil;
+        if (ArchiveVariantIsValid(cachedArchiveVariant))
+        {
+            _archiveVariant = [cachedArchiveVariant copy];
+        }
     }
     else
     {
+        [_defaults removeObjectForKey:kAvailableUpdateKey];
         [_defaults removeObjectForKey:kAvailableVersionKey];
     }
+    [_defaults removeObjectForKey:kAvailableArchiveVariantKey];
     return self;
 }
 
@@ -170,6 +266,11 @@ NSString *MetasequoiaReleaseVersionFromData(NSData *data)
         return nil;
     }
     return [NSURL URLWithString:[kReleasePagePrefix stringByAppendingString:self.availableVersion]];
+}
+
+- (NSURL *)downloadURL
+{
+    return TrustedDownloadURL(self.availableVersion, _archiveVariant);
 }
 
 - (void)checkForUpdatesIfNeeded
@@ -204,19 +305,41 @@ NSString *MetasequoiaReleaseVersionFromData(NSData *data)
             MetasequoiaUpdateCheckState state = MetasequoiaUpdateCheckStateFailed;
             if (error == nil && statusCode == 200)
             {
-                NSString *latestVersion = MetasequoiaReleaseVersionFromData(data);
+                NSDictionary<NSString *, NSString *> *metadata = ReleaseMetadataFromData(data);
+                NSString *latestVersion = metadata[kReleaseVersionMetadataKey];
                 if (latestVersion != nil)
                 {
                     if (MetasequoiaVersionIsNewer(latestVersion, self->_currentVersion))
                     {
                         self.availableVersion = latestVersion;
+                        NSString *archiveVariant = metadata[kReleaseArchiveVariantMetadataKey];
+                        if (ArchiveVariantIsValid(archiveVariant))
+                        {
+                            self->_archiveVariant = [archiveVariant copy];
+                        }
+                        else
+                        {
+                            self->_archiveVariant = nil;
+                        }
+                        NSMutableDictionary<NSString *, NSString *> *cachedUpdate =
+                            [NSMutableDictionary dictionaryWithObject:latestVersion
+                                                               forKey:kReleaseVersionMetadataKey];
+                        if (self->_archiveVariant != nil)
+                        {
+                            cachedUpdate[kReleaseArchiveVariantMetadataKey] = self->_archiveVariant;
+                        }
+                        [self->_defaults setObject:cachedUpdate forKey:kAvailableUpdateKey];
                         [self->_defaults setObject:latestVersion forKey:kAvailableVersionKey];
+                        [self->_defaults removeObjectForKey:kAvailableArchiveVariantKey];
                         state = MetasequoiaUpdateCheckStateAvailable;
                     }
                     else
                     {
                         self.availableVersion = nil;
+                        self->_archiveVariant = nil;
+                        [self->_defaults removeObjectForKey:kAvailableUpdateKey];
                         [self->_defaults removeObjectForKey:kAvailableVersionKey];
+                        [self->_defaults removeObjectForKey:kAvailableArchiveVariantKey];
                         state = MetasequoiaUpdateCheckStateCurrent;
                     }
                 }

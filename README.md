@@ -37,7 +37,7 @@ In System Settings > Keyboard > Text Input > Edit, select 水杉输入法 and ch
 
 The release ZIP also includes `Open Settings.command` as a direct fallback. After installation, open it to launch the same native panel without selecting 水杉 first; closing the panel exits only this standalone settings process and leaves the input method available.
 
-The input method checks GitHub for the latest stable release at most once per day. When a newer version is available, the input menu marks the settings entry and the settings panel provides a link to the fixed GitHub Releases page for that version. You can also check manually from the settings panel.
+The input method checks GitHub for the latest stable release at most once per day. When a newer version is available, the input menu marks the settings entry and the settings panel downloads the matching ZIP installer directly from this repository's fixed GitHub Releases origin. It prefers a signed ZIP when available, otherwise selects the clearly marked unsigned ZIP; if no exact matching archive is present, it safely falls back to the fixed release page. You can also check manually from the settings panel.
 
 The text input menu also shows whether 水杉 is in 中文输入 or 英文输入 mode. Choose either item directly, or press Shift+Space; switching to English commits the active Chinese composition before subsequent keys pass through unchanged. The Shift+Space shortcut is enabled by default and can be disabled in settings when it conflicts with another workflow.
 
