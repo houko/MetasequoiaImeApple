@@ -484,7 +484,8 @@ fi
         self.assertIn("Recommended: ZIP", notes)
         self.assertIn("Install.command", notes)
         self.assertIn("does not automatically log out or restart", notes)
-        self.assertIn("Compatibility option: PKG", notes)
+        self.assertIn("PKG option", notes)
+        self.assertIn("attempts to register and enable 水杉", notes)
         self.assertIn("System Settings", notes)
         self.assertLess(calls.index("--notes-file"), calls.index("release upload"))
         self.assertIn("macos-universal-unsigned.pkg", calls)
@@ -533,7 +534,8 @@ fi
         self.assertIn("metasequoia-release-mode:signed", notes)
         self.assertNotIn("WARNING", notes)
         self.assertIn("Recommended: ZIP", notes)
-        self.assertIn("Compatibility option: PKG", notes)
+        self.assertIn("PKG option", notes)
+        self.assertIn("attempts to register and enable 水杉", notes)
         self.assertIn("macos-universal.pkg", calls)
 
     def test_corrupt_artifact_is_rejected_before_release_metadata_or_assets_change(self):
