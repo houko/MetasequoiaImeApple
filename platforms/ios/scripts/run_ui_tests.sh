@@ -2,7 +2,7 @@
 set -euo pipefail
 
 project_path="${1:-build/ios/MetasequoiaImeIOS.xcodeproj}"
-derived_data_path="${2:-build/ios-ui-test-derived}"
+derived_data_path="${2:-build/ios-derived}"
 
 if [[ ! -d "${project_path}" ]]; then
   echo "Generated Xcode project not found: ${project_path}" >&2
@@ -38,7 +38,10 @@ raise SystemExit("No available iPhone Simulator runtime was found")
 ')"
 fi
 
-# simctl bootstatus polls the real boot state; it avoids a timing guess before XCTest starts.
+# A stale booted runner can accept status requests while its app installation service is wedged.
+# Restarting the selected device is bounded by bootstatus and preserves its installed data.
+xcrun simctl shutdown "${test_device_id}" >/dev/null 2>&1 || true
+xcrun simctl boot "${test_device_id}"
 xcrun simctl bootstatus "${test_device_id}" -b
 
 xcodebuild \
