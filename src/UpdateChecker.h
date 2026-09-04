@@ -20,6 +20,7 @@ FOUNDATION_EXPORT NSNotificationName const MetasequoiaUpdateAvailabilityDidChang
 
 BOOL MetasequoiaVersionIsNewer(NSString *candidateVersion, NSString *currentVersion);
 NSString *_Nullable MetasequoiaReleaseVersionFromData(NSData *data);
+NSURL *_Nullable MetasequoiaRecommendedDownloadURLFromData(NSData *data);
 
 @interface MetasequoiaUpdateChecker : NSObject
 + (instancetype)sharedChecker;
@@ -29,6 +30,7 @@ NSString *_Nullable MetasequoiaReleaseVersionFromData(NSData *data);
                             clock:(MetasequoiaUpdateClock)clock;
 @property(nonatomic, readonly, nullable) NSString *availableVersion;
 @property(nonatomic, readonly, nullable) NSURL *releaseURL;
+@property(nonatomic, readonly, nullable) NSURL *downloadURL;
 - (void)checkForUpdatesIfNeeded;
 - (void)checkForUpdates:(nullable MetasequoiaUpdateCheckCompletion)completion;
 @end

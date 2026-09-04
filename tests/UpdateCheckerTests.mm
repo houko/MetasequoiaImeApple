@@ -36,6 +36,30 @@ int main()
             dataUsingEncoding:NSUTF8StringEncoding];
         require([MetasequoiaReleaseVersionFromData(release) isEqualToString:@"0.20.14"],
                 "A valid latest-release response was not parsed.");
+        NSData *unsignedRelease = [@"{\"tag_name\":\"v0.20.14\",\"draft\":false,\"prerelease\":false,"
+                                    "\"assets\":[{\"name\":\"MetasequoiaIME-v0.20.14-macos-universal-unsigned.zip\","
+                                    "\"browser_download_url\":\"https://attacker.invalid/payload.zip\"}]}"
+            dataUsingEncoding:NSUTF8StringEncoding];
+        require([MetasequoiaRecommendedDownloadURLFromData(unsignedRelease).absoluteString
+                    isEqualToString:@"https://github.com/houko/MetasequoiaImeMac/releases/download/v0.20.14/"
+                                    "MetasequoiaIME-v0.20.14-macos-universal-unsigned.zip"],
+                "The unsigned archive did not use its reconstructed trusted download URL.");
+        NSData *signedRelease = [@"{\"tag_name\":\"v0.20.14\",\"draft\":false,\"prerelease\":false,"
+                                  "\"assets\":["
+                                  "{\"name\":\"MetasequoiaIME-v0.20.14-macos-universal-unsigned.zip\"},"
+                                  "{\"name\":\"MetasequoiaIME-v0.20.14-macos-universal.zip\"}]}"
+            dataUsingEncoding:NSUTF8StringEncoding];
+        require([MetasequoiaRecommendedDownloadURLFromData(signedRelease).lastPathComponent
+                    isEqualToString:@"MetasequoiaIME-v0.20.14-macos-universal.zip"],
+                "A signed archive was not preferred over an unsigned archive.");
+        NSData *untrustedAsset = [@"{\"tag_name\":\"v0.20.14\",\"draft\":false,\"prerelease\":false,"
+                                   "\"assets\":[{\"name\":\"unrelated.zip\","
+                                   "\"browser_download_url\":\"https://attacker.invalid/payload.zip\"}]}"
+            dataUsingEncoding:NSUTF8StringEncoding];
+        require(MetasequoiaRecommendedDownloadURLFromData(untrustedAsset) == nil,
+                "An archive without the exact release filename was accepted.");
+        require(MetasequoiaRecommendedDownloadURLFromData(release) == nil,
+                "A release without a ZIP asset unexpectedly produced a direct download.");
         NSData *prerelease = [@"{\"tag_name\":\"v0.21.0\",\"draft\":false,\"prerelease\":true}"
             dataUsingEncoding:NSUTF8StringEncoding];
         require(MetasequoiaReleaseVersionFromData(prerelease) == nil,
@@ -50,7 +74,7 @@ int main()
         __block NSInteger fetchCount = 0;
         MetasequoiaUpdateFetcher fetcher = ^(MetasequoiaUpdateFetchCompletion completion) {
             ++fetchCount;
-            completion(release, 200, nil);
+            completion(unsignedRelease, 200, nil);
         };
         MetasequoiaUpdateChecker *checker =
             [[MetasequoiaUpdateChecker alloc] initWithDefaults:defaults
@@ -68,6 +92,16 @@ int main()
         require([checker.releaseURL.absoluteString
                     isEqualToString:@"https://github.com/houko/MetasequoiaImeMac/releases/tag/v0.20.14"],
                 "The update URL did not use the trusted release origin.");
+        require([checker.downloadURL.absoluteString
+                    isEqualToString:@"https://github.com/houko/MetasequoiaImeMac/releases/download/v0.20.14/"
+                                    "MetasequoiaIME-v0.20.14-macos-universal-unsigned.zip"],
+                "The update checker did not expose the recommended archive.");
+        NSDictionary *cachedUpdate = [defaults dictionaryForKey:@"MetasequoiaImeAvailableUpdate"];
+        require([cachedUpdate[@"version"] isEqualToString:@"0.20.14"] &&
+                    [cachedUpdate[@"archiveVariant"] isEqualToString:@"unsigned"],
+                "The update version and archive variant were not cached as one record.");
+        [defaults setObject:@"0.20.15" forKey:@"MetasequoiaImeAvailableUpdateVersion"];
+        [defaults setObject:@"signed" forKey:@"MetasequoiaImeAvailableUpdateArchiveVariant"];
         NSUserDefaults *restoredDefaults = [[NSUserDefaults alloc] initWithSuiteName:suiteName];
         MetasequoiaUpdateChecker *restoredChecker =
             [[MetasequoiaUpdateChecker alloc] initWithDefaults:restoredDefaults
@@ -77,7 +111,25 @@ int main()
                                                             return now;
                                                         }];
         require([restoredChecker.availableVersion isEqualToString:@"0.20.14"],
-                "A discovered update was not restored in a new input-method process.");
+                "Interleaved legacy keys overrode the atomic cached update record.");
+        require([restoredChecker.downloadURL.absoluteString isEqualToString:checker.downloadURL.absoluteString],
+                "The recommended archive was not restored in a new input-method process.");
+        [restoredDefaults setObject:@{
+            @"version" : @"0.20.14",
+            @"archiveVariant" : @"https://attacker.invalid/payload.zip",
+        }
+                            forKey:@"MetasequoiaImeAvailableUpdate"];
+        MetasequoiaUpdateChecker *tamperedDefaultsChecker =
+            [[MetasequoiaUpdateChecker alloc] initWithDefaults:restoredDefaults
+                                               currentVersion:@"0.20.13"
+                                                      fetcher:fetcher
+                                                        clock:^NSDate * {
+                                                            return now;
+                                                        }];
+        require(tamperedDefaultsChecker.downloadURL == nil,
+                "An invalid cached archive variant produced a download URL.");
+        require(tamperedDefaultsChecker.releaseURL != nil,
+                "An invalid cached archive variant removed the trusted release-page fallback.");
         [restoredChecker checkForUpdatesIfNeeded];
         [checker checkForUpdatesIfNeeded];
         require(fetchCount == 1, "The automatic update check ignored its daily throttle.");

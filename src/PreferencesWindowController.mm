@@ -585,9 +585,18 @@ void ConfigureCard(NSBox *card)
     if (checker.availableVersion != nil)
     {
         _updateButton.title = [NSString stringWithFormat:@"下载 v%@…", checker.availableVersion];
-        _updateButton.toolTip = @"在 GitHub Releases 中下载最新版本";
-        _updateButton.accessibilityHelp =
-            [NSString stringWithFormat:@"有新版本 v%@，打开 GitHub Releases 下载", checker.availableVersion];
+        if (checker.downloadURL != nil)
+        {
+            _updateButton.toolTip = @"下载推荐的 ZIP 安装包";
+            _updateButton.accessibilityHelp =
+                [NSString stringWithFormat:@"有新版本 v%@，下载推荐的 ZIP 安装包", checker.availableVersion];
+        }
+        else
+        {
+            _updateButton.toolTip = @"在 GitHub Releases 中下载最新版本";
+            _updateButton.accessibilityHelp =
+                [NSString stringWithFormat:@"有新版本 v%@，打开 GitHub Releases 下载", checker.availableVersion];
+        }
         _updateButton.contentTintColor = MetasequoiaBrandColor();
         _updateButton.enabled = YES;
         return;
@@ -612,9 +621,10 @@ void ConfigureCard(NSBox *card)
 {
     (void)sender;
     MetasequoiaUpdateChecker *checker = [MetasequoiaUpdateChecker sharedChecker];
-    if (checker.releaseURL != nil)
+    NSURL *updateURL = checker.downloadURL != nil ? checker.downloadURL : checker.releaseURL;
+    if (updateURL != nil)
     {
-        if (![NSWorkspace.sharedWorkspace openURL:checker.releaseURL])
+        if (![NSWorkspace.sharedWorkspace openURL:updateURL])
         {
             _updateButton.title = @"无法打开下载页，重试…";
             _updateButton.accessibilityHelp = @"无法打开 GitHub Releases 下载页，再次尝试打开";
