@@ -65,6 +65,17 @@ int RunTest() {
                 *punctuation.commit == "。",
             "The adapter did not expose engine-owned Chinese punctuation.");
 
+    Require(adapter.handle_character('x').handled &&
+                adapter.handle_character('i').handled,
+            "The apostrophe fixture did not start a composition.");
+    const auto apostrophe = adapter.handle_character('\'');
+    Require(apostrophe.handled && apostrophe.preedit == "xi'",
+            "An in-composition apostrophe did not reach the engine.");
+    Require(adapter.cancel().handled,
+            "The apostrophe fixture did not cancel its composition.");
+    Require(!adapter.handle_character('\'').handled,
+            "An idle apostrophe was swallowed by the engine adapter.");
+
     Require(adapter.handle_character('n').handled &&
                 adapter.handle_character('i').handled,
             "The candidate-key fixture did not start a composition.");

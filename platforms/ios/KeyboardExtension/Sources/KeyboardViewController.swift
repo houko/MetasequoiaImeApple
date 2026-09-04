@@ -207,6 +207,14 @@ final class KeyboardViewController: UIInputViewController {
       return
     }
 
+    if symbol == "'" {
+      let separatorSnapshot = session.handleCharacter(symbol)
+      if separatorSnapshot.isHandled {
+        render(separatorSnapshot)
+        return
+      }
+    }
+
     let snapshot = session.handlePunctuation(symbol)
     if snapshot.isHandled {
       render(snapshot)
