@@ -28,6 +28,13 @@ if(BUILD_TESTING)
     target_link_libraries(MetasequoiaCandidateSelectionStateTests PRIVATE MetasequoiaIme::Engine)
     target_compile_options(MetasequoiaCandidateSelectionStateTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
     add_test(NAME candidate_selection_state COMMAND MetasequoiaCandidateSelectionStateTests)
+    add_executable(MetasequoiaAppleInputSessionAdapterTests
+        platforms/ios/Tests/InputSessionAdapterTests.cpp
+        shared/apple-bridge/InputSessionAdapter.cpp)
+    target_include_directories(MetasequoiaAppleInputSessionAdapterTests PRIVATE shared/apple-bridge)
+    target_link_libraries(MetasequoiaAppleInputSessionAdapterTests PRIVATE MetasequoiaIme::Engine)
+    target_compile_options(MetasequoiaAppleInputSessionAdapterTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    add_test(NAME apple_input_session_adapter COMMAND MetasequoiaAppleInputSessionAdapterTests)
     add_executable(MetasequoiaInputControllerKeyRoutingTests ${METASEQUOIA_MACOS_ROOT}/tests/InputControllerKeyRoutingTests.mm)
     target_compile_options(MetasequoiaInputControllerKeyRoutingTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(MetasequoiaInputControllerKeyRoutingTests PRIVATE ${APPKIT_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})

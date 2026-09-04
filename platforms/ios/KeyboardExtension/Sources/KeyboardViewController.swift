@@ -2,6 +2,11 @@ import UIKit
 
 @MainActor
 final class KeyboardViewController: UIInputViewController {
+  private let session = MetasequoiaInputSessionBridge()
+  private let preeditLabel = UILabel()
+  private let candidateScrollView = UIScrollView()
+  private let candidateStack = UIStackView()
+
   private let letterRows = [
     Array("qwertyuiop"),
     Array("asdfghjkl"),
@@ -12,6 +17,12 @@ final class KeyboardViewController: UIInputViewController {
     super.viewDidLoad()
     view.backgroundColor = MetasequoiaTheme.keyboardBackground
     installKeyboard()
+    updateCandidateStrip(preedit: "", candidates: [])
+  }
+
+  override func textWillChange(_ textInput: UITextInput?) {
+    super.textWillChange(textInput)
+    render(session.cancel())
   }
 
   private func installKeyboard() {
@@ -41,19 +52,40 @@ final class KeyboardViewController: UIInputViewController {
     container.backgroundColor = MetasequoiaTheme.keyBackground.withAlphaComponent(0.82)
     container.layer.cornerRadius = 12
 
-    let label = UILabel()
-    label.text = "水杉输入法 · iOS 预览"
-    label.font = .preferredFont(forTextStyle: .subheadline)
-    label.textColor = MetasequoiaTheme.forestUIColor
-    label.adjustsFontForContentSizeCategory = true
-    label.translatesAutoresizingMaskIntoConstraints = false
-    container.addSubview(label)
+    preeditLabel.font = .preferredFont(forTextStyle: .subheadline)
+    preeditLabel.textColor = MetasequoiaTheme.forestUIColor
+    preeditLabel.adjustsFontForContentSizeCategory = true
+    preeditLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+    candidateStack.axis = .horizontal
+    candidateStack.spacing = 6
+    candidateStack.translatesAutoresizingMaskIntoConstraints = false
+    candidateScrollView.showsHorizontalScrollIndicator = false
+    candidateScrollView.addSubview(candidateStack)
+
+    let content = UIStackView(arrangedSubviews: [preeditLabel, candidateScrollView])
+    content.axis = .horizontal
+    content.alignment = .center
+    content.spacing = 12
+    content.translatesAutoresizingMaskIntoConstraints = false
+    container.addSubview(content)
 
     NSLayoutConstraint.activate([
       container.heightAnchor.constraint(equalToConstant: 38),
-      label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
-      label.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -14),
-      label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+      content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
+      content.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8),
+      content.topAnchor.constraint(equalTo: container.topAnchor),
+      content.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+      candidateStack.leadingAnchor.constraint(
+        equalTo: candidateScrollView.contentLayoutGuide.leadingAnchor),
+      candidateStack.trailingAnchor.constraint(
+        equalTo: candidateScrollView.contentLayoutGuide.trailingAnchor),
+      candidateStack.topAnchor.constraint(
+        equalTo: candidateScrollView.contentLayoutGuide.topAnchor),
+      candidateStack.bottomAnchor.constraint(
+        equalTo: candidateScrollView.contentLayoutGuide.bottomAnchor),
+      candidateStack.heightAnchor.constraint(
+        equalTo: candidateScrollView.frameLayoutGuide.heightAnchor),
     ])
     return container
   }
@@ -64,7 +96,7 @@ final class KeyboardViewController: UIInputViewController {
       let text = String(letter)
       row.addArrangedSubview(
         makeKey(title: text, accessibilityLabel: text.uppercased()) { [weak self] in
-          self?.textDocumentProxy.insertText(text)
+          self?.handleCharacter(text)
         })
     }
     return row
@@ -74,21 +106,21 @@ final class KeyboardViewController: UIInputViewController {
     let row = makeRow()
     row.addArrangedSubview(
       makeSymbolKey(symbol: "globe", accessibilityLabel: "下一个键盘") { [weak self] in
-        self?.advanceToNextInputMode()
+        self?.switchToNextKeyboard()
       })
     row.addArrangedSubview(
       makeSymbolKey(symbol: "delete.left", accessibilityLabel: "删除") { [weak self] in
-        self?.textDocumentProxy.deleteBackward()
+        self?.handleBackspace()
       })
 
     let space = makeKey(title: "空格", accessibilityLabel: "空格") { [weak self] in
-      self?.textDocumentProxy.insertText(" ")
+      self?.handleSpace()
     }
     space.widthAnchor.constraint(greaterThanOrEqualToConstant: 120).isActive = true
     row.addArrangedSubview(space)
 
     let enter = makeKey(title: "换行", accessibilityLabel: "换行", emphasized: true) { [weak self] in
-      self?.textDocumentProxy.insertText("\n")
+      self?.handleReturn()
     }
     row.addArrangedSubview(enter)
     return row
@@ -101,6 +133,68 @@ final class KeyboardViewController: UIInputViewController {
     row.distribution = .fillEqually
     row.spacing = 6
     return row
+  }
+
+  private func handleCharacter(_ character: String) {
+    render(session.handleCharacter(character))
+  }
+
+  private func handleBackspace() {
+    let snapshot = session.handleBackspace()
+    if !snapshot.isHandled {
+      textDocumentProxy.deleteBackward()
+    }
+    render(snapshot)
+  }
+
+  private func handleSpace() {
+    let snapshot = session.commitCandidate()
+    if !snapshot.isHandled {
+      textDocumentProxy.insertText(" ")
+    }
+    render(snapshot)
+  }
+
+  private func handleReturn() {
+    render(session.commitCandidate())
+    textDocumentProxy.insertText("\n")
+  }
+
+  private func switchToNextKeyboard() {
+    render(session.commitRaw())
+    advanceToNextInputMode()
+  }
+
+  private func render(_ snapshot: MetasequoiaInputSnapshot) {
+    if let commitText = snapshot.commitText {
+      textDocumentProxy.insertText(commitText)
+    }
+    updateCandidateStrip(preedit: snapshot.preedit, candidates: snapshot.candidates)
+  }
+
+  private func updateCandidateStrip(preedit: String, candidates: [String]) {
+    preeditLabel.text = preedit.isEmpty ? "水杉输入法" : preedit
+    for view in candidateStack.arrangedSubviews {
+      candidateStack.removeArrangedSubview(view)
+      view.removeFromSuperview()
+    }
+
+    for (index, candidate) in candidates.prefix(9).enumerated() {
+      var configuration = UIButton.Configuration.plain()
+      configuration.title = candidate
+      configuration.baseForegroundColor = .label
+      configuration.contentInsets = NSDirectionalEdgeInsets(
+        top: 3, leading: 8, bottom: 3, trailing: 8)
+      let button = UIButton(
+        configuration: configuration,
+        primaryAction: UIAction { [weak self] _ in
+          guard let self else { return }
+          self.render(self.session.selectCandidate(at: UInt(index)))
+        })
+      button.accessibilityLabel = "候选词 \(index + 1)：\(candidate)"
+      candidateStack.addArrangedSubview(button)
+    }
+    candidateScrollView.isHidden = candidates.isEmpty
   }
 
   private func makeSymbolKey(

@@ -54,8 +54,10 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
       - name: Install project generator
-        run: brew install xcodegen
+        run: brew install boost fmt spdlog xcodegen
       - name: Validate keyboard configuration
         run: python3 platforms/ios/tests/ProjectConfigurationTests.py
       - name: Generate Xcode project
