@@ -26,7 +26,6 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private var letterCaseState = LetterCaseState.lowercase
   private var isAutomaticShift = false
   private var lastShiftTapTime: TimeInterval?
-  private let schemePreferenceKey = "inputSchemeUsesShuangpin"
 
   var enableInputClicksWhenVisible: Bool { true }
 
@@ -43,7 +42,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    usesShuangpin = UserDefaults.standard.bool(forKey: schemePreferenceKey)
+    usesShuangpin = InputSchemePreference.usesShuangpin
     if usesShuangpin {
       _ = session.switch(toShuangpin: true)
     }
@@ -460,7 +459,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     playInputClick()
     usesShuangpin.toggle()
     let snapshot = session.switch(toShuangpin: usesShuangpin)
-    UserDefaults.standard.set(usesShuangpin, forKey: schemePreferenceKey)
+    InputSchemePreference.usesShuangpin = usesShuangpin
     updateSchemeButton()
     render(snapshot)
   }
