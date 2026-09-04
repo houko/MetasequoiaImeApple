@@ -217,8 +217,13 @@ jobs:
       - name: Verify input method bundle
         env:
           TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+          SIGNING_ENABLED: ${{ steps.signing.outputs.signing_enabled }}
         run: |
-          codesign --verify --deep --strict --verbose=2 build/MetasequoiaIME.app
+          if [[ "$SIGNING_ENABLED" == true ]]; then
+            codesign --verify --deep --strict --verbose=2 build/MetasequoiaIME.app
+          else
+            echo 'Unsigned release: skipping Developer ID signature verification before packaging.'
+          fi
           lipo build/MetasequoiaIME.app/Contents/MacOS/MetasequoiaIME -verify_arch arm64 x86_64
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/MetasequoiaIME.app/Contents/Info.plist)" = "${TAG_NAME#v}"
       - name: Package release

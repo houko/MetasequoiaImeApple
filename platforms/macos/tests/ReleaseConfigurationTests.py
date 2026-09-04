@@ -216,6 +216,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("candidate paging", readme)
         self.assertIn("macos-universal-update.zip", readme)
         self.assertIn("`appcast.xml`", readme)
+        self.assertIn("fallback unsigned release intentionally omits `appcast.xml`", readme)
         self.assertIn("update payload, not a package to open manually", readme)
         self.assertIn("enable full-pinyin autocorrection", readme)
         self.assertIn("native 水杉输入法设置 panel", readme)
