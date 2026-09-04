@@ -15,6 +15,71 @@ NSString *StringFromUTF8(const std::string &value) {
   return string == nil ? @"" : string;
 }
 
+BOOL InstallBundledDictionary(NSFileManager *fileManager,
+                              NSURL *dataDirectory) {
+  NSBundle *bundle = [NSBundle bundleForClass:MetasequoiaInputSessionBridge.class];
+  NSURL *bundledDictionary = [bundle URLForResource:@"msime" withExtension:@"db"];
+  NSURL *bundledDigest =
+      [bundle URLForResource:@"msime.db" withExtension:@"sha256"];
+  if (bundledDictionary == nil || bundledDigest == nil) {
+    return NO;
+  }
+
+  NSString *expectedDigest =
+      [NSString stringWithContentsOfURL:bundledDigest
+                               encoding:NSASCIIStringEncoding
+                                  error:nil];
+  expectedDigest = [expectedDigest
+      stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  NSURL *installedDictionary =
+      [dataDirectory URLByAppendingPathComponent:@"msime.db"];
+  NSURL *installedDigest =
+      [dataDirectory URLByAppendingPathComponent:@"msime.db.sha256"];
+  NSString *currentDigest =
+      [NSString stringWithContentsOfURL:installedDigest
+                               encoding:NSASCIIStringEncoding
+                                  error:nil];
+  currentDigest = [currentDigest
+      stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+  if (expectedDigest.length > 0 &&
+      [expectedDigest isEqualToString:currentDigest] &&
+      [fileManager fileExistsAtPath:installedDictionary.path]) {
+    return YES;
+  }
+
+  NSURL *stagingDictionary =
+      [dataDirectory URLByAppendingPathComponent:@"msime.db.installing"];
+  [fileManager removeItemAtURL:stagingDictionary error:nil];
+  if (![fileManager copyItemAtURL:bundledDictionary
+                            toURL:stagingDictionary
+                            error:nil]) {
+    return NO;
+  }
+
+  BOOL installed = NO;
+  if ([fileManager fileExistsAtPath:installedDictionary.path]) {
+    installed = [fileManager replaceItemAtURL:installedDictionary
+                                withItemAtURL:stagingDictionary
+                               backupItemName:nil
+                                      options:0
+                             resultingItemURL:nil
+                                        error:nil];
+  } else {
+    installed = [fileManager moveItemAtURL:stagingDictionary
+                                      toURL:installedDictionary
+                                      error:nil];
+  }
+  if (!installed) {
+    [fileManager removeItemAtURL:stagingDictionary error:nil];
+    return NO;
+  }
+
+  return [expectedDigest writeToURL:installedDigest
+                         atomically:YES
+                           encoding:NSASCIIStringEncoding
+                              error:nil];
+}
+
 void ConfigureDataDirectory() {
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
@@ -32,6 +97,7 @@ void ConfigureDataDirectory() {
                                       withIntermediateDirectories:YES
                                                        attributes:nil
                                                             error:nil]) {
+      InstallBundledDictionary(fileManager, dataDirectory);
       setenv("METASEQUOIA_IME_DATA_DIR", dataDirectory.fileSystemRepresentation,
              1);
     }

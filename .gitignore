@@ -1,2 +1,4 @@
 /build*/
 /.DS_Store
+/platforms/ios/KeyboardExtension/Resources/msime.db
+/platforms/ios/KeyboardExtension/Resources/msime.db.sha256

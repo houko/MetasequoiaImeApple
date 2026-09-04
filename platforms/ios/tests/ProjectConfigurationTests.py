@@ -55,6 +55,21 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("session.handleCharacter", controller)
         self.assertIn("session.commitCandidate", controller)
 
+    def test_keyboard_packages_the_compact_dictionary(self):
+        project = (IOS_ROOT / "project.yml").read_text()
+        workflow = (IOS_ROOT.parents[1] / ".github/workflows/ci.yml").read_text()
+
+        self.assertIn("platforms/ios/KeyboardExtension/Resources/msime.db", project)
+        self.assertIn("platforms/ios/KeyboardExtension/Resources/msime.db.sha256", project)
+        self.assertIn("python3 platforms/ios/scripts/prepare_dictionary.py", workflow)
+
+    def test_bridge_installs_the_bundled_dictionary_before_engine_startup(self):
+        bridge = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.mm").read_text()
+
+        self.assertIn('URLForResource:@"msime" withExtension:@"db"', bridge)
+        self.assertIn('URLForResource:@"msime.db" withExtension:@"sha256"', bridge)
+        self.assertIn('setenv("METASEQUOIA_IME_DATA_DIR"', bridge)
+
 
 if __name__ == "__main__":
     unittest.main()

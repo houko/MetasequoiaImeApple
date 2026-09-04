@@ -89,6 +89,10 @@ targets:
     sources:
       - path: platforms/ios/KeyboardExtension/Sources
       - path: platforms/ios/SharedUI
+      - path: platforms/ios/KeyboardExtension/Resources/msime.db
+        buildPhase: resources
+      - path: platforms/ios/KeyboardExtension/Resources/msime.db.sha256
+        buildPhase: resources
     settings:
       base:
         GENERATE_INFOPLIST_FILE: NO
