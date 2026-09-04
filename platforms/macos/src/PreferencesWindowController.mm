@@ -163,6 +163,10 @@ NSBox *CardWithViews(NSArray<NSView *> *views, CGFloat spacing)
     stack.distribution = NSStackViewDistributionFill;
     stack.spacing = spacing;
     stack.translatesAutoresizingMaskIntoConstraints = NO;
+    for (NSView *view in views)
+    {
+        [view.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
+    }
     [card addSubview:stack];
     [NSLayoutConstraint activateConstraints:@[
         [stack.leadingAnchor constraintEqualToAnchor:card.leadingAnchor constant:16.0],
