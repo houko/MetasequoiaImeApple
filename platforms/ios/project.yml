@@ -14,6 +14,60 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: 15.0
 
 targets:
+  MetasequoiaAppleBridge:
+    type: library.static
+    platform: iOS
+    sources:
+      - path: shared/apple-bridge
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/common
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/core
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/english
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/japanese
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/providers
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/quanpin
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/schemes
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/shuangpin
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/user_dictionary
+        excludes:
+          - "*.h"
+      - path: vendor/MetasequoiaImeEngine/googlepinyinime-rev/src/share
+        excludes:
+          - "*.h"
+          - maintest.cpp
+    settings:
+      base:
+        BREW_PREFIX: /opt/homebrew
+        CLANG_CXX_LANGUAGE_STANDARD: c++17
+        GCC_PREPROCESSOR_DEFINITIONS:
+          - $(inherited)
+          - FMT_HEADER_ONLY=1
+          - SPDLOG_FMT_EXTERNAL
+        HEADER_SEARCH_PATHS:
+          - $(inherited)
+          - $(PROJECT_DIR)/../../shared/apple-bridge
+          - $(PROJECT_DIR)/../../vendor/MetasequoiaImeEngine
+          - $(PROJECT_DIR)/../../vendor/MetasequoiaImeEngine/utfcpp/source
+          - $(BREW_PREFIX)/include
+        SKIP_INSTALL: YES
+
   MetasequoiaImeIOS:
     type: application
     platform: iOS
@@ -41,6 +95,13 @@ targets:
         INFOPLIST_FILE: $(PROJECT_DIR)/../../platforms/ios/KeyboardExtension/Resources/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.houko.metasequoiaime.ios.keyboard
         PRODUCT_NAME: MetasequoiaKeyboard
+        SWIFT_OBJC_BRIDGING_HEADER: $(PROJECT_DIR)/../../platforms/ios/KeyboardExtension/Sources/MetasequoiaKeyboard-Bridging-Header.h
+        HEADER_SEARCH_PATHS:
+          - $(inherited)
+          - $(PROJECT_DIR)/../../shared/apple-bridge
+    dependencies:
+      - target: MetasequoiaAppleBridge
+      - sdk: libsqlite3.tbd
 
 schemes:
   MetasequoiaImeIOS:

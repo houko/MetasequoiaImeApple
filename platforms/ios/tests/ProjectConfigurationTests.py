@@ -44,6 +44,17 @@ class ProjectConfigurationTests(unittest.TestCase):
 
         self.assertIn("mkdir -p build/ios", workflow)
 
+    def test_keyboard_routes_composition_through_the_shared_engine_bridge(self):
+        project = (IOS_ROOT / "project.yml").read_text()
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("MetasequoiaAppleBridge:", project)
+        self.assertIn("shared/apple-bridge", project)
+        self.assertIn("vendor/MetasequoiaImeEngine/core", project)
+        self.assertIn("MetasequoiaInputSessionBridge", controller)
+        self.assertIn("session.handleCharacter", controller)
+        self.assertIn("session.commitCandidate", controller)
+
 
 if __name__ == "__main__":
     unittest.main()
