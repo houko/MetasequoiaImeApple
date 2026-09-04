@@ -410,6 +410,10 @@ class ReleaseConfigurationTests(unittest.TestCase):
                 check=True,
                 capture_output=True,
                 text=True,
+                # A worktree checkout may expose a placeholder .git file whose
+                # linked metadata is unavailable to this isolated config read.
+                # Run outside the repository so git only parses .gitmodules.
+                cwd=gitmodules.parent.parent,
             )
             return result.stdout.strip()
 
