@@ -490,7 +490,7 @@ fi
         self.assertLess(calls.index("--notes-file"), calls.index("release upload"))
         self.assertIn("macos-universal-unsigned.pkg", calls)
         self.assertIn("macos-universal-unsigned-update.zip", calls)
-        self.assertIn("appcast.xml", calls)
+        self.assertNotIn("appcast.xml", calls)
         self.assertIn("--draft=false", calls)
 
     def test_same_mode_retry_keeps_notes_and_reuploads_with_clobber(self):
