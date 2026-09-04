@@ -12,6 +12,30 @@ MACOS_ROOT = PROJECT_ROOT / "platforms" / "macos"
 
 
 class ReleaseConfigurationTests(unittest.TestCase):
+    def test_current_repository_links_use_the_canonical_apple_repository(self):
+        canonical_repository = "https://github.com/metasequoiaime/MSIME-Apple"
+        current_metadata = "\n".join(
+            path.read_text()
+            for path in (
+                PROJECT_ROOT / "README.md",
+                PROJECT_ROOT / "PRIVACY.md",
+                PROJECT_ROOT / "THIRD_PARTY_NOTICES.txt",
+                PROJECT_ROOT / "docs/apple-platform-architecture.md",
+                MACOS_ROOT / "resources/Info.plist",
+                MACOS_ROOT / "tests/ReleaseAutomationTests.py",
+            )
+        )
+
+        self.assertNotIn("github.com/houko/MetasequoiaImeApple", current_metadata)
+        self.assertNotIn("github.com/houko/MetasequoiaImeMac", current_metadata)
+        self.assertIn(canonical_repository, current_metadata)
+        with (MACOS_ROOT / "resources/Info.plist").open("rb") as info_file:
+            info = plistlib.load(info_file)
+        self.assertEqual(
+            info["SUFeedURL"],
+            f"{canonical_repository}/releases/latest/download/appcast.xml",
+        )
+
     def test_input_source_uses_a_dedicated_menu_icon(self):
         with (MACOS_ROOT / "resources/Info.plist").open("rb") as info_file:
             info = plistlib.load(info_file)

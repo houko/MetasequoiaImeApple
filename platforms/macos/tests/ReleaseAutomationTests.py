@@ -60,7 +60,7 @@ fi
             environment.update(
                 {
                     "PATH": f"{temporary}:{environment['PATH']}",
-                    "GH_REPO": "houko/MetasequoiaImeApple",
+                    "GH_REPO": "metasequoiaime/MSIME-Apple",
                     "RELEASE_PR": json.dumps(release_pr),
                     "GITHUB_OUTPUT": str(output),
                     "FAKE_GH_LOG": str(log),
@@ -216,7 +216,7 @@ fi
             environment.update(
                 {
                     "PATH": f"{fake_bin}:{environment['PATH']}",
-                    "GH_REPO": "houko/MetasequoiaImeApple",
+                    "GH_REPO": "metasequoiaime/MSIME-Apple",
                     "TAG_NAME": "v1.2.3",
                     "ASSET_SUFFIX": asset_suffix,
                     "SIGNING_ENABLED": signing_enabled,
@@ -344,7 +344,7 @@ while (($#)); do
     shift
 done
 cat > "$output" <<'XML'
-<?xml version="1.0"?><rss><channel><item><enclosure url="https://github.com/houko/MetasequoiaImeApple/releases/download/v1.2.3/MetasequoiaIME-v1.2.3-macos-universal-unsigned-update.zip" sparkle:edSignature="test-signature" /></item></channel></rss>
+<?xml version="1.0"?><rss><channel><item><enclosure url="https://github.com/metasequoiaime/MSIME-Apple/releases/download/v1.2.3/MetasequoiaIME-v1.2.3-macos-universal-unsigned-update.zip" sparkle:edSignature="test-signature" /></item></channel></rss>
 XML
 """
             )
@@ -368,7 +368,7 @@ fi
                     "SPARKLE_TOOLS_DIR": str(tools),
                     "SPARKLE_ED_PRIVATE_KEY": private_key,
                     "FAKE_SPARKLE_LOG": str(log),
-                    "GH_REPO": "houko/MetasequoiaImeApple",
+                    "GH_REPO": "metasequoiaime/MSIME-Apple",
                 }
             )
             result = subprocess.run(

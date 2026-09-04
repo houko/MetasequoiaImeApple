@@ -4,7 +4,7 @@
 
 Metasequoia IME uses one composition engine across macOS and iOS, with a separate native frontend for each platform. The shared layer owns input-method behavior; platform layers own operating-system integration and presentation.
 
-This repository is named `MetasequoiaImeApple` because it contains Apple-platform adapters and applications. The reusable engine remains in the independent `MetasequoiaImeEngine` repository so Windows, Apple, and future frontends do not depend on an Apple application project.
+This repository is named `MSIME-Apple` because it contains Apple-platform adapters and applications. The reusable engine remains in the independent `MetasequoiaImeEngine` repository so Windows, Apple, and future frontends do not depend on an Apple application project.
 
 ## Ownership boundaries
 
@@ -37,7 +37,7 @@ macOS settings  iOS host app/settings
 The migration will converge on this layout:
 
 ```text
-MetasequoiaImeApple/
+MSIME-Apple/
 ├── platforms/
 │   ├── macos/
 │   │   ├── src/
