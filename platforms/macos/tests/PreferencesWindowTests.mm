@@ -119,6 +119,7 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
+        [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:NO];
         [MetasequoiaPreferencesWindowController setStoredScheme:2];
         require([MetasequoiaPreferencesWindowController storedScheme] == 2,
                 "The Wubi input scheme preference was not stored.");
@@ -138,6 +139,8 @@ int main()
                 "The English input-mode state was not stored.");
         require(![MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled],
                 "The disabled input-mode shortcut preference was not stored.");
+        require(![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled],
+                "The disabled Wubi auto-commit preference was not stored.");
 
         MetasequoiaPreferencesWindowController *controller =
             [[MetasequoiaPreferencesWindowController alloc] init];
@@ -189,6 +192,30 @@ int main()
         [wubiSchemeButton performClick:nil];
         require([MetasequoiaPreferencesWindowController storedScheme] == 2,
                 "The Wubi scheme choice did not persist its selection.");
+        NSView *wubiSettingsView =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔功能设置");
+        require([wubiSettingsView isKindOfClass:[NSButton class]],
+                "The keyboard-input page did not expose the Wubi settings entry.");
+        [((NSButton *)wubiSettingsView) performClick:nil];
+        NSView *wubiPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔设置页");
+        require(wubiPage != nil && !wubiPage.hidden && generalPage.hidden,
+                "The Wubi settings entry did not open its detail page.");
+        NSView *wubiAutoCommitView =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"四码唯一候选自动上屏");
+        require([wubiAutoCommitView isKindOfClass:[NSButton class]] &&
+                    ((NSButton *)wubiAutoCommitView).state == NSControlStateValueOff,
+                "The Wubi detail page did not reflect the stored auto-commit preference.");
+        NSButton *wubiAutoCommitButton = (NSButton *)wubiAutoCommitView;
+        wubiAutoCommitButton.state = NSControlStateValueOn;
+        require([NSApp sendAction:wubiAutoCommitButton.action
+                               to:wubiAutoCommitButton.target
+                             from:wubiAutoCommitButton] &&
+                    [MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled],
+                "The Wubi auto-commit option did not persist its enabled state.");
+        NSButton *backToKeyboardButton = FindButtonWithTitle(controller.window.contentView, @"返回键盘输入");
+        [backToKeyboardButton performClick:nil];
+        require(!generalPage.hidden && wubiPage.hidden,
+                "The Wubi detail page did not return to keyboard-input settings.");
 
         NSButton *websiteButton = FindButtonWithTitle(controller.window.contentView, @"msime.app");
         require(websiteButton != nil && websiteButton.action == @selector(openWebsite:) &&
@@ -394,6 +421,7 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
+        [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:YES];
         NSButton *restoreDefaultsButton = FindButtonWithTitle(controller.window.contentView, @"恢复默认设置");
         require(restoreDefaultsButton != nil, "The settings window did not expose the restore-defaults button.");
         [restoreDefaultsButton performClick:nil];
@@ -405,7 +433,8 @@ int main()
                     [MetasequoiaPreferencesWindowController storedCandidatePageSize] == 9 &&
                     [MetasequoiaPreferencesWindowController storedCandidateFontSize] == 18 &&
                     [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] &&
-                    [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled],
+                    [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] &&
+                    ![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled],
                 "Restoring defaults did not restore every visible setting.");
         NSArray<NSString *> *preferenceKeys = @[
             @"MetasequoiaImeInputScheme",
@@ -417,6 +446,7 @@ int main()
             @"MetasequoiaImeCandidateFontSize",
             @"MetasequoiaImeCandidateLearning",
             @"MetasequoiaImeInputModeShortcutEnabled",
+            @"MetasequoiaImeWubiAutoCommitUnique",
         ];
         for (NSString *key in preferenceKeys)
         {

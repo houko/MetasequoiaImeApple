@@ -7,6 +7,7 @@
 #import "InputMenu.h"
 #include "InputModeRouting.h"
 #include "InputSchemePreference.h"
+#include "WubiCommitPolicy.h"
 #import "PreferencesWindowController.h"
 #import "UpdateController.h"
 #include "StringConversion.h"
@@ -32,6 +33,7 @@ struct SessionPreferences
     size_t candidatePageSize;
     size_t candidateFontSize;
     bool candidateLearningEnabled;
+    bool wubiAutoCommitUniqueEnabled;
 };
 
 SessionPreferences ReadSessionPreferences()
@@ -49,6 +51,7 @@ SessionPreferences ReadSessionPreferences()
         metasequoia::mac::NormalizeCandidateFontSize(
             static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidateFontSize])),
         [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] == YES,
+        [MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled] == YES,
     };
 }
 
@@ -71,6 +74,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     NSUInteger _candidateHighlightedIndex;
     NSUInteger _candidatePageStart;
     BOOL _candidateLineIdentifiersCollapsed;
+    BOOL _wubiAutoCommitUniqueEnabled;
     NSTimeInterval _dictionaryRetryAfter;
 }
 
@@ -127,6 +131,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [_candidatePanel setPanelType:metasequoia::mac::CandidatePanelTypeForStyle(preferences.candidatePanelStyle)];
     [_candidatePanel setSelectionKeys:metasequoia::mac::CandidateSelectionKeys(preferences.candidatePageSize)];
     [_candidatePanel setAttributes:metasequoia::mac::CandidatePanelAttributes(preferences.candidateFontSize)];
+    _wubiAutoCommitUniqueEnabled = preferences.wubiAutoCommitUniqueEnabled;
     if (_session != nullptr && SessionMatchesPreferences(*_session, preferences))
     {
         return;
@@ -390,7 +395,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
             const unichar character = [characters characterAtIndex:0];
             if ((character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z'))
             {
-                result = _session->handle_character(static_cast<char>(character));
+                result = metasequoia::mac::HandleCharacterWithWubiAutoCommit(
+                    *_session, static_cast<char>(character), _wubiAutoCommitUniqueEnabled);
             }
             else if (character == '\'' && _session->has_composition())
             {

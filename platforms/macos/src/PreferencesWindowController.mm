@@ -33,6 +33,7 @@ NSString * const kCandidateFontSizePreferenceKey = @"MetasequoiaImeCandidateFont
 NSString * const kCandidateLearningPreferenceKey = @"MetasequoiaImeCandidateLearning";
 NSString * const kEnglishInputModePreferenceKey = @"MetasequoiaImeEnglishInputMode";
 NSString * const kInputModeShortcutPreferenceKey = @"MetasequoiaImeInputModeShortcutEnabled";
+NSString * const kWubiAutoCommitUniquePreferenceKey = @"MetasequoiaImeWubiAutoCommitUnique";
 
 NSColor *MetasequoiaBrandColor()
 {
@@ -341,6 +342,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     MetasequoiaCandidatePreviewView *_candidatePreview;
     NSButton *_candidateLearningButton;
     NSButton *_inputModeShortcutButton;
+    NSButton *_wubiAutoCommitButton;
     NSButton *_resetLearningButton;
     NSTextField *_statusLabel;
     NSButton *_updateButton;
@@ -501,6 +503,18 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                                         object:@(enabled)];
 }
 
++ (BOOL)storedWubiAutoCommitUniqueEnabled
+{
+    return [[NSUserDefaults standardUserDefaults] boolForKey:kWubiAutoCommitUniquePreferenceKey];
+}
+
++ (void)setWubiAutoCommitUniqueEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kWubiAutoCommitUniquePreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaWubiAutoCommitUniqueDidChangeNotification"
+                                                        object:@(enabled)];
+}
+
 - (instancetype)initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner
 {
     (void)windowNibName;
@@ -647,6 +661,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         [schemeRows addObject:button];
     }
     _schemeButtons = [schemeButtons copy];
+    NSButton *wubiSettingsButton = [NSButton buttonWithTitle:@"设置…"
+                                                      target:self
+                                                      action:@selector(showWubiSettings:)];
+    wubiSettingsButton.bezelStyle = NSBezelStyleInline;
+    wubiSettingsButton.accessibilityLabel = @"五笔功能设置";
+    [schemeRows addObject:PreferenceRow(@"五笔功能", wubiSettingsButton)];
 
     _autocorrectButton = [NSButton checkboxWithTitle:@"启用全拼自动纠错"
                                               target:self
@@ -668,6 +688,29 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         PreferencesPage(@"键盘输入", @"选择全拼、双拼或 86 五笔，并调整日常输入行为。",
                         @[ SectionLabel(@"输入方式"), schemeCard, SectionLabel(@"中英文状态切换"), behaviorCard ]);
     generalPage.accessibilityLabel = @"键盘输入设置页";
+
+    NSButton *backToKeyboardButton = [NSButton buttonWithTitle:@"返回键盘输入"
+                                                        target:self
+                                                        action:@selector(backToKeyboardInput:)];
+    backToKeyboardButton.bezelStyle = NSBezelStyleInline;
+    backToKeyboardButton.image = [NSImage imageWithSystemSymbolName:@"chevron.left"
+                                           accessibilityDescription:nil];
+    backToKeyboardButton.imagePosition = NSImageLeft;
+    backToKeyboardButton.alignment = NSTextAlignmentLeft;
+    _wubiAutoCommitButton =
+        [NSButton checkboxWithTitle:@"四码唯一候选自动上屏"
+                             target:self
+                             action:@selector(wubiAutoCommitUniqueChanged:)];
+    _wubiAutoCommitButton.accessibilityLabel = @"四码唯一候选自动上屏";
+    NSTextField *wubiSchemeLabel = [NSTextField labelWithString:@"86 五笔"];
+    wubiSchemeLabel.textColor = [NSColor secondaryLabelColor];
+    NSBox *wubiOptionsCard =
+        CardWithViews(@[ PreferenceRow(@"编码方案", wubiSchemeLabel), _wubiAutoCommitButton ], 8.0);
+    wubiOptionsCard.accessibilityLabel = @"五笔选项卡片";
+    NSView *wubiPage =
+        PreferencesPage(@"五笔设置", @"调整 86 五笔的输入与上屏行为。",
+                        @[ backToKeyboardButton, SectionLabel(@"输入行为"), wubiOptionsCard ]);
+    wubiPage.accessibilityLabel = @"五笔设置页";
 
     _candidatePanelStyleButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     [_candidatePanelStyleButton addItemsWithTitles:@[ @"横向排列", @"纵向列表" ]];
@@ -727,7 +770,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                            SectionLabel(@"数据与隐私"), resetCard ]);
     dataPage.accessibilityLabel = @"词库与数据设置页";
 
-    _preferencePages = @[ generalPage, appearancePage, dataPage ];
+    _preferencePages = @[ generalPage, appearancePage, dataPage, wubiPage ];
 
     NSButton *restoreButton = [NSButton buttonWithTitle:@"恢复默认设置" target:self action:@selector(restoreDefaults:)];
     restoreButton.bezelStyle = NSBezelStyleRounded;
@@ -833,10 +876,19 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     NSButton *selectedButton = [sender isKindOfClass:[NSButton class]] ? (NSButton *)sender : nil;
     const NSInteger selectedIndex = selectedButton == nil ? 0 : selectedButton.tag;
+    [self showPreferencesPageAtIndex:selectedIndex sidebarIndex:selectedIndex];
+}
+
+- (void)showPreferencesPageAtIndex:(NSInteger)pageIndex sidebarIndex:(NSInteger)sidebarIndex
+{
     for (NSInteger index = 0; index < static_cast<NSInteger>(_preferencePages.count); ++index)
     {
-        const BOOL selected = index == selectedIndex;
+        const BOOL selected = index == pageIndex;
         _preferencePages[index].hidden = !selected;
+    }
+    for (NSInteger index = 0; index < static_cast<NSInteger>(_navigationButtons.count); ++index)
+    {
+        const BOOL selected = index == sidebarIndex;
         NSButton *button = _navigationButtons[index];
         button.state = selected ? NSControlStateValueOn : NSControlStateValueOff;
         button.accessibilityValue = @(selected);
@@ -844,6 +896,19 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
             selected ? [[NSColor whiteColor] colorWithAlphaComponent:0.16] : [NSColor clearColor];
         button.layer.backgroundColor = backgroundColor.CGColor;
     }
+}
+
+- (void)showWubiSettings:(id)sender
+{
+    (void)sender;
+    [self refreshControls];
+    [self showPreferencesPageAtIndex:3 sidebarIndex:0];
+}
+
+- (void)backToKeyboardInput:(id)sender
+{
+    (void)sender;
+    [self showPreferencesPageAtIndex:0 sidebarIndex:0];
 }
 
 - (void)openWebsite:(id)sender
@@ -876,6 +941,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                fontSize:[MetasequoiaPreferencesWindowController storedCandidateFontSize]];
     _candidateLearningButton.state = [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _inputModeShortcutButton.state = [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+    _wubiAutoCommitButton.state =
+        [MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled] ? NSControlStateValueOn
+                                                                                   : NSControlStateValueOff;
 }
 
 - (void)refreshDictionaryStatus
@@ -1010,6 +1078,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:button.state == NSControlStateValueOn];
 }
 
+- (void)wubiAutoCommitUniqueChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:button.state == NSControlStateValueOn];
+}
+
 - (void)confirmResetLearningData:(id)sender
 {
     (void)sender;
@@ -1068,6 +1142,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
              kCandidateFontSizePreferenceKey,
              kCandidateLearningPreferenceKey,
              kInputModeShortcutPreferenceKey,
+             kWubiAutoCommitUniquePreferenceKey,
          ])
     {
         [defaults removeObjectForKey:key];
@@ -1092,6 +1167,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                   object:@([MetasequoiaPreferencesWindowController storedCandidateLearningEnabled])];
     [notifications postNotificationName:@"MetasequoiaInputModeShortcutDidChangeNotification"
                                   object:@([MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled])];
+    [notifications postNotificationName:@"MetasequoiaWubiAutoCommitUniqueDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled])];
     [self refreshControls];
 }
 

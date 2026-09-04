@@ -30,6 +30,8 @@ bool MetasequoiaShouldShowPreferences(int argc, const char *argv[]);
 + (void)setEnglishInputMode:(BOOL)enabled;
 + (BOOL)storedInputModeShortcutEnabled;
 + (void)setInputModeShortcutEnabled:(BOOL)enabled;
++ (BOOL)storedWubiAutoCommitUniqueEnabled;
++ (void)setWubiAutoCommitUniqueEnabled:(BOOL)enabled;
 - (void)showAndActivate;
 - (void)showAndActivateForStandaloneLaunch;
 @end
