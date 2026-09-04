@@ -48,7 +48,7 @@ In System Settings > Keyboard > Text Input > Edit, select 水杉输入法 and ch
 
 The release ZIP also includes `Open Settings.command` as a direct fallback. After installation, open it to launch the same native panel without selecting 水杉 first; closing the panel exits only this standalone settings process and leaves the input method available.
 
-The input method uses Sparkle 2 to check the repository's signed update feed automatically. Choose `检查更新…` directly from the input menu or from the settings panel to run a manual check. Available releases are downloaded in the background, verified with the project's Ed25519 update key before extraction, and installed by replacing the existing input-method bundle in place; the user does not need to extract or run a ZIP installer. The appcast itself is also signed, and the Sparkle framework and release tools are pinned to a verified version in the build and release configuration.
+The input method uses Sparkle 2 to check the repository's signed update feed automatically. Choose `检查更新…` directly from the input menu or from the settings panel to run a manual check. Available releases are downloaded in the background, verified with the project's Ed25519 update key before extraction, and installed by replacing the existing input-method bundle in place; the user does not need to extract or run a ZIP installer. The `-update.zip` asset is Sparkle's update payload, not a package to open manually. The appcast itself is also signed, and the Sparkle framework and release tools are pinned to a verified version in the build and release configuration.
 
 The text input menu also shows whether 水杉 is in 中文输入 or 英文输入 mode. Choose either item directly, or press Shift+Space; switching to English commits the active Chinese composition before subsequent keys pass through unchanged. The Shift+Space shortcut is enabled by default and can be disabled in settings when it conflicts with another workflow.
 
@@ -71,6 +71,9 @@ Merges to `main` update a Release Please pull request from conventional commit h
 - `MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256`
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip`
 - `MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256`
+- `MetasequoiaIME-vX.Y.Z-macos-universal-update.zip`
+- `MetasequoiaIME-vX.Y.Z-macos-universal-update.zip.sha256`
+- `appcast.xml`
 
 When Apple release credentials are not configured, the workflow publishes the same four assets with `-unsigned` before the file extension and adds a warning to the GitHub Release. Unsigned artifacts are intended for testing and may require explicit approval in macOS privacy and security settings.
 
