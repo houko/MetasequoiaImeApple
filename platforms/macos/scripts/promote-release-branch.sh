@@ -151,7 +151,7 @@ if [[ "$head_changelog_tail" != "## [$head_version]"* || "$head_changelog_tail" 
     exit 1
 fi
 
-gh workflow run ci.yml --repo "$GH_REPO" --ref "$RELEASE_BRANCH"
+gh workflow run ci.yml --repo "$GH_REPO" --ref "$RELEASE_BRANCH" --field mac_only=true
 max_polls=${METASEQUOIA_RELEASE_CI_MAX_POLLS:-150}
 poll_interval=${METASEQUOIA_RELEASE_CI_POLL_INTERVAL:-2}
 run_id=""

@@ -193,7 +193,7 @@ case "$*" in
   "api repos/$GH_REPO/contents/CHANGELOG.md?ref=$FAKE_HEAD_SHA --jq .content")
     print -r -- "$FAKE_HEAD_CHANGELOG_MD"
     ;;
-  "workflow run ci.yml --repo $GH_REPO --ref $RELEASE_BRANCH")
+  "workflow run ci.yml --repo $GH_REPO --ref $RELEASE_BRANCH --field mac_only=true")
     ;;
   "run list --repo $GH_REPO --workflow ci.yml --branch $RELEASE_BRANCH --event workflow_dispatch --limit 20 --json databaseId,headSha --jq "*)
     print -r -- "9001"
