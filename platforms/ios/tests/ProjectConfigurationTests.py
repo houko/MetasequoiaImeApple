@@ -34,6 +34,15 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("timer.fireDate = Date(timeIntervalSinceNow: 0.4)", controller)
         self.assertIn("override func viewWillDisappear", controller)
 
+    def test_keyboard_uses_system_input_click_feedback(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("UIInputViewAudioFeedback", controller)
+        self.assertIn("var enableInputClicksWhenVisible: Bool { true }", controller)
+        self.assertIn("UIDevice.current.playInputClick()", controller)
+        self.assertIn("private func playInputClick()", controller)
+        self.assertGreaterEqual(controller.count("playInputClick()"), 9)
+
     def test_project_defines_distinct_host_and_keyboard_identifiers(self):
         project = (IOS_ROOT / "project.yml").read_text()
 
