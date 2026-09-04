@@ -2,8 +2,8 @@
 
 #import <CommonCrypto/CommonDigest.h>
 
-#include "../vendor/MetasequoiaImeEngine/user_dictionary/user_dictionary_journal.h"
-#include "../vendor/MetasequoiaImeEngine/googlepinyinime-rev/src/include/pinyinime.h"
+#include "../../../vendor/MetasequoiaImeEngine/user_dictionary/user_dictionary_journal.h"
+#include "../../../vendor/MetasequoiaImeEngine/googlepinyinime-rev/src/include/pinyinime.h"
 
 #include <sqlite3.h>
 

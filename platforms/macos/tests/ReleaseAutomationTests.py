@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MACOS_ROOT = Path(__file__).resolve().parents[1]
 BASE_SHA = "1" * 40
 HEAD_SHA = "2" * 40
 SIGNING_SECRETS = (
@@ -73,7 +73,7 @@ fi
                 }
             )
             result = subprocess.run(
-                [PROJECT_ROOT / "scripts/merge-release-pr.sh"],
+                [MACOS_ROOT / "scripts/merge-release-pr.sh"],
                 capture_output=True,
                 text=True,
                 env=environment,
@@ -120,7 +120,7 @@ class ReleaseSigningModeTests(unittest.TestCase):
             environment["GITHUB_OUTPUT"] = str(output)
             environment["GITHUB_STEP_SUMMARY"] = str(summary)
             result = subprocess.run(
-                [PROJECT_ROOT / "scripts/detect-release-signing.sh"],
+                [MACOS_ROOT / "scripts/detect-release-signing.sh"],
                 capture_output=True,
                 text=True,
                 env=environment,
@@ -228,7 +228,7 @@ fi
                 }
             )
             result = subprocess.run(
-                [PROJECT_ROOT / "scripts/publish-release.sh"],
+                [MACOS_ROOT / "scripts/publish-release.sh"],
                 capture_output=True,
                 text=True,
                 env=environment,
@@ -373,7 +373,7 @@ fi
             )
             result = subprocess.run(
                 [
-                    PROJECT_ROOT / "scripts/generate-sparkle-appcast.sh",
+                    MACOS_ROOT / "scripts/generate-sparkle-appcast.sh",
                     "v1.2.3",
                     archive,
                     output,

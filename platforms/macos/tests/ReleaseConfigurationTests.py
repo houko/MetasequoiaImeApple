@@ -7,12 +7,13 @@ import unittest
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+MACOS_ROOT = PROJECT_ROOT / "platforms" / "macos"
 
 
 class ReleaseConfigurationTests(unittest.TestCase):
     def test_input_source_uses_a_dedicated_menu_icon(self):
-        with (PROJECT_ROOT / "resources/Info.plist").open("rb") as info_file:
+        with (MACOS_ROOT / "resources/Info.plist").open("rb") as info_file:
             info = plistlib.load(info_file)
 
         app_icon = "MetasequoiaIME.icns"
@@ -25,7 +26,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertEqual(info["tsInputMethodIconFileKey"], menu_icon)
         self.assertEqual(input_mode["tsInputModeMenuIconFileKey"], menu_icon)
         self.assertEqual(input_mode["tsInputModePaletteIconFileKey"], menu_icon)
-        self.assertTrue((PROJECT_ROOT / "resources" / menu_icon).is_file())
+        self.assertTrue((MACOS_ROOT / "resources" / menu_icon).is_file())
         self.assertIn(menu_icon, (PROJECT_ROOT / "CMakeLists.txt").read_text())
 
     def test_release_version_matches_cmake_project_version(self):
@@ -43,9 +44,9 @@ class ReleaseConfigurationTests(unittest.TestCase):
         config = json.loads((PROJECT_ROOT / "release-please-config.json").read_text())
         package = config["packages"]["."]
         workflow = (PROJECT_ROOT / ".github/workflows/release.yml").read_text()
-        merge_release_pr = (PROJECT_ROOT / "scripts/merge-release-pr.sh").read_text()
+        merge_release_pr = (MACOS_ROOT / "scripts/merge-release-pr.sh").read_text()
         readme = (PROJECT_ROOT / "README.md").read_text()
-        info_plist = (PROJECT_ROOT / "resources/Info.plist").read_text()
+        info_plist = (MACOS_ROOT / "resources/Info.plist").read_text()
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
 
         self.assertEqual(package["release-type"], "simple")
@@ -69,7 +70,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
                 used_actions.add(action)
         self.assertEqual(used_actions, allowed_actions)
         self.assertIn("steps.release.outputs.release_created", workflow)
-        self.assertIn("run: bash scripts/merge-release-pr.sh", workflow)
+        self.assertIn("run: bash platforms/macos/scripts/merge-release-pr.sh", workflow)
         self.assertIn("id: merge_release_pr", workflow)
         self.assertIn("id: finalized_release", workflow)
         self.assertIn("steps.merge_release_pr.outputs.merged == 'true'", workflow)
@@ -81,9 +82,9 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("gh run watch", merge_release_pr)
         self.assertIn("--match-head-commit", merge_release_pr)
         self.assertTrue(merge_release_pr.startswith("#!/usr/bin/env bash\n"))
-        self.assertIn("scripts/package_release.sh", workflow)
-        signing_detector = (PROJECT_ROOT / "scripts/detect-release-signing.sh").read_text()
-        release_publisher = (PROJECT_ROOT / "scripts/publish-release.sh").read_text()
+        self.assertIn("platforms/macos/scripts/package_release.sh", workflow)
+        signing_detector = (MACOS_ROOT / "scripts/detect-release-signing.sh").read_text()
+        release_publisher = (MACOS_ROOT / "scripts/publish-release.sh").read_text()
         self.assertIn("macos-universal$ASSET_SUFFIX.pkg", release_publisher)
         self.assertIn("asset_suffix=-unsigned", signing_detector)
         self.assertIn("timeout-minutes: 30", workflow)
@@ -100,7 +101,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("gh release upload", release_publisher)
         self.assertIn("gh release edit", release_publisher)
         self.assertIn("METASEQUOIA_REQUIRE_RELEASE_SIGNING", workflow)
-        self.assertIn("scripts/detect-release-signing.sh", workflow)
+        self.assertIn("platforms/macos/scripts/detect-release-signing.sh", workflow)
         self.assertIn("steps.signing.outputs.signing_enabled", workflow)
         self.assertIn("steps.signing.outputs.asset_suffix", workflow)
         self.assertIn("metasequoia-release-mode", release_publisher)
@@ -159,9 +160,9 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertNotIn("UpdateChecker.mm", cmake)
         self.assertNotIn("UpdateCheckerTests.mm", cmake)
         self.assertIn("<key>SUEnableAutomaticChecks</key>", info_plist)
-        self.assertIn("scripts/uninstall.sh", cmake)
+        self.assertIn("${METASEQUOIA_MACOS_ROOT}/scripts/uninstall.sh", cmake)
         self.assertIn("MACOSX_PACKAGE_LOCATION Resources", cmake)
-        preferences_controller = (PROJECT_ROOT / "src/PreferencesWindowController.mm").read_text()
+        preferences_controller = (MACOS_ROOT / "src/PreferencesWindowController.mm").read_text()
         self.assertIn("initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner", preferences_controller)
         self.assertIn("showAndActivate", preferences_controller)
         self.assertIn("showAndActivateForStandaloneLaunch", preferences_controller)
@@ -193,7 +194,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("词库已就绪", preferences_controller)
         self.assertIn("当前输入结束后的下一次按键生效", preferences_controller)
         self.assertIn("词库不可用，请重新安装水杉输入法", preferences_controller)
-        input_controller = (PROJECT_ROOT / "src/MetasequoiaInputController.mm").read_text()
+        input_controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
         self.assertIn("reloadSessionFromPreferences", input_controller)
         self.assertIn("prepareSessionIfNeeded", input_controller)
         self.assertIn("kDictionaryRetryDelay", input_controller)
@@ -233,8 +234,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertNotIn("Command::CommitRaw", commit_composition)
         self.assertIn("next key event when no composition is active", readme)
 
-        release_installer = (PROJECT_ROOT / "scripts/install-release.sh").read_text()
-        settings_launcher = (PROJECT_ROOT / "scripts/open-settings.sh").read_text()
+        release_installer = (MACOS_ROOT / "scripts/install-release.sh").read_text()
+        settings_launcher = (MACOS_ROOT / "scripts/open-settings.sh").read_text()
         self.assertNotIn("xcrun", release_installer)
         self.assertNotIn("xattr", release_installer)
         self.assertIn("spctl --assess --type execute", release_installer)
@@ -252,12 +253,12 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("preserves preferences and learned data by default", readme)
         self.assertNotIn("xattr -dr com.apple.quarantine", readme)
         self.assertNotIn("swift", release_installer.lower())
-        install_script = (PROJECT_ROOT / "scripts/install.sh").read_text()
+        install_script = (MACOS_ROOT / "scripts/install.sh").read_text()
         self.assertIn("staging_root=$(mktemp -d", install_script)
         self.assertIn("backup_root=$(mktemp -d", install_script)
         self.assertIn("install_complete=false", install_script)
-        self.assertIn("TISRegisterInputSource", (PROJECT_ROOT / "scripts/register_input_source.swift").read_text())
-        package_script = (PROJECT_ROOT / "scripts/package_release.sh").read_text()
+        self.assertIn("TISRegisterInputSource", (MACOS_ROOT / "scripts/register_input_source.swift").read_text())
+        package_script = (MACOS_ROOT / "scripts/package_release.sh").read_text()
         self.assertIn("productsign", package_script)
         self.assertIn("notarytool", package_script)
         self.assertIn("Commercial release signing requires", package_script)
@@ -316,15 +317,15 @@ class ReleaseConfigurationTests(unittest.TestCase):
             "scripts/install-release.sh",
             "scripts/package_release.sh",
         ):
-            result = subprocess.run(["zsh", "-n", str(PROJECT_ROOT / relative_path)], capture_output=True, text=True)
+            result = subprocess.run(["zsh", "-n", str(MACOS_ROOT / relative_path)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
         result = subprocess.run(
-            ["bash", "-n", str(PROJECT_ROOT / "scripts/merge-release-pr.sh")], capture_output=True, text=True
+            ["bash", "-n", str(MACOS_ROOT / "scripts/merge-release-pr.sh")], capture_output=True, text=True
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         for relative_path in ("scripts/detect-release-signing.sh", "scripts/publish-release.sh"):
             result = subprocess.run(
-                ["bash", "-n", str(PROJECT_ROOT / relative_path)], capture_output=True, text=True
+                ["bash", "-n", str(MACOS_ROOT / relative_path)], capture_output=True, text=True
             )
             self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -340,7 +341,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
             environment.pop(variable, None)
 
         result = subprocess.run(
-            [PROJECT_ROOT / "scripts/package_release.sh", "v1.2.3"],
+            [MACOS_ROOT / "scripts/package_release.sh", "v1.2.3"],
             capture_output=True,
             text=True,
             env=environment,

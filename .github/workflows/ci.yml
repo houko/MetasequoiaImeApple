@@ -30,9 +30,9 @@ jobs:
       - name: Install dependencies
         run: brew install boost fmt spdlog
       - name: Create test dictionary
-        run: python3 tests/create_fixture_dictionary.py "$RUNNER_TEMP/msime.db"
+        run: python3 platforms/macos/tests/create_fixture_dictionary.py "$RUNNER_TEMP/msime.db"
       - name: Type-check registration helper
-        run: xcrun swiftc -typecheck scripts/register_input_source.swift
+        run: xcrun swiftc -typecheck platforms/macos/scripts/register_input_source.swift
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix)" -DMETASEQUOIA_IME_DICTIONARY="$RUNNER_TEMP/msime.db"
       - name: Build

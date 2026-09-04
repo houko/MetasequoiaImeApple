@@ -1,17 +1,17 @@
 #!/bin/zsh
 set -euo pipefail
 
-project_root=${METASEQUOIA_PROJECT_ROOT:-${0:A:h:h}}
+project_root=${METASEQUOIA_PROJECT_ROOT:-${0:A:h:h:h:h}}
 project_root=${project_root:A}
-install_script=${METASEQUOIA_RELEASE_INSTALL_SCRIPT:-$project_root/scripts/install-release.sh}
+install_script=${METASEQUOIA_RELEASE_INSTALL_SCRIPT:-$project_root/platforms/macos/scripts/install-release.sh}
 install_script=${install_script:A}
-uninstall_script=${METASEQUOIA_RELEASE_UNINSTALL_SCRIPT:-$project_root/scripts/uninstall.sh}
+uninstall_script=${METASEQUOIA_RELEASE_UNINSTALL_SCRIPT:-$project_root/platforms/macos/scripts/uninstall.sh}
 uninstall_script=${uninstall_script:A}
-settings_script=${METASEQUOIA_RELEASE_SETTINGS_SCRIPT:-$project_root/scripts/open-settings.sh}
+settings_script=${METASEQUOIA_RELEASE_SETTINGS_SCRIPT:-$project_root/platforms/macos/scripts/open-settings.sh}
 settings_script=${settings_script:A}
-settings_capability_marker="$project_root/scripts/open-settings.sh"
+settings_capability_marker="$project_root/platforms/macos/scripts/open-settings.sh"
 include_settings_launcher=false
-installer_distribution=${METASEQUOIA_INSTALLER_DISTRIBUTION:-$project_root/resources/InstallerDistribution.xml.in}
+installer_distribution=${METASEQUOIA_INSTALLER_DISTRIBUTION:-$project_root/platforms/macos/resources/InstallerDistribution.xml.in}
 installer_distribution=${installer_distribution:A}
 tag_name=${1:-}
 source_bundle=${2:-$project_root/build/MetasequoiaIME.app}

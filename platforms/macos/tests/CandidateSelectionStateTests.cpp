@@ -1,6 +1,6 @@
 #include "../src/CandidateSelectionState.h"
-#include "../vendor/MetasequoiaImeEngine/core/data_path.h"
-#include "../vendor/MetasequoiaImeEngine/user_dictionary/user_dictionary_journal.h"
+#include "../../../vendor/MetasequoiaImeEngine/core/data_path.h"
+#include "../../../vendor/MetasequoiaImeEngine/user_dictionary/user_dictionary_journal.h"
 
 #include <sqlite3.h>
 

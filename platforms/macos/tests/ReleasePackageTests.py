@@ -12,7 +12,8 @@ import zipfile
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+MACOS_ROOT = PROJECT_ROOT / "platforms" / "macos"
 SIGNING_ENVIRONMENT = (
     "METASEQUOIA_REQUIRE_RELEASE_SIGNING",
     "METASEQUOIA_DEVELOPER_ID_APPLICATION",
@@ -49,13 +50,13 @@ class ReleasePackageTests(unittest.TestCase):
             release_root = temporary / "release"
             release_root.mkdir()
             release_installer = release_root / "Install.command"
-            shutil.copy2(PROJECT_ROOT / "scripts/install-release.sh", release_installer)
+            shutil.copy2(MACOS_ROOT / "scripts/install-release.sh", release_installer)
             (release_root / "MetasequoiaIME.app").mkdir()
 
             for installer in (
-                PROJECT_ROOT / "scripts/install.sh",
+                MACOS_ROOT / "scripts/install.sh",
                 release_installer,
-                PROJECT_ROOT / "scripts/open-settings.sh",
+                MACOS_ROOT / "scripts/open-settings.sh",
             ):
                 for unsafe_home in (
                     "",
@@ -111,7 +112,7 @@ class ReleasePackageTests(unittest.TestCase):
             environment["PATH"] = f"{fake_bin}:{environment['PATH']}"
 
             result = subprocess.run(
-                [PROJECT_ROOT / "scripts/install.sh"],
+                [MACOS_ROOT / "scripts/install.sh"],
                 capture_output=True,
                 text=True,
                 env=environment,
@@ -152,10 +153,10 @@ class ReleasePackageTests(unittest.TestCase):
             release_root = temporary / "release"
             release_root.mkdir()
             release_installer = release_root / "Install.command"
-            shutil.copy2(PROJECT_ROOT / "scripts/install-release.sh", release_installer)
+            shutil.copy2(MACOS_ROOT / "scripts/install-release.sh", release_installer)
             (release_root / "MetasequoiaIME.app").mkdir()
 
-            installers = (PROJECT_ROOT / "scripts/install.sh", release_installer)
+            installers = (MACOS_ROOT / "scripts/install.sh", release_installer)
             for index, (installer, failure) in enumerate(
                 (installer, failure)
                 for installer in installers
@@ -225,10 +226,10 @@ class ReleasePackageTests(unittest.TestCase):
             release_root = temporary / "release"
             release_root.mkdir()
             release_installer = release_root / "Install.command"
-            shutil.copy2(PROJECT_ROOT / "scripts/install-release.sh", release_installer)
+            shutil.copy2(MACOS_ROOT / "scripts/install-release.sh", release_installer)
             (release_root / "MetasequoiaIME.app").mkdir()
 
-            installers = (PROJECT_ROOT / "scripts/install.sh", release_installer)
+            installers = (MACOS_ROOT / "scripts/install.sh", release_installer)
             scenarios = ((0, "did not stop in time"), (2, "Could not verify"))
             for index, (installer, (pgrep_status, expected_error)) in enumerate(
                 (installer, scenario)
@@ -304,9 +305,9 @@ class ReleasePackageTests(unittest.TestCase):
             release_root = temporary / "release"
             release_root.mkdir()
             installer = release_root / "Install.command"
-            shutil.copy2(PROJECT_ROOT / "scripts/install-release.sh", installer)
+            shutil.copy2(MACOS_ROOT / "scripts/install-release.sh", installer)
             (release_root / "MetasequoiaIME.app").mkdir()
-            installers = (PROJECT_ROOT / "scripts/install.sh", installer)
+            installers = (MACOS_ROOT / "scripts/install.sh", installer)
             for index, tested_installer in enumerate(installers):
                 with self.subTest(installer=tested_installer.name):
                     active = temporary / f"ditto-active-{index}"
@@ -456,21 +457,21 @@ class ReleasePackageTests(unittest.TestCase):
                     "METASEQUOIA_RELEASE_ASSET_SUFFIX": "",
                     "METASEQUOIA_PROJECT_ROOT": str(legacy_project_root),
                     "METASEQUOIA_RELEASE_INSTALL_SCRIPT": str(
-                        PROJECT_ROOT / "scripts/install-release.sh"
+                        MACOS_ROOT / "scripts/install-release.sh"
                     ),
                     "METASEQUOIA_RELEASE_UNINSTALL_SCRIPT": str(
-                        PROJECT_ROOT / "scripts/uninstall.sh"
+                        MACOS_ROOT / "scripts/uninstall.sh"
                     ),
                     "METASEQUOIA_RELEASE_SETTINGS_SCRIPT": str(
-                        PROJECT_ROOT / "scripts/open-settings.sh"
+                        MACOS_ROOT / "scripts/open-settings.sh"
                     ),
                     "METASEQUOIA_INSTALLER_DISTRIBUTION": str(
-                        PROJECT_ROOT / "resources/InstallerDistribution.xml.in"
+                        MACOS_ROOT / "resources/InstallerDistribution.xml.in"
                     ),
                 }
             )
             result = subprocess.run(
-                [PROJECT_ROOT / "scripts/package_release.sh", f"v{version}", legacy_bundle, output],
+                [MACOS_ROOT / "scripts/package_release.sh", f"v{version}", legacy_bundle, output],
                 capture_output=True,
                 text=True,
                 env=environment,
@@ -513,7 +514,7 @@ class ReleasePackageTests(unittest.TestCase):
             packaged_uninstaller = package_root / "MetasequoiaIME.app/Contents/Resources/Uninstall.command"
             self.assertTrue(packaged_uninstaller.is_file())
             self.assertTrue(os.access(packaged_uninstaller, os.X_OK))
-            self.assertEqual(packaged_uninstaller.read_bytes(), (PROJECT_ROOT / "scripts/uninstall.sh").read_bytes())
+            self.assertEqual(packaged_uninstaller.read_bytes(), (MACOS_ROOT / "scripts/uninstall.sh").read_bytes())
             subprocess.run(
                 ["/usr/bin/codesign", "--verify", "--deep", "--strict", package_root / "MetasequoiaIME.app"],
                 check=True,
@@ -537,7 +538,7 @@ class ReleasePackageTests(unittest.TestCase):
             )
             self.assertTrue(installer_uninstaller.is_file())
             self.assertTrue(os.access(installer_uninstaller, os.X_OK))
-            self.assertEqual(installer_uninstaller.read_bytes(), (PROJECT_ROOT / "scripts/uninstall.sh").read_bytes())
+            self.assertEqual(installer_uninstaller.read_bytes(), (MACOS_ROOT / "scripts/uninstall.sh").read_bytes())
 
             fake_spctl = fake_bin / "spctl"
             fake_spctl.write_text(
@@ -591,7 +592,7 @@ class ReleasePackageTests(unittest.TestCase):
         bundled_uninstaller = bundle / "Contents/Resources/Uninstall.command"
         self.assertTrue(bundled_uninstaller.is_file())
         self.assertTrue(os.access(bundled_uninstaller, os.X_OK))
-        self.assertEqual(bundled_uninstaller.read_bytes(), (PROJECT_ROOT / "scripts/uninstall.sh").read_bytes())
+        self.assertEqual(bundled_uninstaller.read_bytes(), (MACOS_ROOT / "scripts/uninstall.sh").read_bytes())
 
         app_icon_name = "MetasequoiaIME.icns"
         menu_icon_name = "MetasequoiaIMEMenuIcon.tiff"
@@ -654,13 +655,13 @@ class ReleasePackageTests(unittest.TestCase):
                 environment.pop(variable, None)
             environment["METASEQUOIA_RELEASE_ASSET_SUFFIX"] = "-unsigned"
             trusted_packager = Path(temporary_directory) / "package-release.sh"
-            shutil.copy2(PROJECT_ROOT / "scripts/package_release.sh", trusted_packager)
+            shutil.copy2(MACOS_ROOT / "scripts/package_release.sh", trusted_packager)
             environment["METASEQUOIA_PROJECT_ROOT"] = str(PROJECT_ROOT)
             environment["METASEQUOIA_RELEASE_INSTALL_SCRIPT"] = str(
-                PROJECT_ROOT / "scripts/install-release.sh"
+                MACOS_ROOT / "scripts/install-release.sh"
             )
             environment["METASEQUOIA_RELEASE_SETTINGS_SCRIPT"] = str(
-                PROJECT_ROOT / "scripts/open-settings.sh"
+                MACOS_ROOT / "scripts/open-settings.sh"
             )
             subprocess.run(
                 [trusted_packager, f"v{version}", bundle, output],

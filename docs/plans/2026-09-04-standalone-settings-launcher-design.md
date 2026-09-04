@@ -10,7 +10,7 @@ The `MetasequoiaIME` executable accepts one new exact command-line mode, `--show
 
 The release ZIP includes `Open Settings.command`. It resolves only the fixed current-user installation at `~/Library/Input Methods/MetasequoiaIME.app`, validates that its executable exists, and invokes that executable with `--show-settings`. A missing installation fails with a clear instruction to run `Install.command`. No administrator privileges are requested.
 
-Release repackaging includes the trusted launcher only when the target tag itself contains `scripts/open-settings.sh`, which acts as the binary capability marker. Older draft tags therefore never receive a launcher their executable cannot handle.
+Release repackaging includes the trusted launcher only when the target tag itself contains `platforms/macos/scripts/open-settings.sh`, which acts as the binary capability marker. Older draft tags therefore never receive a launcher their executable cannot handle.
 
 The existing settings controller uses `performClose:` for both the window close control and its Close button. Standalone mode marks the controller to terminate the app after the window closes; InputMethodKit-hosted settings remain reopenable and keep the server alive.
 
