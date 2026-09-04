@@ -177,9 +177,9 @@ final class KeyboardViewController: UIInputViewController {
     layoutToggleButton = layoutToggle
     row.addArrangedSubview(layoutToggle)
 
-    let globe = makeSymbolKey(symbol: "globe", accessibilityLabel: "下一个键盘") { [weak self] in
-      self?.switchToNextKeyboard()
-    }
+    let globe = makeSymbolKey(symbol: "globe", accessibilityLabel: "选择下一个键盘")
+    globe.addTarget(
+      self, action: #selector(handleInputModeButton(_:event:)), for: .allTouchEvents)
     row.addArrangedSubview(globe)
 
     let delete = makeSymbolKey(symbol: "delete.left", accessibilityLabel: "删除") { [weak self] in
@@ -335,9 +335,11 @@ final class KeyboardViewController: UIInputViewController {
     textDocumentProxy.insertText("\n")
   }
 
-  private func switchToNextKeyboard() {
-    render(session.commitRaw())
-    advanceToNextInputMode()
+  @objc private func handleInputModeButton(_ sender: UIButton, event: UIEvent) {
+    if event.allTouches?.contains(where: { touch in touch.phase == .began }) == true {
+      render(session.commitRaw())
+    }
+    handleInputModeList(from: sender, with: event)
   }
 
   private func render(_ snapshot: MetasequoiaInputSnapshot) {
@@ -385,14 +387,17 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func makeSymbolKey(
-    symbol: String, accessibilityLabel: String, action: @escaping () -> Void
+    symbol: String, accessibilityLabel: String, action: (() -> Void)? = nil
   ) -> UIButton {
     var configuration = UIButton.Configuration.plain()
     configuration.image = UIImage(systemName: symbol)
     configuration.baseForegroundColor = .label
     configuration.background.backgroundColor = MetasequoiaTheme.keyBackground
     configuration.background.cornerRadius = 8
-    let button = UIButton(configuration: configuration, primaryAction: UIAction { _ in action() })
+    let button = UIButton(configuration: configuration)
+    if let action {
+      button.addAction(UIAction { _ in action() }, for: .primaryActionTriggered)
+    }
     button.accessibilityLabel = accessibilityLabel
     return button
   }
