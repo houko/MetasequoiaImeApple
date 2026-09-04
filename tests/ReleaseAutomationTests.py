@@ -236,18 +236,38 @@ fi
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("metasequoia-release-mode:unsigned", notes)
         self.assertIn("not Developer ID signed or notarized", notes)
+        self.assertIn("Recommended: ZIP", notes)
+        self.assertIn("Install.command", notes)
+        self.assertIn("does not automatically log out or restart", notes)
+        self.assertIn("Compatibility option: PKG", notes)
+        self.assertIn("System Settings", notes)
         self.assertLess(calls.index("--notes-file"), calls.index("release upload"))
         self.assertIn("macos-universal-unsigned.pkg", calls)
         self.assertIn("--draft=false", calls)
 
     def test_same_mode_retry_keeps_notes_and_reuploads_with_clobber(self):
-        marker = "Existing notes\n\n<!-- metasequoia-release-mode:unsigned -->\n"
+        marker = (
+            "Existing notes\n\n"
+            "<!-- metasequoia-release-mode:unsigned -->\n"
+            "<!-- metasequoia-install-guidance:v1 -->\n"
+        )
         result, calls, notes = self.run_publication("false", "-unsigned", marker)
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn("--notes-file", calls)
         self.assertIn("--clobber", calls)
         self.assertEqual(notes, "")
+
+    def test_retry_adds_install_guidance_to_release_with_only_mode_marker(self):
+        marker = "Existing notes\n\n<!-- metasequoia-release-mode:unsigned -->\n"
+        result, calls, notes = self.run_publication("false", "-unsigned", marker)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Existing notes", notes)
+        self.assertEqual(notes.count("metasequoia-release-mode:unsigned"), 1)
+        self.assertIn("metasequoia-install-guidance:v1", notes)
+        self.assertIn("Recommended: ZIP", notes)
+        self.assertLess(calls.index("--notes-file"), calls.index("release upload"))
 
     def test_cross_mode_retry_is_rejected_before_assets_change(self):
         marker = "<!-- metasequoia-release-mode:unsigned -->"
@@ -265,6 +285,8 @@ fi
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("metasequoia-release-mode:signed", notes)
         self.assertNotIn("WARNING", notes)
+        self.assertIn("Recommended: ZIP", notes)
+        self.assertIn("Compatibility option: PKG", notes)
         self.assertIn("macos-universal.pkg", calls)
 
     def test_corrupt_artifact_is_rejected_before_release_metadata_or_assets_change(self):
