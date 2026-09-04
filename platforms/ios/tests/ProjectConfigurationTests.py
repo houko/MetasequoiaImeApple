@@ -124,6 +124,18 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("letterCaseState = .lowercase", controller)
         self.assertIn('button.accessibilityIdentifier = "shiftButton"', controller)
 
+    def test_return_key_reflects_the_host_input_trait(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("private weak var enterButton: UIButton?", controller)
+        self.assertIn("override func textDidChange", controller)
+        self.assertIn("switch textDocumentProxy.returnKeyType", controller)
+        self.assertIn("case .go:", controller)
+        self.assertIn("case .google, .search, .yahoo:", controller)
+        self.assertIn("case .send:", controller)
+        self.assertIn("case .done:", controller)
+        self.assertIn("enterButton?.accessibilityLabel = title", controller)
+
     def test_project_and_ci_run_native_onboarding_ui_tests(self):
         project = (IOS_ROOT / "project.yml").read_text()
         workflow = (IOS_ROOT.parents[1] / ".github/workflows/ci.yml").read_text()
