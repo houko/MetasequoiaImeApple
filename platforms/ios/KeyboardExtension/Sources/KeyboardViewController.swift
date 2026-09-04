@@ -270,21 +270,32 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     for (index, candidate) in candidates.prefix(9).enumerated() {
-      var configuration = UIButton.Configuration.plain()
-      configuration.title = candidate
-      configuration.baseForegroundColor = .label
-      configuration.contentInsets = NSDirectionalEdgeInsets(
-        top: 3, leading: 8, bottom: 3, trailing: 8)
-      let button = UIButton(
-        configuration: configuration,
-        primaryAction: UIAction { [weak self] _ in
-          guard let self else { return }
-          self.render(self.session.selectCandidate(at: UInt(index)))
-        })
-      button.accessibilityLabel = "候选词 \(index + 1)：\(candidate)"
-      candidateStack.addArrangedSubview(button)
+      candidateStack.addArrangedSubview(
+        makeCandidateButton(candidate: candidate, number: index + 1))
     }
     candidateScrollView.isHidden = candidates.isEmpty
+  }
+
+  private func makeCandidateButton(candidate: String, number: Int) -> UIButton {
+    var configuration = UIButton.Configuration.plain()
+    configuration.title = "\(number)  \(candidate)"
+    configuration.baseForegroundColor = .label
+    configuration.contentInsets = NSDirectionalEdgeInsets(
+      top: 4, leading: 9, bottom: 4, trailing: 9)
+    configuration.background.backgroundColor = MetasequoiaTheme.keyBackground
+    configuration.background.strokeColor = MetasequoiaTheme.forestUIColor.withAlphaComponent(0.22)
+    configuration.background.strokeWidth = 1
+    configuration.background.cornerRadius = 9
+
+    let button = UIButton(
+      configuration: configuration,
+      primaryAction: UIAction { [weak self] _ in
+        guard let self else { return }
+        self.render(self.session.selectCandidate(at: UInt(number - 1)))
+      })
+    button.accessibilityLabel = "候选词 \(number)：\(candidate)"
+    button.accessibilityIdentifier = "candidate-\(number)"
+    return button
   }
 
   private func makeSymbolKey(
