@@ -59,7 +59,11 @@ jobs:
       - name: Install project generator
         run: brew install boost fmt spdlog xcodegen
       - name: Validate keyboard configuration
-        run: python3 platforms/ios/tests/ProjectConfigurationTests.py
+        run: |
+          python3 platforms/ios/tests/ProjectConfigurationTests.py
+          python3 platforms/ios/tests/DictionaryPackagingTests.py
+      - name: Package iOS dictionary
+        run: python3 platforms/ios/scripts/prepare_dictionary.py
       - name: Generate Xcode project
         run: |
           mkdir -p build/ios
