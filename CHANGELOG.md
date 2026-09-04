@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.21.2...v0.22.0) (2026-09-04)
+
+
+### Features
+
+* **settings:** add standalone launcher ([#126](https://github.com/houko/MetasequoiaImeMac/issues/126)) ([f43e4d8](https://github.com/houko/MetasequoiaImeMac/commit/f43e4d84278349757ab862c23b47877ec5f00afd))
+
 ## [0.21.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.21.1...v0.21.2) (2026-09-04)
 
 
