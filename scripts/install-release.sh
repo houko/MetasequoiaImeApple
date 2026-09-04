@@ -150,13 +150,13 @@ if ! verify_bundle "$destination_bundle"; then
     print -u2 "Installed release bundle verification failed; restoring the previous installation."
     exit 1
 fi
+install_complete=true
 if ! "$registration_command" --register-input-source; then
-    print -u2 "Input source registration failed; restoring the previous installation."
+    print -u2 "Input source registration or enable failed. The verified new version remains installed; enable it manually in System Settings > Keyboard > Text Input > Edit."
     exit 1
 fi
-install_complete=true
 print "Installed $destination_bundle"
 if [[ "$unsigned_release" == true ]]; then
     print "If macOS blocks the input method, approve it in System Settings > Privacy & Security before enabling it."
 fi
-print "Registered 水杉输入法 with macOS. Enable it in System Settings > Keyboard > Text Input > Edit."
+print "Registered and enabled 水杉输入法 with macOS. Select it from the input menu to start typing."

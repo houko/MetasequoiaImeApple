@@ -13,13 +13,16 @@ int main(int argc, const char *argv[])
         if (MetasequoiaShouldRegisterInputSource(argc, argv))
         {
             NSURL *bundleURL = NSBundle.mainBundle.bundleURL;
-            OSStatus status = MetasequoiaRegisterInputSource(bundleURL, TISRegisterInputSource);
+            NSString *bundleIdentifier = NSBundle.mainBundle.bundleIdentifier;
+            OSStatus status = MetasequoiaRegisterAndEnableInputSources(
+                bundleURL, bundleIdentifier, TISRegisterInputSource, TISCreateInputSourceList,
+                TISGetInputSourceProperty, TISEnableInputSource);
             if (status != noErr)
             {
-                std::fprintf(stderr, "TISRegisterInputSource failed with OSStatus %d.\n", status);
+                std::fprintf(stderr, "Input source registration or enable failed with OSStatus %d.\n", status);
                 return 1;
             }
-            std::fprintf(stdout, "Registered %s\n", bundleURL.fileSystemRepresentation);
+            std::fprintf(stdout, "Registered and enabled %s\n", bundleURL.fileSystemRepresentation);
             return 0;
         }
 

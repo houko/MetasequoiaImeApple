@@ -80,7 +80,7 @@ When all of the following repository secrets are configured, release builds are 
 
 Local development builds remain ad-hoc signed. After installation, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
 
-The ZIP provides the same current-user destination through `Install.command` and is the recommended option when 水杉 should be available immediately without logging out or administrator privileges. The installer always verifies the bundle's code signature before replacing an existing installation, then registers that exact bundle with macOS so it is available to add without logging out. Signed releases must also pass Gatekeeper; clearly marked unsigned builds instead require typing `I UNDERSTAND` and may need explicit approval in System Settings > Privacy & Security.
+The ZIP provides the same current-user destination through `Install.command` and is the recommended option when 水杉 should be available immediately without logging out or administrator privileges. The installer always verifies the bundle's code signature before replacing an existing installation, then registers and enables that exact bundle with macOS so it appears in the input menu without logging out. If registration or enablement fails, the verified app remains installed and the installer directs you to enable it manually in System Settings. Signed releases must also pass Gatekeeper; clearly marked unsigned builds instead require typing `I UNDERSTAND` and may need explicit approval in System Settings > Privacy & Security.
 
 Verify the ZIP checksum, extract it, and run `Install.command`:
 

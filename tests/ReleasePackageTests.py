@@ -750,14 +750,19 @@ class ReleasePackageTests(unittest.TestCase):
                     env=registration_failure_environment,
                 )
                 self.assertNotEqual(failed_registration.returncode, 0)
-                self.assertEqual(registration_failure_marker.read_text(), "previous installation\n")
+                self.assertFalse(registration_failure_marker.exists())
+                self.assertTrue(
+                    (registration_failure_destination / "Contents/Info.plist").is_file()
+                )
                 self.assertFalse(
                     any(registration_failure_destination.parent.glob(".MetasequoiaIME.installing.*"))
                 )
                 self.assertFalse(
                     any(registration_failure_destination.parent.glob(".MetasequoiaIME.backup.*"))
                 )
-                self.assertIn("registration failed", failed_registration.stderr)
+                self.assertIn("registration or enable failed", failed_registration.stderr)
+                self.assertIn("remains installed", failed_registration.stderr)
+                self.assertIn("enable it manually", failed_registration.stderr)
 
                 fake_codesign = fake_bin / "codesign"
                 fake_codesign.write_text(
