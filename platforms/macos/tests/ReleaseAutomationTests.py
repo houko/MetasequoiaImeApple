@@ -269,7 +269,7 @@ esac
         self.assertIn("workflow run ci.yml", calls)
         self.assertLess(calls.index("run watch 9001"), calls.index("git/refs/heads/main -f sha="))
         self.assertIn(f"git/refs/heads/main -f sha={HEAD_SHA} -F force=false", calls)
-        self.assertEqual(output, "promoted=true\n")
+        self.assertEqual(output, f"promoted=true\ntarget_sha={HEAD_SHA}\ntag_name=v1.2.3\n")
 
     def test_unexpected_release_file_is_rejected(self):
         result, calls, output = self.run_promotion(changed_files=["version.txt", "src/backdoor.mm"])
@@ -648,6 +648,97 @@ fi
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(appcast, "")
         self.assertEqual(calls, "")
+
+    def run_promoted_release_creation(
+        self, *, main_sha=HEAD_SHA, release_exists="false", release_draft="true", release_target=HEAD_SHA
+    ):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            log = temporary / "gh.log"
+            output = temporary / "github-output"
+            fake_gh = temporary / "gh"
+            fake_gh.write_text(
+                """#!/bin/zsh
+set -euo pipefail
+print -r -- "$*" >> "$FAKE_GH_LOG"
+case "$*" in
+  "api repos/$GH_REPO/git/ref/heads/main --jq .object.sha")
+    print -r -- "$FAKE_MAIN_SHA"
+    ;;
+  "api repos/$GH_REPO/contents/version.txt?ref=$TARGET_SHA --jq .content")
+    print -r -- "MC4yOC4wCg=="
+    ;;
+  "release view $TAG_NAME --repo $GH_REPO --json isDraft,tagName,targetCommitish")
+    if [[ "$FAKE_RELEASE_EXISTS" != true && ! -f "$FAKE_RELEASE_CREATED" ]]; then exit 1; fi
+    print -r -- "{\\"isDraft\\":$FAKE_RELEASE_DRAFT,\\"tagName\\":\\"$TAG_NAME\\",\\"targetCommitish\\":\\"$FAKE_RELEASE_TARGET\\"}"
+    ;;
+  "release create $TAG_NAME --repo $GH_REPO --target $TARGET_SHA --title $TAG_NAME --generate-notes --draft")
+    touch "$FAKE_RELEASE_CREATED"
+    ;;
+  *)
+    print -u2 -- "Unexpected gh invocation: $*"
+    exit 64
+    ;;
+esac
+"""
+            )
+            fake_gh.chmod(0o755)
+            environment = os.environ.copy()
+            environment.update(
+                {
+                    "PATH": f"{temporary}:{environment['PATH']}",
+                    "GH_REPO": "metasequoiaime/MSIME-Apple",
+                    "TARGET_SHA": HEAD_SHA,
+                    "TAG_NAME": "v0.28.0",
+                    "GITHUB_OUTPUT": str(output),
+                    "FAKE_GH_LOG": str(log),
+                    "FAKE_MAIN_SHA": main_sha,
+                    "FAKE_RELEASE_EXISTS": release_exists,
+                    "FAKE_RELEASE_DRAFT": release_draft,
+                    "FAKE_RELEASE_TARGET": release_target,
+                    "FAKE_RELEASE_CREATED": str(temporary / "release-created"),
+                }
+            )
+            result = subprocess.run(
+                [MACOS_ROOT / "scripts/create-promoted-release.sh"],
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            return result, log.read_text() if log.exists() else "", output.read_text() if output.exists() else ""
+
+    def test_promoted_commit_creates_draft_release_at_exact_sha(self):
+        result, calls, output = self.run_promoted_release_creation()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(f"release create v0.28.0 --repo metasequoiaime/MSIME-Apple --target {HEAD_SHA}", calls)
+        self.assertEqual(calls.count("release view v0.28.0"), 2)
+        self.assertEqual(output, "release_created=true\ntag_name=v0.28.0\n")
+
+    def test_existing_draft_release_resumes_without_recreating_it(self):
+        result, calls, output = self.run_promoted_release_creation(release_exists="true")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("release create", calls)
+        self.assertEqual(output, "release_created=true\ntag_name=v0.28.0\n")
+
+    def test_promoted_release_rejects_stale_main(self):
+        result, calls, output = self.run_promoted_release_creation(main_sha=BASE_SHA)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("main advanced", result.stderr)
+        self.assertNotIn("release create", calls)
+        self.assertEqual(output, "")
+
+    def test_existing_draft_release_must_target_promoted_sha(self):
+        result, calls, output = self.run_promoted_release_creation(
+            release_exists="true", release_target=BASE_SHA
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("targets", result.stderr)
+        self.assertNotIn("release create", calls)
+        self.assertEqual(output, "")
 
 
 if __name__ == "__main__":

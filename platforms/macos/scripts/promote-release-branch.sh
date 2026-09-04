@@ -159,3 +159,5 @@ fi
 
 gh api --method PATCH "repos/$GH_REPO/git/refs/heads/main" -f sha="$head_sha" -F force=false >/dev/null
 write_output "promoted=true"
+write_output "target_sha=$head_sha"
+write_output "tag_name=v$head_version"

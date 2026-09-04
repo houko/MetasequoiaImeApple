@@ -28,8 +28,9 @@ jobs:
       issues: write
       pull-requests: write
     outputs:
-      should_publish: ${{ github.event_name == 'workflow_dispatch' || steps.release.outputs.release_created == 'true' || steps.finalized_release.outputs.release_created == 'true' }}
-      tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || steps.finalized_release.outputs.tag_name || steps.release.outputs.tag_name }}
+      should_publish: ${{ github.event_name == 'workflow_dispatch' || steps.release.outputs.release_created == 'true' || steps.finalized_release.outputs.release_created == 'true' || steps.finalized_promoted_release.outputs.release_created == 'true' }}
+      tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || steps.finalized_promoted_release.outputs.tag_name || steps.finalized_release.outputs.tag_name || steps.release.outputs.tag_name }}
+      target_sha: ${{ github.event_name == 'workflow_dispatch' && steps.requested_release.outputs.target_sha || steps.promote_release_commit.outputs.target_sha || steps.finalized_release.outputs.sha || steps.release.outputs.sha }}
     steps:
       - name: Check out release automation
         if: ${{ github.event_name == 'push' }}
@@ -75,13 +76,23 @@ jobs:
           EXPECTED_PREVIOUS_RELEASE_SHA: ${{ steps.release_branch_before.outputs.sha }}
         run: bash platforms/macos/scripts/promote-release-branch.sh
       - name: Finalize automated release
-        if: ${{ github.event_name == 'push' && (steps.merge_release_pr.outputs.merged == 'true' || steps.promote_release_commit.outputs.promoted == 'true') }}
+        if: ${{ github.event_name == 'push' && steps.merge_release_pr.outputs.merged == 'true' }}
         id: finalized_release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create draft release for promoted commit
+        if: ${{ github.event_name == 'push' && steps.promote_release_commit.outputs.promoted == 'true' }}
+        id: finalized_promoted_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TARGET_SHA: ${{ steps.promote_release_commit.outputs.target_sha }}
+          TAG_NAME: ${{ steps.promote_release_commit.outputs.tag_name }}
+        run: bash platforms/macos/scripts/create-promoted-release.sh
       - name: Validate requested draft release
         if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: requested_release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -91,11 +102,24 @@ jobs:
             echo "Tag must use the vMAJOR.MINOR.PATCH format." >&2
             exit 1
           fi
-          is_draft=$(gh release view "$TAG_NAME" --json isDraft --jq .isDraft)
+          release_json=$(gh release view "$TAG_NAME" --json isDraft,targetCommitish)
+          is_draft=$(jq -er .isDraft <<< "$release_json")
           if [[ "$is_draft" != true ]]; then
             echo "Release $TAG_NAME is not an unpublished draft." >&2
             exit 1
           fi
+          target=$(jq -er .targetCommitish <<< "$release_json")
+          if [[ ! "$target" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Draft release target must be an immutable full commit SHA." >&2
+            exit 1
+          fi
+          target_sha=$target
+          version=$(gh api "repos/$GH_REPO/contents/version.txt?ref=$target_sha" --jq .content | base64 --decode)
+          if [[ "$TAG_NAME" != "v$version" ]]; then
+            echo "Release $TAG_NAME does not match version.txt ($version)." >&2
+            exit 1
+          fi
+          printf 'target_sha=%s\n' "$target_sha" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Build and publish release
@@ -146,7 +170,7 @@ jobs:
       - name: Check out release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.prepare.outputs.tag_name }}
+          ref: ${{ needs.prepare.outputs.target_sha }}
           submodules: recursive
           fetch-depth: 0
           persist-credentials: false
@@ -232,6 +256,16 @@ jobs:
           update_archive="dist/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX-update.zip"
           SPARKLE_TOOLS_DIR="$sparkle_root/bin" \
             exec "$RUNNER_TEMP/generate-sparkle-appcast.sh" "$TAG_NAME" "$update_archive" dist/appcast.xml
+      - name: Revalidate draft release target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+          TARGET_SHA: ${{ needs.prepare.outputs.target_sha }}
+        run: |
+          release_json=$(gh release view "$TAG_NAME" --repo "$GH_REPO" --json isDraft,targetCommitish)
+          test "$(jq -er .isDraft <<< "$release_json")" = true
+          test "$(jq -er .targetCommitish <<< "$release_json")" = "$TARGET_SHA"
       - name: Upload and publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
