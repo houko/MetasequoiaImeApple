@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.25.0](https://github.com/houko/MetasequoiaImeApple/compare/v0.24.0...v0.25.0) (2026-09-04)
+
+
+### Features
+
+* **ios:** add Chinese English mode switch ([#148](https://github.com/houko/MetasequoiaImeApple/issues/148)) ([7404661](https://github.com/houko/MetasequoiaImeApple/commit/740466120bd95c020c3ec2097df8d70fe764c0fd))
+* **ios:** add host app and keyboard extension shell ([#141](https://github.com/houko/MetasequoiaImeApple/issues/141)) ([90b5189](https://github.com/houko/MetasequoiaImeApple/commit/90b518965de636931b65414d0787da918decb6ff))
+* **ios:** add number and symbol keyboard ([#145](https://github.com/houko/MetasequoiaImeApple/issues/145)) ([400bd77](https://github.com/houko/MetasequoiaImeApple/commit/400bd772fa33388f9a62afaf2a48bc0dc0c20f79))
+* **ios:** number candidate chips ([#146](https://github.com/houko/MetasequoiaImeApple/issues/146)) ([6d9e848](https://github.com/houko/MetasequoiaImeApple/commit/6d9e848986f97df98efe1235831d87afc1247697))
+* **ios:** package compact pinyin dictionary ([#143](https://github.com/houko/MetasequoiaImeApple/issues/143)) ([63c8093](https://github.com/houko/MetasequoiaImeApple/commit/63c8093fbd74aa8312c146a5d28768a9db87e3d1))
+* **ios:** route keyboard through shared engine ([#142](https://github.com/houko/MetasequoiaImeApple/issues/142)) ([575348e](https://github.com/houko/MetasequoiaImeApple/commit/575348e48ff35e01cf73484a12386407732581bd))
+
+
+### Bug Fixes
+
+* **ios:** route apostrophe through composition ([#147](https://github.com/houko/MetasequoiaImeApple/issues/147)) ([f3caf12](https://github.com/houko/MetasequoiaImeApple/commit/f3caf1290ea9b478a1ff8d542ba215175d22859c))
+
 ## [0.24.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.23.2...v0.24.0) (2026-09-04)
 
 
