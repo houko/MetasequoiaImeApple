@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.21.0...v0.21.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **install:** stop forcing logout after pkg install ([#122](https://github.com/houko/MetasequoiaImeMac/issues/122)) ([f5cadeb](https://github.com/houko/MetasequoiaImeMac/commit/f5cadebb613152f1ccea3f414a0e32297e3b0955))
+
 ## [0.21.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.13...v0.21.0) (2026-09-04)
 
 
