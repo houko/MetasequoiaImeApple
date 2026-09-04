@@ -76,9 +76,9 @@ When all of the following repository secrets are configured, release builds are 
 - `MACOS_DEVELOPER_ID_APPLICATION`
 - `MACOS_DEVELOPER_ID_INSTALLER`
 
-Local development builds remain ad-hoc signed. After installation and logout, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
+Local development builds remain ad-hoc signed. After installation, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
 
-The ZIP provides the same current-user destination through `Install.command` when a command-line installation is preferred. The installer always verifies the bundle's code signature before replacing an existing installation. Signed releases must also pass Gatekeeper; clearly marked unsigned builds instead require typing `I UNDERSTAND` and may need explicit approval in System Settings > Privacy & Security.
+The ZIP provides the same current-user destination through `Install.command` when a command-line installation is preferred. The installer always verifies the bundle's code signature before replacing an existing installation, then registers that exact bundle with macOS so it is available to add without logging out. Signed releases must also pass Gatekeeper; clearly marked unsigned builds instead require typing `I UNDERSTAND` and may need explicit approval in System Settings > Privacy & Security.
 
 Verify the ZIP checksum, extract it, and run `Install.command`:
 
