@@ -39,6 +39,11 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn('TextField("在这里试试水杉键盘"', onboarding)
         self.assertIn('.accessibilityIdentifier("keyboardTryoutField")', onboarding)
 
+    def test_ci_creates_the_generated_project_output_directory(self):
+        workflow = (IOS_ROOT.parents[1] / ".github/workflows/ci.yml").read_text()
+
+        self.assertIn("mkdir -p build/ios", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

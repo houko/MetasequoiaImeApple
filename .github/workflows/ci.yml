@@ -59,7 +59,9 @@ jobs:
       - name: Validate keyboard configuration
         run: python3 platforms/ios/tests/ProjectConfigurationTests.py
       - name: Generate Xcode project
-        run: xcodegen generate --spec platforms/ios/project.yml --project build/ios --project-root .
+        run: |
+          mkdir -p build/ios
+          xcodegen generate --spec platforms/ios/project.yml --project build/ios --project-root .
       - name: Build host app and keyboard extension
         run: |
           xcodebuild \

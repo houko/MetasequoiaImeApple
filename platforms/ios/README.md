@@ -10,6 +10,7 @@ Generate and build the current shell for the Simulator from the repository root:
 
 ```sh
 brew install xcodegen
+mkdir -p build/ios
 xcodegen generate --spec platforms/ios/project.yml --project build/ios --project-root .
 xcodebuild -project build/ios/MetasequoiaImeIOS.xcodeproj -scheme MetasequoiaImeIOS -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios-derived CODE_SIGNING_ALLOWED=NO build
 ```
