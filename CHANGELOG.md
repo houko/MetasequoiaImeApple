@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.33.1...v0.34.0) (2026-09-04)
+
+
+### Features
+
+* **mac:** show auxiliary codes in candidates ([#201](https://github.com/metasequoiaime/MSIME-Apple/issues/201)) ([47fecc8](https://github.com/metasequoiaime/MSIME-Apple/commit/47fecc85d4c9ae086ae744173e4189bcc49f0511))
+
 ## [0.33.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.33.0...v0.33.1) (2026-09-04)
 
 
