@@ -161,6 +161,9 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("MetasequoiaImeIOSUITests", project.split("test:", 1)[1])
         self.assertIn("platforms/ios/scripts/run_ui_tests.sh", workflow)
         self.assertIn("simctl bootstatus", runner)
+        self.assertIn('derived_data_path="${2:-build/ios-derived}"', runner)
+        self.assertIn('xcrun simctl shutdown "${test_device_id}"', runner)
+        self.assertIn('xcrun simctl boot "${test_device_id}"', runner)
         self.assertNotIn("sleep ", runner)
 
     def test_ui_tests_are_main_actor_isolated_for_swift_6(self):
