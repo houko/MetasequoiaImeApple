@@ -6,6 +6,7 @@
 #include "CandidatePanelStyle.h"
 #import "InputMenu.h"
 #include "InputModeRouting.h"
+#include "InputSchemePreference.h"
 #import "PreferencesWindowController.h"
 #import "UpdateController.h"
 #include "StringConversion.h"
@@ -35,9 +36,9 @@ struct SessionPreferences
 
 SessionPreferences ReadSessionPreferences()
 {
-    const NSInteger storedScheme = [MetasequoiaPreferencesWindowController storedScheme];
     return {
-        storedScheme == 1 ? SchemeType::Shuangpin : SchemeType::Quanpin,
+        metasequoia::mac::EngineSchemeForStoredPreference(
+            static_cast<int>([MetasequoiaPreferencesWindowController storedScheme])),
         [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] == YES,
         [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] == YES,
         [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] == YES,

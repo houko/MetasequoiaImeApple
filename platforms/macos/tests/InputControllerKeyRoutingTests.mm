@@ -3,6 +3,7 @@
 #include "../src/CandidatePageSize.h"
 #include "../src/CandidateFontSize.h"
 #include "../src/InputModeRouting.h"
+#include "../src/InputSchemePreference.h"
 
 #import <InputMethodKit/InputMethodKit.h>
 
@@ -38,6 +39,16 @@ int main()
     using metasequoia::mac::NormalizeCandidatePageSize;
     using metasequoia::mac::NormalizeCandidatePanelStyle;
     using metasequoia::mac::IsInputModeToggle;
+    using metasequoia::mac::EngineSchemeForStoredPreference;
+    using metasequoia::mac::NormalizeStoredInputScheme;
+
+    require(NormalizeStoredInputScheme(0) == 0 && NormalizeStoredInputScheme(1) == 1 &&
+                NormalizeStoredInputScheme(2) == 2 && NormalizeStoredInputScheme(99) == 0,
+            "The stored input scheme was not normalized safely.");
+    require(EngineSchemeForStoredPreference(0) == SchemeType::Quanpin &&
+                EngineSchemeForStoredPreference(1) == SchemeType::Shuangpin &&
+                EngineSchemeForStoredPreference(2) == SchemeType::Wubi,
+            "A stored input scheme did not map to the matching engine scheme.");
 
     require(IsInputModeToggle(kVK_Space, NSEventModifierFlagShift),
             "Shift+Space did not map to input-mode switching.");
