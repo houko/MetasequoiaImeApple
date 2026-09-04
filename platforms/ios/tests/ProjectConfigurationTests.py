@@ -21,6 +21,19 @@ class ProjectConfigurationTests(unittest.TestCase):
             )
             subprocess.run([str(executable)], check=True)
 
+    def test_backspace_repeats_only_while_the_delete_key_is_held(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("private var backspaceRepeatTimer: Timer?", controller)
+        self.assertIn("#selector(beginBackspacePress)", controller)
+        self.assertIn("for: .touchDown", controller)
+        self.assertIn("#selector(finishBackspacePress)", controller)
+        self.assertIn("for: .touchUpInside", controller)
+        self.assertIn("#selector(cancelBackspacePress)", controller)
+        self.assertIn("RunLoop.main.add(timer, forMode: .common)", controller)
+        self.assertIn("timer.fireDate = Date(timeIntervalSinceNow: 0.4)", controller)
+        self.assertIn("override func viewWillDisappear", controller)
+
     def test_project_defines_distinct_host_and_keyboard_identifiers(self):
         project = (IOS_ROOT / "project.yml").read_text()
 
