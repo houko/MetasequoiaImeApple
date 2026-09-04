@@ -40,7 +40,7 @@ The dictionary build generates `vendor/MetasequoiaImeDict/out/msime.db` from the
 ./platforms/macos/scripts/install.sh
 ```
 
-Then enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit. The installer copies the signed bundle to `~/Library/Input Methods` and registers that exact bundle with macOS; it does not require administrator privileges.
+The installer copies the signed bundle to `~/Library/Input Methods`, registers it, and enables 水杉输入法 automatically for the current user; it does not require administrator privileges. If macOS blocks an ad-hoc build, approve it in Privacy & Security and enable it from System Settings > Keyboard > Text Input > Edit.
 
 ## Settings
 
@@ -93,7 +93,7 @@ When all of the following repository secrets are configured, release builds are 
 - `MACOS_DEVELOPER_ID_APPLICATION`
 - `MACOS_DEVELOPER_ID_INSTALLER`
 
-Local development builds remain ad-hoc signed. After installation, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
+Local development builds remain ad-hoc signed. After installation, the script registers and enables 水杉输入法 automatically; if macOS blocks the bundle, approve it in Privacy & Security and then enable it in System Settings > Keyboard > Text Input > Edit.
 
 The ZIP provides the same current-user destination through `Install.command` and is the recommended option when 水杉 should be available immediately without logging out or administrator privileges. The installer always verifies the bundle's code signature before replacing an existing installation, then registers and enables that exact bundle with macOS so it appears in the input menu without logging out. If registration or enablement fails, the verified app remains installed and the installer directs you to enable it manually in System Settings. Signed releases must also pass Gatekeeper; clearly marked unsigned builds instead require typing `I UNDERSTAND` and may need explicit approval in System Settings > Privacy & Security.
 

@@ -324,6 +324,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("The installer always verifies the bundle's code signature", readme)
         self.assertIn("appears in the input menu without logging out", readme)
         self.assertIn("Both paths install the current-user bundle", readme)
+        self.assertIn("enables 水杉输入法 automatically for the current user", readme)
+        self.assertIn("script registers and enables 水杉输入法 automatically", readme)
         self.assertIn("unsigned builds instead require typing `I UNDERSTAND`", readme)
         self.assertNotIn("verifies both the code signature and Gatekeeper acceptance", readme)
         self.assertIn("./MetasequoiaIME-vX.Y.Z/Uninstall.command", readme)
