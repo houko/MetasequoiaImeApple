@@ -73,6 +73,8 @@
     <string>NSApplication</string>
     <key>SUFeedURL</key>
     <string>https://github.com/houko/MetasequoiaImeMac/releases/latest/download/appcast.xml</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
     <key>SUPublicEDKey</key>
     <string>rSAufajnup+T+d+I4LTs4EAhe5M8bwHemWDKao3CB/E=</string>
     <key>SURequireSignedFeed</key>

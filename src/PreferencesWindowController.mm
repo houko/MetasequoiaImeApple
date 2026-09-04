@@ -4,7 +4,7 @@
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
 #import "DictionaryInstaller.h"
-#import "UpdateChecker.h"
+#import "UpdateController.h"
 
 #include <cstring>
 
@@ -423,7 +423,9 @@ void ConfigureCard(NSBox *card)
     restoreButton.bezelStyle = NSBezelStyleRounded;
     restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
 
-    _updateButton = [NSButton buttonWithTitle:@"检查更新…" target:self action:@selector(checkForUpdates:)];
+    _updateButton = [NSButton buttonWithTitle:@"检查更新…"
+                                        target:self
+                                        action:@selector(checkForUpdates:)];
     _updateButton.bezelStyle = NSBezelStyleInline;
     _updateButton.accessibilityLabel = @"软件更新";
     _updateButton.translatesAutoresizingMaskIntoConstraints = NO;
@@ -566,41 +568,12 @@ void ConfigureCard(NSBox *card)
         [closeButton.bottomAnchor constraintEqualToAnchor:settingsPanel.bottomAnchor constant:-20.0],
         [closeButton.widthAnchor constraintGreaterThanOrEqualToConstant:80.0],
     ]];
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(updateAvailabilityChanged:)
-                                                 name:MetasequoiaUpdateAvailabilityDidChangeNotification
-                                               object:[MetasequoiaUpdateChecker sharedChecker]];
     [self refreshUpdateButton];
     return self;
 }
 
-- (void)dealloc
-{
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
-}
-
 - (void)refreshUpdateButton
 {
-    MetasequoiaUpdateChecker *checker = [MetasequoiaUpdateChecker sharedChecker];
-    if (checker.availableVersion != nil)
-    {
-        _updateButton.title = [NSString stringWithFormat:@"下载 v%@…", checker.availableVersion];
-        if (checker.downloadURL != nil)
-        {
-            _updateButton.toolTip = @"下载推荐的 ZIP 安装包";
-            _updateButton.accessibilityHelp =
-                [NSString stringWithFormat:@"有新版本 v%@，下载推荐的 ZIP 安装包", checker.availableVersion];
-        }
-        else
-        {
-            _updateButton.toolTip = @"在 GitHub Releases 中下载最新版本";
-            _updateButton.accessibilityHelp =
-                [NSString stringWithFormat:@"有新版本 v%@，打开 GitHub Releases 下载", checker.availableVersion];
-        }
-        _updateButton.contentTintColor = MetasequoiaBrandColor();
-        _updateButton.enabled = YES;
-        return;
-    }
     NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
     _updateButton.title = version.length == 0 ? @"检查更新…" : [NSString stringWithFormat:@"检查更新（v%@）…", version];
     _updateButton.toolTip = @"从 GitHub 检查水杉输入法的最新正式版本";
@@ -611,43 +584,9 @@ void ConfigureCard(NSBox *card)
     _updateButton.enabled = YES;
 }
 
-- (void)updateAvailabilityChanged:(NSNotification *)notification
-{
-    (void)notification;
-    [self refreshUpdateButton];
-}
-
 - (void)checkForUpdates:(id)sender
 {
-    (void)sender;
-    MetasequoiaUpdateChecker *checker = [MetasequoiaUpdateChecker sharedChecker];
-    NSURL *updateURL = checker.downloadURL != nil ? checker.downloadURL : checker.releaseURL;
-    if (updateURL != nil)
-    {
-        if (![NSWorkspace.sharedWorkspace openURL:updateURL])
-        {
-            _updateButton.title = @"无法打开下载页，重试…";
-            _updateButton.accessibilityHelp = @"无法打开 GitHub Releases 下载页，再次尝试打开";
-        }
-        return;
-    }
-
-    _updateButton.enabled = NO;
-    _updateButton.title = @"正在检查更新…";
-    _updateButton.accessibilityHelp = @"正在从 GitHub 检查最新正式版本";
-    [checker checkForUpdates:^(MetasequoiaUpdateCheckState state) {
-        [self refreshUpdateButton];
-        if (state == MetasequoiaUpdateCheckStateCurrent)
-        {
-            self->_updateButton.title = @"已是最新版本";
-            self->_updateButton.accessibilityHelp = @"当前安装的水杉输入法已是最新正式版本";
-        }
-        else if (state == MetasequoiaUpdateCheckStateFailed)
-        {
-            self->_updateButton.title = @"检查失败，重试…";
-            self->_updateButton.accessibilityHelp = @"无法检查更新，再次尝试连接 GitHub";
-        }
-    }];
+    [[MetasequoiaUpdateController sharedController] checkForUpdates:sender];
 }
 
 - (void)refreshControls

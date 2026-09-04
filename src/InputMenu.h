@@ -11,7 +11,7 @@ inline NSMenuItem *CreateInputModeItem(NSString *title, SEL action, id target, B
     return item;
 }
 
-inline NSMenu *CreateMetasequoiaInputMenu(id target, BOOL englishMode, NSString *availableVersion)
+inline NSMenu *CreateMetasequoiaInputMenu(id target, BOOL englishMode)
 {
     NSMenu *menu = [[NSMenu alloc] initWithTitle:@"水杉输入法"];
     menu.autoenablesItems = NO;
@@ -20,10 +20,14 @@ inline NSMenu *CreateMetasequoiaInputMenu(id target, BOOL englishMode, NSString 
     [menu addItem:CreateInputModeItem(@"英文输入", @selector(selectEnglishMode:), target, englishMode)];
     [menu addItem:[NSMenuItem separatorItem]];
 
-    NSString *settingsTitle = availableVersion.length == 0
-                                  ? @"水杉输入法设置…"
-                                  : [NSString stringWithFormat:@"水杉输入法设置（新版本 v%@）…", availableVersion];
-    NSMenuItem *settingsItem = [[NSMenuItem alloc] initWithTitle:settingsTitle
+    NSMenuItem *updateItem = [[NSMenuItem alloc] initWithTitle:@"检查更新…"
+                                                        action:@selector(checkForUpdates:)
+                                                 keyEquivalent:@""];
+    updateItem.target = target;
+    updateItem.enabled = YES;
+    [menu addItem:updateItem];
+
+    NSMenuItem *settingsItem = [[NSMenuItem alloc] initWithTitle:@"水杉输入法设置…"
                                                           action:@selector(showPreferences:)
                                                    keyEquivalent:@""];
     settingsItem.target = target;
