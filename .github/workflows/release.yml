@@ -88,6 +88,7 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           path: .release-automation
           sparse-checkout: |
+            resources/InstallerDistribution.xml.in
             scripts/detect-release-signing.sh
             scripts/install-release.sh
             scripts/uninstall.sh
@@ -96,6 +97,7 @@ jobs:
           persist-credentials: false
       - name: Stage trusted release automation
         run: |
+          install -m 0644 .release-automation/resources/InstallerDistribution.xml.in "$RUNNER_TEMP/InstallerDistribution.xml.in"
           install -m 0755 .release-automation/scripts/detect-release-signing.sh "$RUNNER_TEMP/detect-release-signing.sh"
           install -m 0755 .release-automation/scripts/install-release.sh "$RUNNER_TEMP/install-release.sh"
           install -m 0755 .release-automation/scripts/uninstall.sh "$RUNNER_TEMP/uninstall.sh"
@@ -178,6 +180,7 @@ jobs:
           METASEQUOIA_PROJECT_ROOT: ${{ github.workspace }}
           METASEQUOIA_RELEASE_INSTALL_SCRIPT: ${{ runner.temp }}/install-release.sh
           METASEQUOIA_RELEASE_UNINSTALL_SCRIPT: ${{ runner.temp }}/uninstall.sh
+          METASEQUOIA_INSTALLER_DISTRIBUTION: ${{ runner.temp }}/InstallerDistribution.xml.in
         run: exec "$RUNNER_TEMP/package-release.sh" "$TAG_NAME" build/MetasequoiaIME.app dist
       - name: Upload and publish release
         env:

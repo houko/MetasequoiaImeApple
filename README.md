@@ -61,7 +61,7 @@ Merges to `main` update a Release Please pull request from conventional commit h
 
 When Apple release credentials are not configured, the workflow publishes the same four assets with `-unsigned` before the file extension and adds a warning to the GitHub Release. Unsigned artifacts are intended for testing and may require explicit approval in macOS privacy and security settings.
 
-Download the `.pkg` and its checksum, verify it, then double-click the package to open the native macOS Installer. The package installs the current user's copy in `~/Library/Input Methods` and does not require administrator privileges. Log out after installation so macOS refreshes its input source cache.
+Download the `.pkg` and its checksum, verify it, then double-click the package to open the native macOS Installer. The package installs the current user's copy in `~/Library/Input Methods`; the native Installer may request administrator authorization. It will not log out or restart the Mac automatically. macOS may require you to log out and back in at a convenient time before the newly copied input method appears.
 
 ```sh
 shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.pkg.sha256
@@ -80,7 +80,7 @@ When all of the following repository secrets are configured, release builds are 
 
 Local development builds remain ad-hoc signed. After installation, enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit.
 
-The ZIP provides the same current-user destination through `Install.command` when a command-line installation is preferred. The installer always verifies the bundle's code signature before replacing an existing installation, then registers that exact bundle with macOS so it is available to add without logging out. Signed releases must also pass Gatekeeper; clearly marked unsigned builds instead require typing `I UNDERSTAND` and may need explicit approval in System Settings > Privacy & Security.
+The ZIP provides the same current-user destination through `Install.command` and is the recommended option when 水杉 should be available immediately without logging out or administrator privileges. The installer always verifies the bundle's code signature before replacing an existing installation, then registers that exact bundle with macOS so it is available to add without logging out. Signed releases must also pass Gatekeeper; clearly marked unsigned builds instead require typing `I UNDERSTAND` and may need explicit approval in System Settings > Privacy & Security.
 
 Verify the ZIP checksum, extract it, and run `Install.command`:
 
