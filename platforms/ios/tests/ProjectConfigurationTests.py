@@ -124,6 +124,14 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("simctl bootstatus", runner)
         self.assertNotIn("sleep ", runner)
 
+    def test_ui_tests_are_main_actor_isolated_for_swift_6(self):
+        ui_tests = (IOS_ROOT / "UITests/OnboardingUITests.swift").read_text()
+
+        self.assertIn(
+            "@MainActor\n  func testOnboardingExposesEnablementPathAndTryoutField()",
+            ui_tests,
+        )
+
     def test_keyboard_action_row_adapts_to_narrow_screens(self):
         controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
 
