@@ -40,6 +40,7 @@ def compact_dictionary(source_path, output_path, minimum_weight):
         ).fetchall()
         if not tables:
             raise ValueError("The source dictionary has no pinyin tables")
+        included_tables = {table_name for table_name, _ in tables}
 
         source_uri = source_path.resolve().as_uri().replace("'", "''")
         output.execute(f"ATTACH DATABASE '{source_uri}?mode=ro' AS source")
@@ -63,11 +64,12 @@ def compact_dictionary(source_path, output_path, minimum_weight):
             ).fetchone()[0]
 
         indexes = source.execute(
-            "SELECT sql FROM sqlite_master "
+            "SELECT tbl_name, sql FROM sqlite_master "
             "WHERE type='index' AND sql IS NOT NULL ORDER BY name"
         ).fetchall()
-        for (schema,) in indexes:
-            output.execute(schema)
+        for table_name, schema in indexes:
+            if table_name in included_tables:
+                output.execute(schema)
         output.commit()
 
         integrity = output.execute("PRAGMA integrity_check").fetchone()[0]
