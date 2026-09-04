@@ -6,6 +6,7 @@
 #include "CandidatePanelStyle.h"
 #import "InputMenu.h"
 #include "InputModeRouting.h"
+#include "FullWidthInput.h"
 #include "InputSchemePreference.h"
 #include "WubiCommitPolicy.h"
 #import "PreferencesWindowController.h"
@@ -268,6 +269,12 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     {
         return NO;
     }
+    if (metasequoia::mac::IsFullWidthInputToggle(event.keyCode, inputModeModifiers))
+    {
+        [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:
+            ![MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]];
+        return YES;
+    }
     if (![self prepareSessionIfNeeded])
     {
         return NO;
@@ -438,6 +445,18 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     if (!result.handled)
     {
         [self commitLeadingCandidate:sender];
+        if (_session != nullptr && !_session->has_composition() &&
+            [MetasequoiaPreferencesWindowController storedFullWidthInputEnabled] && event.characters.length == 1)
+        {
+            const unichar character = [event.characters characterAtIndex:0];
+            if (metasequoia::mac::IsFullWidthConvertibleCharacter(character))
+            {
+                const unichar fullWidthCharacter = metasequoia::mac::FullWidthCharacter(character);
+                NSString *converted = [NSString stringWithCharacters:&fullWidthCharacter length:1];
+                [sender insertText:converted replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
+                return YES;
+            }
+        }
         return NO;
     }
     [self applyResult:result client:sender];

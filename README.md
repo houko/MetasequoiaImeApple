@@ -13,7 +13,7 @@ The target module boundaries and migration sequence are documented in [Apple pla
 
 The iOS work does not port the Windows TSF or WebView2 host. It reuses `MetasequoiaImeEngine` and supplies an iOS-specific UI and text-document adapter.
 
-The current release supports full-pinyin composition, live candidates from the official Metasequoia dictionary, candidate selection through the native candidate panel or number keys 1–9, Space to commit the leading candidate, Return to commit raw input, Backspace, Escape, composition commit on focus changes, and Shift+Space switching between Chinese and direct English input.
+The current release supports full-pinyin composition, live candidates from the official Metasequoia dictionary, candidate selection through the native candidate panel or number keys 1–9, Space to commit the leading candidate, Return to commit raw input, Backspace, Escape, composition commit on focus changes, Shift+Space switching between Chinese and direct English input, and an optional full-width mode toggled with Option+Shift+H. When full-width mode is enabled, idle ASCII letters, digits, punctuation, and spaces are converted to their Unicode full-width forms without changing pinyin composition.
 
 ## Requirements
 
@@ -44,7 +44,7 @@ The installer copies the signed bundle to `~/Library/Input Methods`, registers i
 
 ## Settings
 
-In System Settings > Keyboard > Text Input > Edit, select 水杉输入法 and choose its settings action to open the native 水杉输入法设置 panel. The panel lets you choose 全拼、小鹤双拼 or 86 五笔, configure unique four-code Wubi candidates to commit automatically, preview and switch the native candidate window between a horizontal row and vertical list, show 5, 7, or 9 candidates per page, choose a small, standard, or large candidate font, select `- / =`, `[ / ]`, or Page Up / Page Down for candidate paging, enable full-pinyin autocorrection and auxiliary codes, switch Chinese punctuation conversion, and control whether selected candidates update learned word frequencies. These choices are saved for the current user and apply before the next key event when no composition is active; an active composition keeps its original settings until it is committed or cancelled. Additional input and candidate options will be added incrementally.
+In System Settings > Keyboard > Text Input > Edit, select 水杉输入法 and choose its settings action to open the native 水杉输入法设置 panel. The panel lets you choose 全拼、小鹤双拼 or 86 五笔, configure unique four-code Wubi candidates to commit automatically, preview and switch the native candidate window between a horizontal row and vertical list, show 5, 7, or 9 candidates per page, choose a small, standard, or large candidate font, select `- / =`, `[ / ]`, or Page Up / Page Down for candidate paging, enable full-pinyin autocorrection and auxiliary codes, switch Chinese punctuation conversion, enable Option+Shift+H full-width input, and control whether selected candidates update learned word frequencies. These choices are saved for the current user and apply before the next key event when no composition is active; an active composition keeps its original settings until it is committed or cancelled. Additional input and candidate options will be added incrementally.
 
 The release ZIP also includes `Open Settings.command` as a direct fallback. After installation, open it to launch the same native panel without selecting 水杉 first; closing the panel exits only this standalone settings process and leaves the input method available.
 
