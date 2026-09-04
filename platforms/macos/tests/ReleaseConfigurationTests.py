@@ -362,6 +362,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("productsign", package_script)
         self.assertIn("notarytool", package_script)
         self.assertIn("Commercial release signing requires", package_script)
+        self.assertIn("SUEnableAutomaticChecks false", package_script)
+        self.assertIn("feed that cannot provide a trusted update", package_script)
         postinstall_script = MACOS_ROOT / "scripts/pkg-postinstall.sh"
         self.assertTrue(postinstall_script.is_file())
         self.assertIn("launchctl asuser", postinstall_script.read_text())

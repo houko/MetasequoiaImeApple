@@ -158,6 +158,12 @@ ditto "$source_bundle" "$packaged_bundle"
 mkdir -p "$packaged_bundle/Contents/Resources"
 ditto "$uninstall_script" "$bundled_uninstaller"
 chmod +x "$bundled_uninstaller"
+if [[ "$require_release_signing" != true ]]; then
+    # Unsigned releases intentionally omit appcast.xml, so avoid polling a
+    # feed that cannot provide a trusted update until a signed build is installed.
+    /usr/libexec/PlistBuddy -c 'Set :SUEnableAutomaticChecks false' \
+        "$packaged_bundle/Contents/Info.plist"
+fi
 if [[ -n "$application_identity" ]]; then
     codesign --force --deep --options runtime --timestamp --sign "$application_identity" "$packaged_bundle"
 else
