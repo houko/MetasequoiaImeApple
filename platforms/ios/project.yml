@@ -1,0 +1,52 @@
+name: MetasequoiaImeIOS
+
+options:
+  bundleIdPrefix: com.houko.metasequoiaime
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "15.0"
+
+settings:
+  base:
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 0.1.0
+    SWIFT_VERSION: 6.0
+    IPHONEOS_DEPLOYMENT_TARGET: 15.0
+
+targets:
+  MetasequoiaImeIOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: platforms/ios/App/Sources
+      - path: platforms/ios/SharedUI
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: $(PROJECT_DIR)/../../platforms/ios/App/Resources/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.houko.metasequoiaime.ios
+        PRODUCT_NAME: MetasequoiaIME
+    dependencies:
+      - target: MetasequoiaKeyboard
+
+  MetasequoiaKeyboard:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: platforms/ios/KeyboardExtension/Sources
+      - path: platforms/ios/SharedUI
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: $(PROJECT_DIR)/../../platforms/ios/KeyboardExtension/Resources/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.houko.metasequoiaime.ios.keyboard
+        PRODUCT_NAME: MetasequoiaKeyboard
+
+schemes:
+  MetasequoiaImeIOS:
+    build:
+      targets:
+        MetasequoiaImeIOS: all
+        MetasequoiaKeyboard: all
+    run:
+      config: Debug
