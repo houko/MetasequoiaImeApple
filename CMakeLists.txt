@@ -167,7 +167,10 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         target_link_libraries(MetasequoiaPreferencesWindowTests PRIVATE MetasequoiaIme::Engine MetasequoiaSparkle ${APPKIT_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
         set_target_properties(MetasequoiaPreferencesWindowTests PROPERTIES BUILD_RPATH "${METASEQUOIA_SPARKLE_ROOT}")
         add_test(NAME preferences_window COMMAND MetasequoiaPreferencesWindowTests)
-        add_test(NAME release_package COMMAND ${Python3_EXECUTABLE} ${METASEQUOIA_MACOS_ROOT}/tests/ReleasePackageTests.py $<TARGET_BUNDLE_DIR:MetasequoiaIME>)
+        add_test(NAME release_package COMMAND ${CMAKE_COMMAND} -E env
+            "METASEQUOIA_DEVELOPMENT_BUNDLE=$<TARGET_BUNDLE_DIR:MetasequoiaIME>"
+            ${Python3_EXECUTABLE} ${METASEQUOIA_MACOS_ROOT}/tests/ReleasePackageTests.py
+            $<TARGET_BUNDLE_DIR:MetasequoiaIME>)
         set_tests_properties(release_package PROPERTIES TIMEOUT 240)
     endif()
 endif()

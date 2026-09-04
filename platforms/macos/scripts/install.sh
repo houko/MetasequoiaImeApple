@@ -12,7 +12,8 @@ if [[ "$home_directory" == / ]]; then
 fi
 
 project_root=${0:A:h:h:h:h}
-source_bundle="$project_root/build/MetasequoiaIME.app"
+source_bundle=${METASEQUOIA_DEVELOPMENT_BUNDLE:-"$project_root/build/MetasequoiaIME.app"}
+source_bundle=${source_bundle:A}
 destination_root="$home_directory/Library/Input Methods"
 destination_bundle="$destination_root/MetasequoiaIME.app"
 

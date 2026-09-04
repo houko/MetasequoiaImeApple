@@ -202,6 +202,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("recommended option when 水杉 should be available immediately", readme)
         self.assertNotIn("installs the input method system-wide", readme)
         self.assertIn("InputMethodServerPreferencesWindowControllerClass", info_plist)
+        self.assertIn("METASEQUOIA_DEVELOPMENT_BUNDLE=$<TARGET_BUNDLE_DIR:MetasequoiaIME>", cmake)
         self.assertIn("@METASEQUOIA_IME_DICTIONARY_SHA256@", info_plist)
         self.assertIn("<key>SUPublicEDKey</key>", info_plist)
         self.assertIn("rSAufajnup+T+d+I4LTs4EAhe5M8bwHemWDKao3CB/E=", info_plist)
