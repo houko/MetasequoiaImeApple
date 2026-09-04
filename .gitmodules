@@ -4,4 +4,4 @@
 	branch = feat/macos-portability
 [submodule "vendor/MetasequoiaImeDict"]
 	path = vendor/MetasequoiaImeDict
-	url = https://github.com/metasequoiaime/MetasequoiaImeDict.git
+	url = https://github.com/metasequoiaime/MSIME-Dict.git
