@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.28.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.27.0...v0.28.0) (2026-09-04)
+
+
+### Features
+
+* **ios:** add host input scheme settings ([#168](https://github.com/metasequoiaime/MSIME-Apple/issues/168)) ([78fea6e](https://github.com/metasequoiaime/MSIME-Apple/commit/78fea6e3541f7ff0207a75ab153500ab22a8d6cf))
+* **ios:** add system input click feedback ([#165](https://github.com/metasequoiaime/MSIME-Apple/issues/165)) ([aaeedf8](https://github.com/metasequoiaime/MSIME-Apple/commit/aaeedf84ad7cbd896bfb5a0453f0d8c63ed6bb41))
+* **ios:** bundle privacy manifests ([#169](https://github.com/metasequoiaime/MSIME-Apple/issues/169)) ([83c8dae](https://github.com/metasequoiaime/MSIME-Apple/commit/83c8dae6aa2a37ebfbb019a7cdbc4dbc32376745))
+* **ios:** repeat backspace while held ([#163](https://github.com/metasequoiaime/MSIME-Apple/issues/163)) ([c02a6be](https://github.com/metasequoiaime/MSIME-Apple/commit/c02a6bef369d2716266e655c4fdcffccd82f517a))
+* **ios:** share input scheme through app group ([#167](https://github.com/metasequoiaime/MSIME-Apple/issues/167)) ([8704dc5](https://github.com/metasequoiaime/MSIME-Apple/commit/8704dc57675261ac3135d3583e8d6bd6b1b3bc62))
+
+
+### Bug Fixes
+
+* **ios:** handle missing input traits ([#164](https://github.com/metasequoiaime/MSIME-Apple/issues/164)) ([fbeb07c](https://github.com/metasequoiaime/MSIME-Apple/commit/fbeb07cac6a1bc34795d967fd399585b86afa1ba))
+* **ios:** respect the system keyboard height ([#166](https://github.com/metasequoiaime/MSIME-Apple/issues/166)) ([412a956](https://github.com/metasequoiaime/MSIME-Apple/commit/412a956ea30ae5238f6808e04b450f4a46cb41ac))
+* **release:** promote validated release commits without PRs ([#170](https://github.com/metasequoiaime/MSIME-Apple/issues/170)) ([51a71ba](https://github.com/metasequoiaime/MSIME-Apple/commit/51a71ba87e1d483cb07cd307252c2d181cfe682a))
+
 ## [0.27.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.26.0...v0.27.0) (2026-09-04)
 
 
