@@ -105,11 +105,24 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("languageModeButton", controller)
         self.assertIn("toggleInputMode", controller)
         self.assertIn("render(session.handleCharacter(character))", controller)
-        self.assertIn("textDocumentProxy.insertText(character)", controller)
+        self.assertIn("textDocumentProxy.insertText(output)", controller)
         self.assertIn("if !isChineseMode {\n      textDocumentProxy.insertText(symbol)", controller)
         self.assertIn("isChineseMode ? session.commitCandidate() : session.cancel()", controller)
         self.assertIn("isChineseMode ? \"中\" : \"英\"", controller)
         self.assertIn('languageModeButton.accessibilityIdentifier = "languageModeButton"', controller)
+
+    def test_english_keyboard_supports_one_shot_shift_and_caps_lock(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("private enum LetterCaseState", controller)
+        self.assertIn("case lowercase, shifted, capsLock", controller)
+        self.assertIn("private var letterButtons: [(button: UIButton, lowercase: String)]", controller)
+        self.assertIn("private weak var shiftButton: UIButton?", controller)
+        self.assertIn("toggleLetterCase", controller)
+        self.assertIn("letterCaseState = .capsLock", controller)
+        self.assertIn("if letterCaseState == .shifted", controller)
+        self.assertIn("letterCaseState = .lowercase", controller)
+        self.assertIn('button.accessibilityIdentifier = "shiftButton"', controller)
 
     def test_project_and_ci_run_native_onboarding_ui_tests(self):
         project = (IOS_ROOT / "project.yml").read_text()
