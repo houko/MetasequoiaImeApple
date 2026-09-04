@@ -249,11 +249,25 @@ int main()
                 "The candidate page shortcut choice did not persist.");
 
         NSButton *quanpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"全拼输入");
-        NSButton *shuangpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"小鹤双拼");
-        NSButton *wubiSchemeButton = FindButtonWithTitle(controller.window.contentView, @"五笔输入（86 五笔）");
+        NSButton *shuangpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"双拼输入");
+        NSButton *wubiSchemeButton = FindButtonWithTitle(controller.window.contentView, @"五笔输入");
         NSButton *fullWidthButton = FindButtonWithTitle(controller.window.contentView, @"Option+Shift+H 切换全半角");
         require(quanpinSchemeButton != nil && shuangpinSchemeButton != nil && wubiSchemeButton != nil,
                 "The keyboard-input page did not expose every supported input scheme.");
+        NSView *shuangpinSchemeView =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"双拼方案");
+        NSView *wubiSchemeView = FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔方案");
+        require([shuangpinSchemeView isKindOfClass:[NSPopUpButton class]] &&
+                    ((NSPopUpButton *)shuangpinSchemeView).numberOfItems == 1 &&
+                    [[((NSPopUpButton *)shuangpinSchemeView) itemTitleAtIndex:0] isEqualToString:@"小鹤双拼"] &&
+                    [wubiSchemeView isKindOfClass:[NSPopUpButton class]] &&
+                    ((NSPopUpButton *)wubiSchemeView).numberOfItems == 1 &&
+                    [[((NSPopUpButton *)wubiSchemeView) itemTitleAtIndex:0] isEqualToString:@"86 五笔"],
+                "The input-scheme rows did not expose their concrete scheme choices.");
+        NSView *wubiSettingsRow =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔功能行");
+        require(wubiSettingsRow != nil && !wubiSettingsRow.hidden,
+                "The selected Wubi scheme did not reveal its settings row.");
         require(fullWidthButton != nil && fullWidthButton.state == NSControlStateValueOff,
                 "The keyboard-input page did not expose the full-width input toggle.");
         fullWidthButton.state = NSControlStateValueOn;
@@ -265,14 +279,27 @@ int main()
         [shuangpinSchemeButton performClick:nil];
         require([MetasequoiaPreferencesWindowController storedScheme] == 1,
                 "The Shuangpin scheme choice did not persist its selection.");
+        require(wubiSettingsRow.hidden,
+                "The Wubi settings row remained visible after another scheme was selected.");
         [wubiSchemeButton performClick:nil];
         require([MetasequoiaPreferencesWindowController storedScheme] == 2,
                 "The Wubi scheme choice did not persist its selection.");
+        require(!wubiSettingsRow.hidden,
+                "Selecting Wubi did not reveal the inline settings entry.");
         NSView *wubiSettingsView =
             FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔功能设置");
         require([wubiSettingsView isKindOfClass:[NSButton class]],
                 "The keyboard-input page did not expose the Wubi settings entry.");
-        [((NSButton *)wubiSettingsView) performClick:nil];
+        NSButton *wubiSettingsButton = (NSButton *)wubiSettingsView;
+        NSColor *wubiSettingsTitleColor =
+            [wubiSettingsButton.attributedTitle attribute:NSForegroundColorAttributeName
+                                                   atIndex:0
+                                            effectiveRange:nil];
+        require(!wubiSettingsButton.bordered &&
+                    [wubiSettingsButton.contentTintColor isEqual:[NSColor labelColor]] &&
+                    [wubiSettingsTitleColor isEqual:[NSColor labelColor]],
+                "The Wubi settings entry did not use the readable dynamic label color.");
+        [wubiSettingsButton performClick:nil];
         NSView *wubiPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔设置页");
         require(wubiPage != nil && !wubiPage.hidden && generalPage.hidden,
                 "The Wubi settings entry did not open its detail page.");

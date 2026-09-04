@@ -153,6 +153,61 @@ NSView *PreferenceRow(NSString *title, NSView *control)
     return row;
 }
 
+NSView *CardHeader(NSString *title)
+{
+    NSView *row = [[NSView alloc] initWithFrame:NSZeroRect];
+    NSTextField *label = [NSTextField labelWithString:title];
+    label.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightSemibold];
+    label.textColor = [NSColor labelColor];
+    label.accessibilityLabel = [title stringByAppendingString:@"标题"];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    [row addSubview:label];
+    [NSLayoutConstraint activateConstraints:@[
+        [row.heightAnchor constraintEqualToConstant:34.0],
+        [label.leadingAnchor constraintEqualToAnchor:row.leadingAnchor],
+        [label.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+    ]];
+    return row;
+}
+
+NSBox *CardSeparator()
+{
+    NSBox *separator = [[NSBox alloc] initWithFrame:NSZeroRect];
+    separator.boxType = NSBoxSeparator;
+    separator.translatesAutoresizingMaskIntoConstraints = NO;
+    [separator.heightAnchor constraintEqualToConstant:1.0].active = YES;
+    return separator;
+}
+
+NSView *SchemeChoiceRow(NSButton *choice, NSView *accessory)
+{
+    NSView *row = [[NSView alloc] initWithFrame:NSZeroRect];
+    choice.translatesAutoresizingMaskIntoConstraints = NO;
+    [row addSubview:choice];
+    NSMutableArray<NSLayoutConstraint *> *constraints = [NSMutableArray arrayWithArray:@[
+        [row.heightAnchor constraintEqualToConstant:44.0],
+        [choice.leadingAnchor constraintEqualToAnchor:row.leadingAnchor],
+        [choice.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+    ]];
+    if (accessory == nil)
+    {
+        [constraints addObject:[choice.trailingAnchor constraintLessThanOrEqualToAnchor:row.trailingAnchor]];
+    }
+    else
+    {
+        accessory.translatesAutoresizingMaskIntoConstraints = NO;
+        [row addSubview:accessory];
+        [constraints addObjectsFromArray:@[
+            [choice.trailingAnchor constraintLessThanOrEqualToAnchor:accessory.leadingAnchor constant:-12.0],
+            [accessory.trailingAnchor constraintEqualToAnchor:row.trailingAnchor],
+            [accessory.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
+            [accessory.widthAnchor constraintEqualToConstant:150.0],
+        ]];
+    }
+    [NSLayoutConstraint activateConstraints:constraints];
+    return row;
+}
+
 NSBox *CardWithViews(NSArray<NSView *> *views, CGFloat spacing)
 {
     NSBox *card = [[NSBox alloc] initWithFrame:NSZeroRect];
@@ -375,6 +430,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 @implementation MetasequoiaPreferencesWindowController
 {
     NSArray<NSButton *> *_schemeButtons;
+    NSPopUpButton *_shuangpinSchemeButton;
+    NSPopUpButton *_wubiSchemeButton;
+    NSView *_wubiSettingsRow;
     NSButton *_autocorrectButton;
     NSButton *_helpcodeButton;
     NSButton *_chinesePunctuationButton;
@@ -734,9 +792,16 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSView *pageContainer = [[NSView alloc] initWithFrame:NSZeroRect];
     pageContainer.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSArray<NSString *> *schemeTitles = @[ @"全拼输入", @"小鹤双拼", @"五笔输入（86 五笔）" ];
+    NSArray<NSString *> *schemeTitles = @[ @"全拼输入", @"双拼输入", @"五笔输入" ];
     NSMutableArray<NSButton *> *schemeButtons = [NSMutableArray arrayWithCapacity:schemeTitles.count];
-    NSMutableArray<NSView *> *schemeRows = [NSMutableArray arrayWithCapacity:schemeTitles.count];
+    NSMutableArray<NSView *> *schemeRows = [NSMutableArray arrayWithObject:CardHeader(@"输入方式")];
+    [schemeRows addObject:CardSeparator()];
+    _shuangpinSchemeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_shuangpinSchemeButton addItemWithTitle:@"小鹤双拼"];
+    _shuangpinSchemeButton.accessibilityLabel = @"双拼方案";
+    _wubiSchemeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_wubiSchemeButton addItemWithTitle:@"86 五笔"];
+    _wubiSchemeButton.accessibilityLabel = @"五笔方案";
     for (NSInteger index = 0; index < static_cast<NSInteger>(schemeTitles.count); ++index)
     {
         NSButton *button = [NSButton radioButtonWithTitle:schemeTitles[index]
@@ -745,18 +810,32 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         button.tag = index;
         button.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
         button.accessibilityLabel = schemeTitles[index];
-        button.translatesAutoresizingMaskIntoConstraints = NO;
-        [button.heightAnchor constraintEqualToConstant:34.0].active = YES;
         [schemeButtons addObject:button];
-        [schemeRows addObject:button];
+        NSView *accessory = index == 1 ? _shuangpinSchemeButton : (index == 2 ? _wubiSchemeButton : nil);
+        [schemeRows addObject:SchemeChoiceRow(button, accessory)];
+        [schemeRows addObject:CardSeparator()];
     }
     _schemeButtons = [schemeButtons copy];
-    NSButton *wubiSettingsButton = [NSButton buttonWithTitle:@"设置…"
+    NSButton *wubiSettingsButton = [NSButton buttonWithTitle:@"设置"
                                                       target:self
                                                       action:@selector(showWubiSettings:)];
-    wubiSettingsButton.bezelStyle = NSBezelStyleInline;
+    wubiSettingsButton.bordered = NO;
+    wubiSettingsButton.alignment = NSTextAlignmentRight;
+    wubiSettingsButton.image = [NSImage imageWithSystemSymbolName:@"chevron.right"
+                                         accessibilityDescription:nil];
+    wubiSettingsButton.imagePosition = NSImageTrailing;
+    wubiSettingsButton.contentTintColor = [NSColor labelColor];
+    wubiSettingsButton.attributedTitle =
+        [[NSAttributedString alloc] initWithString:wubiSettingsButton.title
+                                        attributes:@{
+                                            NSFontAttributeName :
+                                                [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium],
+                                            NSForegroundColorAttributeName : [NSColor labelColor],
+                                        }];
     wubiSettingsButton.accessibilityLabel = @"五笔功能设置";
-    [schemeRows addObject:PreferenceRow(@"五笔功能", wubiSettingsButton)];
+    _wubiSettingsRow = PreferenceRow(@"五笔功能", wubiSettingsButton);
+    _wubiSettingsRow.accessibilityLabel = @"五笔功能行";
+    [schemeRows addObject:_wubiSettingsRow];
 
     _autocorrectButton = [NSButton checkboxWithTitle:@"启用全拼自动纠错"
                                               target:self
@@ -779,7 +858,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     _candidatePageShortcutButton.action = @selector(candidatePageShortcutChanged:);
     _candidatePageShortcutButton.accessibilityLabel = @"候选翻页快捷键";
 
-    NSBox *schemeCard = CardWithViews(schemeRows, 2.0);
+    NSBox *schemeCard = CardWithViews(schemeRows, 0.0);
     NSBox *behaviorCard =
         CardWithViews(@[ _autocorrectButton, _chinesePunctuationButton, _inputModeShortcutButton,
                          _fullWidthInputButton ], 9.0);
@@ -790,7 +869,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSView *generalPage =
         PreferencesPage(@"键盘输入", @"选择全拼、双拼或 86 五笔，并调整日常输入行为。",
                         @[
-                            SectionLabel(@"输入方式"), schemeCard, SectionLabel(@"中英文状态切换"), behaviorCard,
+                            schemeCard, SectionLabel(@"中英文状态切换"), behaviorCard,
                             SectionLabel(@"候选翻页快捷键"), shortcutCard
                         ]);
     generalPage.accessibilityLabel = @"键盘输入设置页";
@@ -1095,6 +1174,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     {
         _schemeButtons[index].state = index == storedScheme ? NSControlStateValueOn : NSControlStateValueOff;
     }
+    _shuangpinSchemeButton.enabled = storedScheme == 1;
+    _wubiSchemeButton.enabled = storedScheme == 2;
+    _wubiSettingsRow.hidden = storedScheme != 2;
     _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
@@ -1205,6 +1287,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     NSButton *schemeButton = (NSButton *)sender;
     [MetasequoiaPreferencesWindowController setStoredScheme:schemeButton.tag];
+    [self refreshControls];
 }
 
 - (void)candidatePanelStyleChanged:(id)sender
