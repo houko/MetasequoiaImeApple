@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.35.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.34.0...v0.35.0) (2026-09-04)
+
+
+### Features
+
+* **mac:** surface Wubi settings in scheme card ([#202](https://github.com/metasequoiaime/MSIME-Apple/issues/202)) ([43bee29](https://github.com/metasequoiaime/MSIME-Apple/commit/43bee2947564fe45bd5f4331f3032c9777f4b0fd))
+
 ## [0.34.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.33.1...v0.34.0) (2026-09-04)
 
 
