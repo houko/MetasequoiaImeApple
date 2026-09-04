@@ -277,6 +277,9 @@ class ReleasePackageTests(unittest.TestCase):
                 command = fake_bin / command_name
                 command.write_text(f"#!/bin/sh\nexit {exit_status}\n")
                 command.chmod(0o755)
+            fake_registrar = fake_bin / "register-input-source"
+            fake_registrar.write_text("#!/bin/sh\nexit 0\n")
+            fake_registrar.chmod(0o755)
 
             fake_ditto = fake_bin / "ditto"
             fake_ditto.write_text(
@@ -316,6 +319,7 @@ class ReleasePackageTests(unittest.TestCase):
                             "FAKE_DITTO_STARTED": str(started),
                             "FAKE_DITTO_RELEASE": str(release),
                             "FAKE_DITTO_OVERLAP": str(overlap),
+                            "METASEQUOIA_REGISTER_INPUT_SOURCE_COMMAND": str(fake_registrar),
                         }
                     )
 
@@ -522,9 +526,13 @@ class ReleasePackageTests(unittest.TestCase):
             fake_pgrep = fake_bin / "pgrep"
             fake_pgrep.write_text("#!/bin/sh\nexit 1\n")
             fake_pgrep.chmod(0o755)
+            fake_registrar = fake_bin / "register-input-source"
+            fake_registrar.write_text("#!/bin/sh\nexit 0\n")
+            fake_registrar.chmod(0o755)
             install_home = (temporary / "signed-install-home").resolve()
             install_environment = environment.copy()
             install_environment["HOME"] = str(install_home)
+            install_environment["METASEQUOIA_REGISTER_INPUT_SOURCE_COMMAND"] = str(fake_registrar)
             install_result = subprocess.run(
                 ["zsh", package_root / "Install.command"],
                 capture_output=True,
@@ -646,6 +654,8 @@ class ReleasePackageTests(unittest.TestCase):
                 uninstall_command = release_zip.read(f"{package_root}Uninstall.command").decode()
                 self.assertIn("spctl --assess --type execute", install_command)
                 self.assertIn("Type I UNDERSTAND", install_command)
+                self.assertIn("Contents/MacOS/MetasequoiaIME", install_command)
+                self.assertIn("--register-input-source", install_command)
                 self.assertNotIn("xattr", install_command)
                 self.assertIn("Type REMOVE METASEQUOIAIME", uninstall_command)
                 self.assertIn("--remove-user-data", uninstall_command)
@@ -661,10 +671,20 @@ class ReleasePackageTests(unittest.TestCase):
                 fake_pgrep = fake_bin / "pgrep"
                 fake_pgrep.write_text("#!/bin/sh\nexit 1\n")
                 fake_pgrep.chmod(0o755)
+                registration_log = Path(temporary_directory) / "registration.log"
+                fake_registrar = fake_bin / "register-input-source"
+                fake_registrar.write_text(
+                    "#!/bin/sh\n"
+                    "printf '%s\\n' \"$*\" >> \"$FAKE_REGISTRATION_LOG\"\n"
+                    "exit \"${FAKE_REGISTRATION_STATUS:-0}\"\n"
+                )
+                fake_registrar.chmod(0o755)
                 test_home = (Path(temporary_directory) / "home").resolve()
                 install_environment = os.environ.copy()
                 install_environment["HOME"] = str(test_home)
                 install_environment["PATH"] = f"{fake_bin}:{install_environment['PATH']}"
+                install_environment["FAKE_REGISTRATION_LOG"] = str(registration_log)
+                install_environment["METASEQUOIA_REGISTER_INPUT_SOURCE_COMMAND"] = str(fake_registrar)
                 rejected_install = subprocess.run(
                     ["zsh", extracted / package_root / "Install.command"],
                     input="no\n",
@@ -687,6 +707,7 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertTrue(
                     (test_home / "Library/Input Methods/MetasequoiaIME.app/Contents/Info.plist").is_file()
                 )
+                self.assertIn("--register-input-source", registration_log.read_text())
                 packaged_uninstall = subprocess.run(
                     ["zsh", extracted / package_root / "Uninstall.command"],
                     input="REMOVE METASEQUOIAIME\n",
@@ -697,6 +718,35 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertEqual(packaged_uninstall.returncode, 0, packaged_uninstall.stderr)
                 self.assertFalse((test_home / "Library/Input Methods/MetasequoiaIME.app").exists())
                 self.assertEqual(len(list((test_home / ".Trash").glob("MetasequoiaIME-uninstall.*"))), 1)
+
+                registration_failure_home = (Path(temporary_directory) / "registration-failure-home").resolve()
+                registration_failure_destination = (
+                    registration_failure_home / "Library/Input Methods/MetasequoiaIME.app"
+                )
+                registration_failure_marker = (
+                    registration_failure_destination / "Contents/previous-installation.txt"
+                )
+                registration_failure_marker.parent.mkdir(parents=True)
+                registration_failure_marker.write_text("previous installation\n")
+                registration_failure_environment = install_environment.copy()
+                registration_failure_environment["HOME"] = str(registration_failure_home)
+                registration_failure_environment["FAKE_REGISTRATION_STATUS"] = "54"
+                failed_registration = subprocess.run(
+                    ["zsh", extracted / package_root / "Install.command"],
+                    input="I UNDERSTAND\n",
+                    capture_output=True,
+                    text=True,
+                    env=registration_failure_environment,
+                )
+                self.assertNotEqual(failed_registration.returncode, 0)
+                self.assertEqual(registration_failure_marker.read_text(), "previous installation\n")
+                self.assertFalse(
+                    any(registration_failure_destination.parent.glob(".MetasequoiaIME.installing.*"))
+                )
+                self.assertFalse(
+                    any(registration_failure_destination.parent.glob(".MetasequoiaIME.backup.*"))
+                )
+                self.assertIn("registration failed", failed_registration.stderr)
 
                 fake_codesign = fake_bin / "codesign"
                 fake_codesign.write_text(

@@ -16,6 +16,7 @@ source_bundle="$package_root/MetasequoiaIME.app"
 unsigned_marker="$package_root/UNSIGNED_BUILD.txt"
 destination_root="$home_directory/Library/Input Methods"
 destination_bundle="$destination_root/MetasequoiaIME.app"
+registration_command=${METASEQUOIA_REGISTER_INPUT_SOURCE_COMMAND:-"$destination_bundle/Contents/MacOS/MetasequoiaIME"}
 
 if [[ ! -d "$source_bundle" ]]; then
     print -u2 "MetasequoiaIME.app is missing from the release package."
@@ -149,9 +150,13 @@ if ! verify_bundle "$destination_bundle"; then
     print -u2 "Installed release bundle verification failed; restoring the previous installation."
     exit 1
 fi
+if ! "$registration_command" --register-input-source; then
+    print -u2 "Input source registration failed; restoring the previous installation."
+    exit 1
+fi
 install_complete=true
 print "Installed $destination_bundle"
 if [[ "$unsigned_release" == true ]]; then
     print "If macOS blocks the input method, approve it in System Settings > Privacy & Security before enabling it."
 fi
-print "Log out and back in, then enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit."
+print "Registered 水杉输入法 with macOS. Enable it in System Settings > Keyboard > Text Input > Edit."
