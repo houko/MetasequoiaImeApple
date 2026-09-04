@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.30.0...v0.30.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **mac:** support non-default package build dirs ([#178](https://github.com/metasequoiaime/MSIME-Apple/issues/178)) ([d4326be](https://github.com/metasequoiaime/MSIME-Apple/commit/d4326bee07e2110ca445fd833f7c22576f89efdf))
+
 ## [0.30.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.29.0...v0.30.0) (2026-09-04)
 
 
