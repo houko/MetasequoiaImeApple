@@ -71,11 +71,13 @@ if ! /usr/bin/lockf -s -t 0 "$operation_lock_fd"; then
     exit 1
 fi
 
-pkill -TERM -x -u "$EUID" MetasequoiaIME 2>/dev/null || true
+process_pattern=$(printf '%s' "$installed_bundle/Contents/MacOS/MetasequoiaIME" | sed 's/[.[\\*^$()+?{|]/\\&/g')
+process_pattern="^${process_pattern}( |$)"
+pkill -TERM -u "$EUID" -f "$process_pattern" 2>/dev/null || true
 process_stopped=false
 for attempt in {1..50}; do
     process_status=0
-    pgrep -x -u "$EUID" MetasequoiaIME >/dev/null 2>&1 || process_status=$?
+    pgrep -u "$EUID" -f "$process_pattern" >/dev/null 2>&1 || process_status=$?
     if (( process_status == 1 )); then
         process_stopped=true
         break

@@ -231,7 +231,8 @@ exec /bin/mv "$@"
             self.assertFalse((home / ".Trash").exists())
             self.assertIn("did not stop in time", result.stderr)
             pkill_arguments = (home.parent / "pkill.log").read_text()
-            self.assertIn(f"-u {os.geteuid()}", pkill_arguments)
+            self.assertIn(f"-u {os.geteuid()} -f ^", pkill_arguments)
+            self.assertIn("/Contents/MacOS/MetasequoiaIME( |$)", pkill_arguments)
 
     def test_process_inspection_error_changes_no_files(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -250,6 +251,21 @@ exec /bin/mv "$@"
             self.assertEqual(preferences.read_text(), "preferences\n")
             self.assertFalse((home / ".Trash").exists())
             self.assertIn("Could not verify whether MetasequoiaIME stopped", result.stderr)
+
+    def test_process_shutdown_is_scoped_to_installed_bundle(self):
+        script = (MACOS_ROOT / "scripts/uninstall.sh").read_text()
+        self.assertIn(
+            'pkill -TERM -u "$EUID" -f "$process_pattern"',
+            script,
+        )
+        self.assertIn(
+            'pgrep -u "$EUID" -f "$process_pattern"',
+            script,
+        )
+        self.assertNotIn(
+            'pkill -TERM -x -u "$EUID" MetasequoiaIME',
+            script,
+        )
 
     def test_concurrent_installation_lock_leaves_everything_untouched(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
