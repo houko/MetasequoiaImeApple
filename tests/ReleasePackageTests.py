@@ -52,7 +52,11 @@ class ReleasePackageTests(unittest.TestCase):
             shutil.copy2(PROJECT_ROOT / "scripts/install-release.sh", release_installer)
             (release_root / "MetasequoiaIME.app").mkdir()
 
-            for installer in (PROJECT_ROOT / "scripts/install.sh", release_installer):
+            for installer in (
+                PROJECT_ROOT / "scripts/install.sh",
+                release_installer,
+                PROJECT_ROOT / "scripts/open-settings.sh",
+            ):
                 for unsafe_home in (
                     "",
                     "/",
@@ -457,6 +461,9 @@ class ReleasePackageTests(unittest.TestCase):
                     "METASEQUOIA_RELEASE_UNINSTALL_SCRIPT": str(
                         PROJECT_ROOT / "scripts/uninstall.sh"
                     ),
+                    "METASEQUOIA_RELEASE_SETTINGS_SCRIPT": str(
+                        PROJECT_ROOT / "scripts/open-settings.sh"
+                    ),
                     "METASEQUOIA_INSTALLER_DISTRIBUTION": str(
                         PROJECT_ROOT / "resources/InstallerDistribution.xml.in"
                     ),
@@ -510,6 +517,11 @@ class ReleasePackageTests(unittest.TestCase):
             )
             install_command = (package_root / "Install.command").read_text()
             self.assertIn("spctl --assess --type execute", install_command)
+            settings_command = package_root / "Open Settings.command"
+            self.assertFalse(
+                settings_command.exists(),
+                "A standalone-settings launcher was injected into a legacy bundle without the capability marker.",
+            )
 
             expanded_package = temporary / "signed-expanded-package"
             subprocess.run(["pkgutil", "--expand-full", installer_package, expanded_package], check=True)
@@ -629,6 +641,9 @@ class ReleasePackageTests(unittest.TestCase):
             environment["METASEQUOIA_RELEASE_INSTALL_SCRIPT"] = str(
                 PROJECT_ROOT / "scripts/install-release.sh"
             )
+            environment["METASEQUOIA_RELEASE_SETTINGS_SCRIPT"] = str(
+                PROJECT_ROOT / "scripts/open-settings.sh"
+            )
             subprocess.run(
                 [trusted_packager, f"v{version}", bundle, output],
                 check=True,
@@ -650,6 +665,7 @@ class ReleasePackageTests(unittest.TestCase):
                 package_root = f"MetasequoiaIME-v{version}/"
                 self.assertIn(f"{package_root}MetasequoiaIME.app/Contents/Info.plist", names)
                 self.assertIn(f"{package_root}Install.command", names)
+                self.assertIn(f"{package_root}Open Settings.command", names)
                 self.assertIn(f"{package_root}Uninstall.command", names)
                 self.assertIn(f"{package_root}UNSIGNED_BUILD.txt", names)
                 self.assertIn(f"{package_root}LICENSE", names)
@@ -662,12 +678,15 @@ class ReleasePackageTests(unittest.TestCase):
                 )
                 self.assertFalse(any(name.endswith("register_input_source.swift") for name in names))
                 install_command = release_zip.read(f"{package_root}Install.command").decode()
+                settings_command = release_zip.read(f"{package_root}Open Settings.command").decode()
                 uninstall_command = release_zip.read(f"{package_root}Uninstall.command").decode()
                 self.assertIn("spctl --assess --type execute", install_command)
                 self.assertIn("Type I UNDERSTAND", install_command)
                 self.assertIn("Contents/MacOS/MetasequoiaIME", install_command)
                 self.assertIn("--register-input-source", install_command)
                 self.assertNotIn("xattr", install_command)
+                self.assertIn("--show-settings", settings_command)
+                self.assertIn("Library/Input Methods/MetasequoiaIME.app", settings_command)
                 self.assertIn("Type REMOVE METASEQUOIAIME", uninstall_command)
                 self.assertIn("--remove-user-data", uninstall_command)
                 self.assertNotIn("rm -rf", uninstall_command)
@@ -690,6 +709,40 @@ class ReleasePackageTests(unittest.TestCase):
                     "exit \"${FAKE_REGISTRATION_STATUS:-0}\"\n"
                 )
                 fake_registrar.chmod(0o755)
+
+                missing_settings_home = (Path(temporary_directory) / "missing-settings-home").resolve()
+                missing_settings_environment = os.environ.copy()
+                missing_settings_environment["HOME"] = str(missing_settings_home)
+                missing_settings = subprocess.run(
+                    ["zsh", extracted / package_root / "Open Settings.command"],
+                    capture_output=True,
+                    text=True,
+                    env=missing_settings_environment,
+                )
+                self.assertNotEqual(missing_settings.returncode, 0)
+                self.assertIn("is not installed", missing_settings.stderr)
+
+                settings_home = (Path(temporary_directory) / "settings-home").resolve()
+                settings_executable = settings_home / "Library/Input Methods/MetasequoiaIME.app/Contents/MacOS/MetasequoiaIME"
+                settings_executable.parent.mkdir(parents=True)
+                settings_log = Path(temporary_directory) / "settings.log"
+                settings_executable.write_text(
+                    "#!/bin/sh\n"
+                    "printf '%s\\n' \"$*\" > \"$SETTINGS_LAUNCH_LOG\"\n"
+                )
+                settings_executable.chmod(0o755)
+                settings_environment = os.environ.copy()
+                settings_environment["HOME"] = str(settings_home)
+                settings_environment["SETTINGS_LAUNCH_LOG"] = str(settings_log)
+                opened_settings = subprocess.run(
+                    ["zsh", extracted / package_root / "Open Settings.command"],
+                    capture_output=True,
+                    text=True,
+                    env=settings_environment,
+                )
+                self.assertEqual(opened_settings.returncode, 0, opened_settings.stderr)
+                self.assertEqual(settings_log.read_text(), "--show-settings\n")
+
                 test_home = (Path(temporary_directory) / "home").resolve()
                 install_environment = os.environ.copy()
                 install_environment["HOME"] = str(test_home)

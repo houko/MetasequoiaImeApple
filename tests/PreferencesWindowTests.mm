@@ -18,6 +18,21 @@ void require(bool condition, const char *message)
     }
 }
 
+bool WaitUntil(BOOL (^condition)(void))
+{
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:1.0];
+    while (!condition())
+    {
+        if ([deadline timeIntervalSinceNow] <= 0.0)
+        {
+            return false;
+        }
+        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode
+                                 beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+    }
+    return true;
+}
+
 NSView *FindViewWithAccessibilityLabel(NSView *view, NSString *label)
 {
     if ([view.accessibilityLabel isEqualToString:label])
@@ -58,6 +73,15 @@ int main()
     @autoreleasepool
     {
         [NSApplication sharedApplication];
+        const char *showSettingsArguments[] = {"MetasequoiaIME", "--show-settings"};
+        const char *extraSettingsArguments[] = {"MetasequoiaIME", "--show-settings", "unexpected"};
+        const char *serverArguments[] = {"MetasequoiaIME"};
+        require(MetasequoiaShouldShowPreferences(2, showSettingsArguments),
+                "The standalone settings argument was not recognized.");
+        require(!MetasequoiaShouldShowPreferences(3, extraSettingsArguments),
+                "Standalone settings accepted unexpected arguments.");
+        require(!MetasequoiaShouldShowPreferences(1, serverArguments),
+                "A normal input-method launch was treated as standalone settings.");
         [MetasequoiaPreferencesWindowController setCandidatePanelStyle:1];
         [MetasequoiaPreferencesWindowController setCandidatePageSize:5];
         [MetasequoiaPreferencesWindowController setCandidateFontSize:16];
@@ -265,6 +289,33 @@ int main()
         [MetasequoiaPreferencesWindowController setEnglishInputMode:NO];
         require(![MetasequoiaPreferencesWindowController storedEnglishInputMode],
                 "The Chinese input-mode state was not stored.");
+
+        __block bool standaloneCloseObserved = false;
+        id standaloneCloseObserver = [[NSNotificationCenter defaultCenter]
+            addObserverForName:MetasequoiaStandalonePreferencesDidCloseNotification
+                        object:nil
+                         queue:nil
+                    usingBlock:^(NSNotification *notification) {
+                        (void)notification;
+                        standaloneCloseObserved = true;
+                    }];
+        MetasequoiaPreferencesWindowController *standaloneController =
+            [[MetasequoiaPreferencesWindowController alloc] init];
+        [standaloneController showAndActivateForStandaloneLaunch];
+        NSView *standaloneResetView = FindViewWithAccessibilityLabel(standaloneController.window.contentView,
+                                                                     @"清除学习数据");
+        require([standaloneResetView isKindOfClass:[NSButton class]] &&
+                    !((NSButton *)standaloneResetView).enabled &&
+                    [((NSButton *)standaloneResetView).accessibilityHelp containsString:@"输入菜单"],
+                "Standalone settings allowed an unsafe learned-data reset.");
+        NSButton *standaloneCloseButton = FindButtonWithTitle(standaloneController.window.contentView, @"关闭");
+        require(standaloneCloseButton != nil, "The standalone settings window did not expose its close action.");
+        [standaloneCloseButton performClick:nil];
+        require(WaitUntil(^BOOL {
+                    return standaloneCloseObserved && !standaloneController.window.visible;
+                }),
+                "Closing standalone settings did not finish or request application termination.");
+        [[NSNotificationCenter defaultCenter] removeObserver:standaloneCloseObserver];
     }
     return 0;
 }

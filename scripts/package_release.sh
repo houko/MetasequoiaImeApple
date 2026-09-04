@@ -7,6 +7,10 @@ install_script=${METASEQUOIA_RELEASE_INSTALL_SCRIPT:-$project_root/scripts/insta
 install_script=${install_script:A}
 uninstall_script=${METASEQUOIA_RELEASE_UNINSTALL_SCRIPT:-$project_root/scripts/uninstall.sh}
 uninstall_script=${uninstall_script:A}
+settings_script=${METASEQUOIA_RELEASE_SETTINGS_SCRIPT:-$project_root/scripts/open-settings.sh}
+settings_script=${settings_script:A}
+settings_capability_marker="$project_root/scripts/open-settings.sh"
+include_settings_launcher=false
 installer_distribution=${METASEQUOIA_INSTALLER_DISTRIBUTION:-$project_root/resources/InstallerDistribution.xml.in}
 installer_distribution=${installer_distribution:A}
 tag_name=${1:-}
@@ -63,6 +67,13 @@ fi
 if [[ ! -f "$uninstall_script" ]]; then
     print -u2 "Release uninstall script not found at $uninstall_script"
     exit 1
+fi
+if [[ -f "$settings_capability_marker" ]]; then
+    include_settings_launcher=true
+    if [[ ! -f "$settings_script" ]]; then
+        print -u2 "Settings launcher script not found at $settings_script"
+        exit 1
+    fi
 fi
 if [[ ! -f "$installer_distribution" ]]; then
     print -u2 "Installer distribution template not found at $installer_distribution"
@@ -144,6 +155,10 @@ else
 fi
 codesign --verify --deep --strict --verbose=2 "$packaged_bundle"
 ditto "$install_script" "$package_root/Install.command"
+if [[ "$include_settings_launcher" == true ]]; then
+    ditto "$settings_script" "$package_root/Open Settings.command"
+    chmod +x "$package_root/Open Settings.command"
+fi
 ditto "$uninstall_script" "$package_root/Uninstall.command"
 ditto "$project_root/LICENSE" "$package_root/LICENSE"
 ditto "$project_root/THIRD_PARTY_NOTICES.txt" "$package_root/THIRD_PARTY_NOTICES.txt"
