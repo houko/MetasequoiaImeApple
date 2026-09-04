@@ -135,6 +135,13 @@ int main()
         require([resetLearningView isKindOfClass:[NSButton class]],
                 "The settings window did not expose the learned-data reset button.");
         NSButton *resetLearningButton = (NSButton *)resetLearningView;
+        NSView *updateView = FindViewWithAccessibilityLabel(controller.window.contentView, @"软件更新");
+        require([updateView isKindOfClass:[NSButton class]],
+                "The settings window did not expose the software-update control.");
+        require([((NSButton *)updateView).title containsString:@"检查更新"],
+                "The software-update control did not show the installed-version state.");
+        require([((NSButton *)updateView).accessibilityHelp containsString:@"检查 GitHub"],
+                "The software-update control did not expose its current state to assistive technology.");
 
         __block bool resetStartedAfterCancel = false;
         id cancelObserver = [[NSNotificationCenter defaultCenter]

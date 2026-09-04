@@ -222,6 +222,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("~/Library/Application Support/metasequoiaime/", privacy)
         self.assertIn("does not send typed text", privacy)
         self.assertIn("does not sell or share personal data", privacy)
+        self.assertIn("GitHub's public Releases API", privacy)
+        self.assertIn("IP address and standard network request metadata", privacy)
         self.assertIn(
             "If learning is disabled while a composition is active, that composition keeps the setting it started "
             "with; after it is committed or cancelled, newly started compositions do not update word frequencies.",
