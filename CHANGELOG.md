@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.33.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.33.0...v0.33.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **mac:** scope installer process shutdown ([3891752](https://github.com/metasequoiaime/MSIME-Apple/commit/389175231240121b6dfa7ac30b3747f8e81390a3))
+* **mac:** scope uninstaller process shutdown ([5297ab7](https://github.com/metasequoiaime/MSIME-Apple/commit/5297ab73825bd51392763e7323fe79afbbf59d29))
+
 ## [0.33.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.32.0...v0.33.0) (2026-09-04)
 
 
