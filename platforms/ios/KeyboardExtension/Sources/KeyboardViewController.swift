@@ -1,7 +1,7 @@
 import UIKit
 
 @MainActor
-final class KeyboardViewController: UIInputViewController {
+final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedback {
   private enum LetterCaseState {
     case lowercase, shifted, capsLock
   }
@@ -27,6 +27,8 @@ final class KeyboardViewController: UIInputViewController {
   private var isAutomaticShift = false
   private var lastShiftTapTime: TimeInterval?
   private let schemePreferenceKey = "inputSchemeUsesShuangpin"
+
+  var enableInputClicksWhenVisible: Bool { true }
 
   private let letterRows = [
     Array("qwertyuiop"),
@@ -259,6 +261,7 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func handleCharacter(_ character: String) {
+    playInputClick()
     if isChineseMode {
       render(session.handleCharacter(character))
     } else {
@@ -273,6 +276,7 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func handleSymbol(_ symbol: String) {
+    playInputClick()
     if !isChineseMode {
       textDocumentProxy.insertText(symbol)
       return
@@ -306,6 +310,7 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func toggleInputMode() {
+    playInputClick()
     let snapshot = isChineseMode ? session.commitCandidate() : session.cancel()
     isChineseMode.toggle()
     letterCaseState = .lowercase
@@ -319,6 +324,7 @@ final class KeyboardViewController: UIInputViewController {
   private func toggleLetterCase() {
     guard !isChineseMode else { return }
 
+    playInputClick()
     isAutomaticShift = false
     let now = ProcessInfo.processInfo.systemUptime
     if letterCaseState == .shifted,
@@ -452,6 +458,7 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func toggleScheme() {
+    playInputClick()
     usesShuangpin.toggle()
     let snapshot = session.switch(toShuangpin: usesShuangpin)
     UserDefaults.standard.set(usesShuangpin, forKey: schemePreferenceKey)
@@ -475,6 +482,7 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func toggleLayout() {
+    playInputClick()
     showsSymbols.toggle()
     letterRowViews.forEach { $0.isHidden = showsSymbols }
     symbolRowViews.forEach { $0.isHidden = !showsSymbols }
@@ -487,6 +495,7 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func handleBackspace() {
+    playInputClick()
     let snapshot = session.handleBackspace()
     if !snapshot.isHandled {
       textDocumentProxy.deleteBackward()
@@ -529,6 +538,7 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func handleSpace() {
+    playInputClick()
     let snapshot = session.commitCandidate()
     if !snapshot.isHandled {
       textDocumentProxy.insertText(" ")
@@ -537,6 +547,7 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func handleReturn() {
+    playInputClick()
     render(session.commitCandidate())
     textDocumentProxy.insertText("\n")
   }
@@ -585,6 +596,7 @@ final class KeyboardViewController: UIInputViewController {
       configuration: configuration,
       primaryAction: UIAction { [weak self] _ in
         guard let self else { return }
+        self.playInputClick()
         self.render(self.session.selectCandidate(at: UInt(number - 1)))
       })
     button.accessibilityLabel = "候选词 \(number)：\(candidate)"
@@ -631,5 +643,9 @@ final class KeyboardViewController: UIInputViewController {
     let button = UIButton(configuration: configuration, primaryAction: UIAction { _ in action() })
     button.accessibilityLabel = accessibilityLabel
     return button
+  }
+
+  private func playInputClick() {
+    UIDevice.current.playInputClick()
   }
 }
