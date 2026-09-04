@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.30.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.29.0...v0.30.0) (2026-09-04)
+
+
+### Features
+
+* **mac:** add candidate paging shortcuts ([#177](https://github.com/metasequoiaime/MSIME-Apple/issues/177)) ([586f503](https://github.com/metasequoiaime/MSIME-Apple/commit/586f50344ec1b04b6a5e309c8c60f3a7b522634a))
+
 ## [0.29.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.28.0...v0.29.0) (2026-09-04)
 
 
