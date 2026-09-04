@@ -275,6 +275,20 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
             ![MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]];
         return YES;
     }
+    if ([MetasequoiaPreferencesWindowController storedFullWidthInputEnabled] && event.characters.length == 1 &&
+        metasequoia::mac::IsFullWidthDirectCharacter([event.characters characterAtIndex:0], inputModeModifiers))
+    {
+        const unichar character = [event.characters characterAtIndex:0];
+        if (metasequoia::mac::IsFullWidthConvertibleCharacter(character) &&
+            ((character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z')) &&
+            (_session == nullptr || !_session->has_composition()))
+        {
+            const unichar fullWidthCharacter = metasequoia::mac::FullWidthCharacter(character);
+            NSString *converted = [NSString stringWithCharacters:&fullWidthCharacter length:1];
+            [sender insertText:converted replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
+            return YES;
+        }
+    }
     if (![self prepareSessionIfNeeded])
     {
         return NO;

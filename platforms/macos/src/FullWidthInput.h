@@ -18,6 +18,13 @@ inline bool IsFullWidthConvertibleCharacter(unichar character)
     return character == ' ' || (character >= '!' && character <= '~');
 }
 
+inline bool IsFullWidthDirectCharacter(unichar character, NSEventModifierFlags modifiers)
+{
+    const NSEventModifierFlags competingModifiers =
+        modifiers & (NSEventModifierFlagCommand | NSEventModifierFlagControl | NSEventModifierFlagOption);
+    return competingModifiers == 0 && IsFullWidthConvertibleCharacter(character);
+}
+
 inline unichar FullWidthCharacter(unichar character)
 {
     return character == ' ' ? 0x3000 : static_cast<unichar>(character + 0xFEE0);
