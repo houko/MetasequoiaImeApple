@@ -195,11 +195,11 @@ int main()
         NSColor *generalTitleColor = [generalNavigationButton.attributedTitle attribute:NSForegroundColorAttributeName
                                                                                 atIndex:0
                                                                          effectiveRange:nil];
-        require([generalTitleColor isEqual:[NSColor whiteColor]],
-                "The settings sidebar did not render navigation titles in white.");
-        require([generalNavigationButton.contentTintColor isEqual:[NSColor whiteColor]] &&
+        require([generalTitleColor isEqual:[NSColor labelColor]],
+                "The settings sidebar did not render navigation titles with the readable label color.");
+        require([generalNavigationButton.contentTintColor isEqual:[NSColor labelColor]] &&
                     ![generalNavigationButton.image isTemplate],
-                "The settings sidebar did not render navigation symbols in white.");
+                "The settings sidebar did not render navigation symbols with a readable tint.");
         require(generalNavigationButton.state == NSControlStateValueOn &&
                     appearanceNavigationButton.state == NSControlStateValueOff &&
                     dataNavigationButton.state == NSControlStateValueOff &&
@@ -300,8 +300,8 @@ int main()
         NSColor *websiteTitleColor = [websiteButton.attributedTitle attribute:NSForegroundColorAttributeName
                                                                       atIndex:0
                                                                effectiveRange:nil];
-        require([websiteTitleColor isEqual:[NSColor whiteColor]],
-                "The canonical website link was unreadable against the sidebar.");
+        require([websiteTitleColor isEqual:[NSColor labelColor]],
+                "The canonical website link did not use the readable sidebar label color.");
 
         [controller.window.contentView layoutSubtreeIfNeeded];
         NSView *schemeCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"输入方式卡片");

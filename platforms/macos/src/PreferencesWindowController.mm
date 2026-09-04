@@ -22,8 +22,8 @@ bool MetasequoiaShouldShowPreferences(int argc, const char *argv[])
 
 namespace
 {
-constexpr CGFloat kWindowWidth = 720.0;
-constexpr CGFloat kWindowHeight = 560.0;
+constexpr CGFloat kWindowWidth = 980.0;
+constexpr CGFloat kWindowHeight = 720.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
@@ -47,6 +47,41 @@ NSColor *MetasequoiaBrandColor()
             return [NSColor colorWithSRGBRed:0.08 green:0.38 blue:0.35 alpha:1.0];
         }
         return [NSColor colorWithSRGBRed:0.07 green:0.49 blue:0.45 alpha:1.0];
+    }];
+}
+
+NSColor *MetasequoiaSidebarColor()
+{
+    return [NSColor colorWithName:@"MetasequoiaSidebarColor" dynamicProvider:^NSColor *(NSAppearance *appearance) {
+        NSString *match = [appearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
+        if ([match isEqualToString:NSAppearanceNameDarkAqua])
+        {
+            return [NSColor colorWithSRGBRed:0.12 green:0.18 blue:0.20 alpha:1.0];
+        }
+        return [NSColor colorWithSRGBRed:0.88 green:0.92 blue:0.95 alpha:1.0];
+    }];
+}
+
+NSColor *MetasequoiaSidebarPrimaryTextColor()
+{
+    return [NSColor labelColor];
+}
+
+NSColor *MetasequoiaSidebarSecondaryTextColor()
+{
+    return [NSColor secondaryLabelColor];
+}
+
+NSColor *MetasequoiaSidebarSelectionColor()
+{
+    return [NSColor colorWithName:@"MetasequoiaSidebarSelectionColor"
+                  dynamicProvider:^NSColor *(NSAppearance *appearance) {
+        NSString *match = [appearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
+        if ([match isEqualToString:NSAppearanceNameDarkAqua])
+        {
+            return [[NSColor whiteColor] colorWithAlphaComponent:0.16];
+        }
+        return [[NSColor whiteColor] colorWithAlphaComponent:0.92];
     }];
 }
 
@@ -84,8 +119,8 @@ void ConfigureCard(NSBox *card)
     card.titlePosition = NSNoTitle;
     card.borderWidth = 1.0;
     card.cornerRadius = 12.0;
-    card.borderColor = [NSColor separatorColor];
-    card.fillColor = [NSColor controlBackgroundColor];
+    card.borderColor = [[NSColor separatorColor] colorWithAlphaComponent:0.55];
+    card.fillColor = [NSColor windowBackgroundColor];
     card.translatesAutoresizingMaskIntoConstraints = NO;
 }
 
@@ -113,7 +148,7 @@ NSView *PreferenceRow(NSString *title, NSView *control)
         [label.trailingAnchor constraintLessThanOrEqualToAnchor:control.leadingAnchor constant:-12.0],
         [control.trailingAnchor constraintEqualToAnchor:row.trailingAnchor],
         [control.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
-        [control.widthAnchor constraintEqualToConstant:188.0],
+        [control.widthAnchor constraintEqualToConstant:220.0],
     ]];
     return row;
 }
@@ -583,6 +618,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     window.titleVisibility = NSWindowTitleHidden;
     window.titlebarAppearsTransparent = YES;
     window.movableByWindowBackground = YES;
+    window.backgroundColor = [NSColor windowBackgroundColor];
 
     self = [super initWithWindow:window];
     if (self == nil)
@@ -599,7 +635,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     sidebar.boxType = NSBoxCustom;
     sidebar.titlePosition = NSNoTitle;
     sidebar.borderWidth = 0.0;
-    sidebar.fillColor = MetasequoiaBrandColor();
+    sidebar.fillColor = MetasequoiaSidebarColor();
     sidebar.accessibilityLabel = @"水杉输入法导航";
     sidebar.translatesAutoresizingMaskIntoConstraints = NO;
 
@@ -610,14 +646,15 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 
     NSTextField *brandTitle = [NSTextField labelWithString:@"水杉输入法"];
     brandTitle.font = [NSFont systemFontOfSize:20.0 weight:NSFontWeightSemibold];
-    brandTitle.textColor = [NSColor whiteColor];
-    brandTitle.alignment = NSTextAlignmentCenter;
+    brandTitle.textColor = MetasequoiaSidebarPrimaryTextColor();
+    brandTitle.alignment = NSTextAlignmentLeft;
     brandTitle.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSTextField *brandDescription = [NSTextField labelWithString:@"轻巧、专注的中文输入体验"];
     brandDescription.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightRegular];
-    brandDescription.textColor = [[NSColor whiteColor] colorWithAlphaComponent:0.9];
-    brandDescription.alignment = NSTextAlignmentCenter;
+    brandDescription.textColor = MetasequoiaSidebarSecondaryTextColor();
+    brandDescription.alignment = NSTextAlignmentLeft;
+    brandDescription.maximumNumberOfLines = 2;
     brandDescription.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSArray<NSString *> *navigationTitles = @[ @"键盘输入", @"外观", @"词库与数据", @"更新与反馈" ];
@@ -636,17 +673,17 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
             [[NSAttributedString alloc] initWithString:navigationTitles[index]
                                             attributes:@{
                                                 NSFontAttributeName : button.font,
-                                                NSForegroundColorAttributeName : [NSColor whiteColor],
+                                                NSForegroundColorAttributeName : MetasequoiaSidebarPrimaryTextColor(),
                                             }];
         button.alignment = NSTextAlignmentLeft;
         button.bordered = NO;
-        button.contentTintColor = [NSColor whiteColor];
+        button.contentTintColor = MetasequoiaSidebarPrimaryTextColor();
         button.imagePosition = NSImageLeading;
         NSImage *navigationImage = [NSImage imageWithSystemSymbolName:navigationSymbols[index]
                                              accessibilityDescription:navigationTitles[index]];
         navigationImage = [navigationImage imageWithSymbolConfiguration:
                                                 [NSImageSymbolConfiguration
-                                                    configurationWithHierarchicalColor:[NSColor whiteColor]]];
+                                                    configurationWithHierarchicalColor:MetasequoiaSidebarPrimaryTextColor()]];
         [navigationImage setTemplate:NO];
         button.image = navigationImage;
         button.accessibilityLabel = navigationTitles[index];
@@ -662,7 +699,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     navigationStack.orientation = NSUserInterfaceLayoutOrientationVertical;
     navigationStack.alignment = NSLayoutAttributeLeading;
     navigationStack.distribution = NSStackViewDistributionFill;
-    navigationStack.spacing = 6.0;
+    navigationStack.spacing = 8.0;
     navigationStack.translatesAutoresizingMaskIntoConstraints = NO;
     for (NSButton *button in _navigationButtons)
     {
@@ -671,20 +708,20 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 
     NSButton *websiteButton = [NSButton buttonWithTitle:@"msime.app" target:self action:@selector(openWebsite:)];
     websiteButton.bordered = NO;
-    websiteButton.contentTintColor = [NSColor whiteColor];
+    websiteButton.contentTintColor = MetasequoiaSidebarPrimaryTextColor();
     websiteButton.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightMedium];
     websiteButton.attributedTitle =
         [[NSAttributedString alloc] initWithString:@"msime.app"
                                         attributes:@{
                                             NSFontAttributeName : websiteButton.font,
-                                            NSForegroundColorAttributeName : [NSColor whiteColor],
+                                            NSForegroundColorAttributeName : MetasequoiaSidebarPrimaryTextColor(),
                                         }];
     websiteButton.toolTip = @"打开水杉输入法官网";
     websiteButton.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSTextField *brandTag = [NSTextField labelWithString:@"METASEQUOIA  ·  macOS"];
     brandTag.font = [NSFont monospacedSystemFontOfSize:9.0 weight:NSFontWeightMedium];
-    brandTag.textColor = [[NSColor whiteColor] colorWithAlphaComponent:0.8];
+    brandTag.textColor = MetasequoiaSidebarSecondaryTextColor();
     brandTag.alignment = NSTextAlignmentCenter;
     brandTag.translatesAutoresizingMaskIntoConstraints = NO;
 
@@ -932,20 +969,20 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         [sidebar.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor],
         [sidebar.topAnchor constraintEqualToAnchor:contentView.topAnchor],
         [sidebar.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor],
-        [sidebar.widthAnchor constraintEqualToConstant:190.0],
+        [sidebar.widthAnchor constraintEqualToConstant:260.0],
         [iconView.topAnchor constraintEqualToAnchor:sidebar.topAnchor constant:44.0],
-        [iconView.centerXAnchor constraintEqualToAnchor:sidebar.centerXAnchor],
-        [iconView.widthAnchor constraintEqualToConstant:52.0],
-        [iconView.heightAnchor constraintEqualToConstant:52.0],
-        [brandTitle.topAnchor constraintEqualToAnchor:iconView.bottomAnchor constant:16.0],
-        [brandTitle.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:16.0],
-        [brandTitle.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-16.0],
-        [brandDescription.topAnchor constraintEqualToAnchor:brandTitle.bottomAnchor constant:8.0],
-        [brandDescription.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:16.0],
-        [brandDescription.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-16.0],
-        [navigationStack.topAnchor constraintEqualToAnchor:brandDescription.bottomAnchor constant:26.0],
-        [navigationStack.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:16.0],
-        [navigationStack.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-16.0],
+        [iconView.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:26.0],
+        [iconView.widthAnchor constraintEqualToConstant:48.0],
+        [iconView.heightAnchor constraintEqualToConstant:48.0],
+        [brandTitle.leadingAnchor constraintEqualToAnchor:iconView.trailingAnchor constant:12.0],
+        [brandTitle.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-20.0],
+        [brandTitle.centerYAnchor constraintEqualToAnchor:iconView.centerYAnchor],
+        [brandDescription.topAnchor constraintEqualToAnchor:iconView.bottomAnchor constant:18.0],
+        [brandDescription.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:26.0],
+        [brandDescription.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-26.0],
+        [navigationStack.topAnchor constraintEqualToAnchor:brandDescription.bottomAnchor constant:28.0],
+        [navigationStack.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:18.0],
+        [navigationStack.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-18.0],
         [websiteButton.centerXAnchor constraintEqualToAnchor:sidebar.centerXAnchor],
         [websiteButton.bottomAnchor constraintEqualToAnchor:brandTag.topAnchor constant:-10.0],
         [brandTag.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:12.0],
@@ -1009,8 +1046,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         NSButton *button = _navigationButtons[index];
         button.state = selected ? NSControlStateValueOn : NSControlStateValueOff;
         button.accessibilityValue = @(selected);
-        NSColor *backgroundColor =
-            selected ? [[NSColor whiteColor] colorWithAlphaComponent:0.16] : [NSColor clearColor];
+        NSColor *backgroundColor = selected ? MetasequoiaSidebarSelectionColor() : [NSColor clearColor];
         button.layer.backgroundColor = backgroundColor.CGColor;
     }
 }
