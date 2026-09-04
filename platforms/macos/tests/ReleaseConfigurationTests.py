@@ -191,7 +191,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertLess(workflow.index("name: Determine release signing mode"), workflow.index("name: Install dependencies"))
         self.assertIn("Developer ID Application", readme)
         self.assertIn("notarized", readme.lower())
-        self.assertIn("全拼 or 小鹤双拼", readme)
+        self.assertIn("全拼、小鹤双拼 or 86 五笔", readme)
         self.assertIn("enable full-pinyin autocorrection", readme)
         self.assertIn("native 水杉输入法设置 panel", readme)
         self.assertIn("current user's copy in `~/Library/Input Methods`", readme)
