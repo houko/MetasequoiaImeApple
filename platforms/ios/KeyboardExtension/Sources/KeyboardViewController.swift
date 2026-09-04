@@ -7,11 +7,14 @@ final class KeyboardViewController: UIInputViewController {
   private let candidateScrollView = UIScrollView()
   private let candidateStack = UIStackView()
   private let languageModeButton = UIButton()
+  private let schemeButton = UIButton()
   private var letterRowViews: [UIView] = []
   private var symbolRowViews: [UIView] = []
   private var layoutToggleButton: UIButton?
   private var isChineseMode = true
+  private var usesShuangpin = false
   private var showsSymbols = false
+  private let schemePreferenceKey = "inputSchemeUsesShuangpin"
 
   private let letterRows = [
     Array("qwertyuiop"),
@@ -26,6 +29,10 @@ final class KeyboardViewController: UIInputViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
+    usesShuangpin = UserDefaults.standard.bool(forKey: schemePreferenceKey)
+    if usesShuangpin {
+      _ = session.switch(toShuangpin: true)
+    }
     view.backgroundColor = MetasequoiaTheme.keyboardBackground
     installKeyboard()
     updateCandidateStrip(preedit: "", candidates: [])
@@ -81,6 +88,11 @@ final class KeyboardViewController: UIInputViewController {
       UIAction { [weak self] _ in self?.toggleInputMode() }, for: .primaryActionTriggered)
     languageModeButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
 
+    updateSchemeButton()
+    schemeButton.addAction(
+      UIAction { [weak self] _ in self?.toggleScheme() }, for: .primaryActionTriggered)
+    schemeButton.widthAnchor.constraint(equalToConstant: 48).isActive = true
+
     candidateStack.axis = .horizontal
     candidateStack.spacing = 6
     candidateStack.translatesAutoresizingMaskIntoConstraints = false
@@ -88,7 +100,7 @@ final class KeyboardViewController: UIInputViewController {
     candidateScrollView.addSubview(candidateStack)
 
     let content = UIStackView(
-      arrangedSubviews: [languageModeButton, preeditLabel, candidateScrollView])
+      arrangedSubviews: [languageModeButton, schemeButton, preeditLabel, candidateScrollView])
     content.axis = .horizontal
     content.alignment = .center
     content.spacing = 12
@@ -265,6 +277,29 @@ final class KeyboardViewController: UIInputViewController {
     languageModeButton.accessibilityLabel =
       isChineseMode ? "切换到英文输入" : "切换到中文输入"
     languageModeButton.accessibilityValue = isChineseMode ? "中文输入" : "英文输入"
+  }
+
+  private func toggleScheme() {
+    usesShuangpin.toggle()
+    let snapshot = session.switch(toShuangpin: usesShuangpin)
+    UserDefaults.standard.set(usesShuangpin, forKey: schemePreferenceKey)
+    updateSchemeButton()
+    render(snapshot)
+  }
+
+  private func updateSchemeButton() {
+    var configuration = UIButton.Configuration.plain()
+    configuration.title = usesShuangpin ? "小鹤" : "全拼"
+    configuration.baseForegroundColor = MetasequoiaTheme.forestUIColor
+    configuration.contentInsets = NSDirectionalEdgeInsets(
+      top: 3, leading: 4, bottom: 3, trailing: 4)
+    configuration.background.strokeColor = MetasequoiaTheme.forestUIColor.withAlphaComponent(0.35)
+    configuration.background.strokeWidth = 1
+    configuration.background.cornerRadius = 8
+    schemeButton.configuration = configuration
+    schemeButton.accessibilityIdentifier = "schemeButton"
+    schemeButton.accessibilityLabel = usesShuangpin ? "切换到全拼" : "切换到小鹤双拼"
+    schemeButton.accessibilityValue = usesShuangpin ? "小鹤双拼" : "全拼"
   }
 
   private func toggleLayout() {
