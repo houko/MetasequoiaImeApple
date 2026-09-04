@@ -74,7 +74,7 @@ Merges to `main` update a Release Please pull request from conventional commit h
 
 When Apple release credentials are not configured, the workflow publishes the same four assets with `-unsigned` before the file extension and adds a warning to the GitHub Release. Unsigned artifacts are intended for testing and may require explicit approval in macOS privacy and security settings.
 
-For normal installation, use the ZIP and run its `Install.command`; this is the recommended path because it installs, registers, and enables the current user's input source without automatically logging out or restarting the Mac. The PKG is a compatibility option for users who prefer the native macOS Installer. It copies the same app but cannot reliably enable the current GUI user's input source, so manual enablement in System Settings may still be needed.
+For normal installation, use the ZIP and run its `Install.command`, or use the PKG with the native macOS Installer. Both paths install the current-user bundle and attempt to register and enable 水杉 automatically without logging out or restarting the Mac. If no GUI user is logged in, or macOS blocks an unsigned app, enable it later in System Settings > Keyboard > Text Input > Edit.
 
 If you choose the PKG, download it and its checksum, verify it, then double-click the package. It installs the current user's copy in `~/Library/Input Methods`; the native Installer may request administrator authorization. It will not log out or restart the Mac automatically. macOS may still require you to log out and back in at a convenient time before the newly copied input method appears.
 
