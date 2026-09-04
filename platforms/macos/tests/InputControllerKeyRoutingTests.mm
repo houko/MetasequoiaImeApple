@@ -255,6 +255,9 @@ int main()
                 metasequoia::mac::FullWidthCharacter('A') == 0xFF21 &&
                 metasequoia::mac::FullWidthCharacter(' ') == 0x3000,
             "ASCII full-width conversion did not preserve the expected Unicode mapping.");
+    require(metasequoia::mac::IsFullWidthDirectCharacter('a', NSEventModifierFlagShift) &&
+                !metasequoia::mac::IsFullWidthDirectCharacter('a', NSEventModifierFlagOption),
+            "Direct full-width character routing did not honor competing modifiers.");
 
     const std::initializer_list<std::pair<unsigned short, ControllerKeyAction>> navigationKeys = {
         {kVK_LeftArrow, ControllerKeyAction::MoveCandidateLeft},
