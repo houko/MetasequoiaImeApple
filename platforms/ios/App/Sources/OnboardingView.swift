@@ -35,6 +35,7 @@ struct OnboardingView: View {
         .background(
           MetasequoiaTheme.forest, in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
+        .accessibilityIdentifier("openKeyboardSettingsButton")
         .accessibilityHint("打开水杉输入法的系统设置页面")
 
         VStack(alignment: .leading, spacing: 10) {

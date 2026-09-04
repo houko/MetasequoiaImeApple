@@ -14,7 +14,10 @@ python3 platforms/ios/scripts/prepare_dictionary.py
 mkdir -p build/ios
 xcodegen generate --spec platforms/ios/project.yml --project build/ios --project-root .
 xcodebuild -project build/ios/MetasequoiaImeIOS.xcodeproj -scheme MetasequoiaImeIOS -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios-derived CODE_SIGNING_ALLOWED=NO build
+bash platforms/ios/scripts/run_ui_tests.sh
 ```
+
+The UI-test runner prefers an already booted iPhone Simulator, otherwise selects the newest available iPhone runtime, waits for its reported boot readiness, and runs the onboarding smoke test without fixed startup delays. Set `IOS_SIMULATOR_UDID` to target a specific device.
 
 `BREW_PREFIX` defaults to `/opt/homebrew` in `project.yml`; override that build setting when dependencies are installed under another prefix.
 
