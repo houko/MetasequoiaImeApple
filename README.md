@@ -26,8 +26,8 @@ The current release supports full-pinyin composition, live candidates from the o
 ## Build
 
 ```sh
-git clone --recursive https://github.com/houko/MetasequoiaImeApple.git
-cd MetasequoiaImeApple
+git clone --recursive https://github.com/metasequoiaime/MSIME-Apple.git
+cd MSIME-Apple
 brew install cmake boost fmt spdlog
 ./platforms/macos/scripts/build.sh
 ```
