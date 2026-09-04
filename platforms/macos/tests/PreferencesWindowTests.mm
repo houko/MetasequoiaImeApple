@@ -116,6 +116,7 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidatePanelStyle:1];
         [MetasequoiaPreferencesWindowController setCandidatePageSize:5];
         [MetasequoiaPreferencesWindowController setCandidateFontSize:16];
+        [MetasequoiaPreferencesWindowController setCandidatePageShortcut:1];
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
@@ -133,6 +134,8 @@ int main()
                 "The five-candidate page-size preference was not stored.");
         require([MetasequoiaPreferencesWindowController storedCandidateFontSize] == 16,
                 "The small candidate font-size preference was not stored.");
+        require([MetasequoiaPreferencesWindowController storedCandidatePageShortcut] == 1,
+                "The bracket candidate page shortcut preference was not stored.");
         require(![MetasequoiaPreferencesWindowController storedCandidateLearningEnabled],
                 "The disabled candidate-learning preference was not stored.");
         require([MetasequoiaPreferencesWindowController storedEnglishInputMode],
@@ -178,6 +181,24 @@ int main()
                     dataNavigationButton.state == NSControlStateValueOn,
                 "The data sidebar item did not reveal and select the data page.");
         [generalNavigationButton performClick:nil];
+
+        NSView *candidatePageShortcutView =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"候选翻页快捷键");
+        require([candidatePageShortcutView isKindOfClass:[NSPopUpButton class]] &&
+                    ((NSPopUpButton *)candidatePageShortcutView).indexOfSelectedItem == 1,
+                "The keyboard-input page did not reflect the stored candidate page shortcut.");
+        NSPopUpButton *candidatePageShortcutButton = (NSPopUpButton *)candidatePageShortcutView;
+        require(candidatePageShortcutButton.numberOfItems == 3 &&
+                    [[candidatePageShortcutButton itemTitleAtIndex:0] isEqualToString:@"- / ="] &&
+                    [[candidatePageShortcutButton itemTitleAtIndex:1] isEqualToString:@"[ / ]"] &&
+                    [[candidatePageShortcutButton itemTitleAtIndex:2] isEqualToString:@"Page Up / Page Down"],
+                "The candidate page shortcut control did not contain all supported key pairs.");
+        [candidatePageShortcutButton selectItemAtIndex:2];
+        require([NSApp sendAction:candidatePageShortcutButton.action
+                               to:candidatePageShortcutButton.target
+                             from:candidatePageShortcutButton] &&
+                    [MetasequoiaPreferencesWindowController storedCandidatePageShortcut] == 2,
+                "The candidate page shortcut choice did not persist.");
 
         NSButton *quanpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"全拼输入");
         NSButton *shuangpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"小鹤双拼");
@@ -230,10 +251,17 @@ int main()
         [controller.window.contentView layoutSubtreeIfNeeded];
         NSView *schemeCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"输入方式卡片");
         NSView *behaviorCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"中英文状态切换卡片");
+        NSView *candidatePageShortcutCard =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"候选翻页快捷键卡片");
         NSView *learningCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"候选与学习卡片");
         require(schemeCard.frame.size.width == behaviorCard.frame.size.width &&
+                    schemeCard.frame.size.width == candidatePageShortcutCard.frame.size.width &&
                     schemeCard.frame.size.width == learningCard.frame.size.width,
                 "The settings cards did not consistently fill the content width.");
+        NSRect candidatePageShortcutCardRect =
+            [generalPage convertRect:candidatePageShortcutCard.bounds fromView:candidatePageShortcutCard];
+        require(NSMaxY(candidatePageShortcutCardRect) <= NSMaxY(generalPage.bounds),
+                "The candidate page shortcut card overflowed the keyboard-input page.");
 
         NSView *view = FindViewWithAccessibilityLabel(controller.window.contentView, @"候选排列");
         require([view isKindOfClass:[NSPopUpButton class]],
@@ -418,6 +446,7 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidatePanelStyle:1];
         [MetasequoiaPreferencesWindowController setCandidatePageSize:5];
         [MetasequoiaPreferencesWindowController setCandidateFontSize:20];
+        [MetasequoiaPreferencesWindowController setCandidatePageShortcut:2];
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
@@ -432,6 +461,7 @@ int main()
                     [MetasequoiaPreferencesWindowController storedCandidatePanelStyle] == 0 &&
                     [MetasequoiaPreferencesWindowController storedCandidatePageSize] == 9 &&
                     [MetasequoiaPreferencesWindowController storedCandidateFontSize] == 18 &&
+                    [MetasequoiaPreferencesWindowController storedCandidatePageShortcut] == 0 &&
                     [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] &&
                     [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] &&
                     ![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled],
@@ -444,6 +474,7 @@ int main()
             @"MetasequoiaImeCandidatePanelStyle",
             @"MetasequoiaImeCandidatePageSize",
             @"MetasequoiaImeCandidateFontSize",
+            @"MetasequoiaImeCandidatePageShortcut",
             @"MetasequoiaImeCandidateLearning",
             @"MetasequoiaImeInputModeShortcutEnabled",
             @"MetasequoiaImeWubiAutoCommitUnique",

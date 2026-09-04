@@ -282,7 +282,19 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     }
 
     metasequoia::KeyResult result;
-    switch (metasequoia::mac::ClassifyControllerKey(event.keyCode, [_candidatePanel isVisible]))
+    const BOOL candidatePageShortcutModified =
+        (modifiers & (NSEventModifierFlagShift | NSEventModifierFlagCommand | NSEventModifierFlagControl |
+                      NSEventModifierFlagOption)) != 0;
+    NSString *charactersIgnoringModifiers = event.charactersIgnoringModifiers;
+    const char candidatePageShortcutCharacter =
+        charactersIgnoringModifiers.length == 1 && [charactersIgnoringModifiers characterAtIndex:0] <= 0x7f
+            ? static_cast<char>([charactersIgnoringModifiers characterAtIndex:0])
+            : '\0';
+    switch (metasequoia::mac::ClassifyControllerKey(
+        event.keyCode, [_candidatePanel isVisible],
+        metasequoia::mac::NormalizeCandidatePageShortcut(
+            static_cast<int>([MetasequoiaPreferencesWindowController storedCandidatePageShortcut])),
+        candidatePageShortcutCharacter, candidatePageShortcutModified))
     {
     case metasequoia::mac::ControllerKeyAction::MoveCandidateLeft:
         if (!metasequoia::mac::IsPrimaryCandidateDirection(event.keyCode, _candidatePanel.panelType))
