@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.12](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.11...v0.20.12) (2026-09-04)
+
+
+### Bug Fixes
+
+* **uninstall:** fail closed on process check errors ([#116](https://github.com/houko/MetasequoiaImeMac/issues/116)) ([4c324af](https://github.com/houko/MetasequoiaImeMac/commit/4c324af1ae505a8d8874e5ee33e4f63d7e7be30f))
+
 ## [0.20.11](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.10...v0.20.11) (2026-09-03)
 
 
