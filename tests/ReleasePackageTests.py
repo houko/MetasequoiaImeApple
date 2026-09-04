@@ -590,21 +590,36 @@ class ReleasePackageTests(unittest.TestCase):
         self.assertTrue(os.access(bundled_uninstaller, os.X_OK))
         self.assertEqual(bundled_uninstaller.read_bytes(), (PROJECT_ROOT / "scripts/uninstall.sh").read_bytes())
 
-        icon_name = "MetasequoiaIME.icns"
+        app_icon_name = "MetasequoiaIME.icns"
+        menu_icon_name = "MetasequoiaIMEMenuIcon.tiff"
         input_mode = bundle_info["ComponentInputModeDict"]["tsInputModeListKey"][
             "com.houko.inputmethod.MetasequoiaIME.Hans"
         ]
-        self.assertEqual(bundle_info["CFBundleIconFile"], icon_name)
-        self.assertEqual(bundle_info["tsInputMethodIconFileKey"], icon_name)
-        self.assertEqual(input_mode["tsInputModeMenuIconFileKey"], icon_name)
-        self.assertEqual(input_mode["tsInputModePaletteIconFileKey"], icon_name)
-        icon = bundle / "Contents/Resources" / icon_name
-        self.assertTrue(icon.is_file())
+        self.assertEqual(bundle_info["CFBundleIconFile"], app_icon_name)
+        self.assertEqual(bundle_info["tsInputMethodIconFileKey"], menu_icon_name)
+        self.assertEqual(input_mode["tsInputModeMenuIconFileKey"], menu_icon_name)
+        self.assertEqual(input_mode["tsInputModePaletteIconFileKey"], menu_icon_name)
+        app_icon = bundle / "Contents/Resources" / app_icon_name
+        self.assertTrue(app_icon.is_file())
         with tempfile.TemporaryDirectory() as icon_directory:
             iconset = Path(icon_directory) / "MetasequoiaIME.iconset"
-            subprocess.run(["iconutil", "--convert", "iconset", "--output", iconset, icon], check=True)
+            subprocess.run(
+                ["iconutil", "--convert", "iconset", "--output", iconset, app_icon],
+                check=True,
+            )
             self.assertTrue((iconset / "icon_16x16.png").is_file())
             self.assertTrue((iconset / "icon_128x128@2x.png").is_file())
+        menu_icon = bundle / "Contents/Resources" / menu_icon_name
+        self.assertTrue(menu_icon.is_file())
+        menu_icon_properties = subprocess.run(
+            ["sips", "-g", "pixelWidth", "-g", "pixelHeight", "-g", "hasAlpha", menu_icon],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        self.assertIn("pixelWidth: 32", menu_icon_properties)
+        self.assertIn("pixelHeight: 36", menu_icon_properties)
+        self.assertIn("hasAlpha: yes", menu_icon_properties)
 
         executable = bundle / "Contents/MacOS/MetasequoiaIME"
         for architecture in ("arm64", "x86_64"):
