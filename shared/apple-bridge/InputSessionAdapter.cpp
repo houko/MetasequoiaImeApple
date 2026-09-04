@@ -7,7 +7,10 @@
 namespace metasequoia::apple {
 class InputSessionAdapter::Impl {
 public:
-  InputSession session{SchemeType::Quanpin, true, true, true, false};
+  explicit Impl(SchemeType scheme = SchemeType::Quanpin)
+      : session{scheme, true, true, true, false} {}
+
+  InputSession session;
 };
 
 namespace {
@@ -65,5 +68,21 @@ InputSnapshot InputSessionAdapter::cancel() {
 
 InputSnapshot InputSessionAdapter::select_candidate(std::size_t index) {
   return MakeSnapshot(impl_->session, impl_->session.select_candidate(index));
+}
+
+InputSnapshot InputSessionAdapter::switch_to_shuangpin(bool uses_shuangpin) {
+  if (uses_shuangpin == this->uses_shuangpin()) {
+    return MakeSnapshot(impl_->session, {});
+  }
+  const auto result = impl_->session.handle_command(Command::CommitCandidate);
+  auto snapshot = MakeSnapshot(impl_->session, result);
+  const auto scheme =
+      uses_shuangpin ? SchemeType::Shuangpin : SchemeType::Quanpin;
+  impl_ = std::make_unique<Impl>(scheme);
+  return snapshot;
+}
+
+bool InputSessionAdapter::uses_shuangpin() const {
+  return impl_->session.scheme_type() == SchemeType::Shuangpin;
 }
 } // namespace metasequoia::apple

@@ -30,6 +30,8 @@ public:
   InputSnapshot commit_raw();
   InputSnapshot cancel();
   InputSnapshot select_candidate(std::size_t index);
+  InputSnapshot switch_to_shuangpin(bool uses_shuangpin);
+  bool uses_shuangpin() const;
 
 private:
   class Impl;

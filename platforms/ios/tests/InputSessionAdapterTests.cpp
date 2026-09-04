@@ -76,6 +76,31 @@ int RunTest() {
     Require(!adapter.handle_character('\'').handled,
             "An idle apostrophe was swallowed by the engine adapter.");
 
+    Require(!adapter.uses_shuangpin(),
+            "The adapter did not start in full-pinyin mode.");
+    Require(adapter.handle_character('n').handled &&
+                adapter.handle_character('i').handled,
+            "The scheme-switch fixture did not start a composition.");
+    const auto switchedToShuangpin = adapter.switch_to_shuangpin(true);
+    Require(switchedToShuangpin.handled &&
+                switchedToShuangpin.commit.has_value() &&
+                *switchedToShuangpin.commit == "ni" &&
+                switchedToShuangpin.preedit.empty(),
+            "Switching schemes did not commit and clear the composition.");
+    Require(adapter.uses_shuangpin(),
+            "The adapter did not retain double-pinyin mode.");
+    Require(adapter.handle_character('n').handled,
+            "The idempotent switch fixture did not start a composition.");
+    const auto unchangedShuangpin = adapter.switch_to_shuangpin(true);
+    Require(!unchangedShuangpin.handled && unchangedShuangpin.preedit == "n" &&
+                adapter.uses_shuangpin(),
+            "Selecting the active scheme changed the composition.");
+    Require(adapter.cancel().handled,
+            "The idempotent switch fixture did not cancel its composition.");
+    const auto switchedToQuanpin = adapter.switch_to_shuangpin(false);
+    Require(!switchedToQuanpin.handled && !adapter.uses_shuangpin(),
+            "The adapter did not switch an idle session back to full pinyin.");
+
     Require(adapter.handle_character('n').handled &&
                 adapter.handle_character('i').handled,
             "The candidate-key fixture did not start a composition.");

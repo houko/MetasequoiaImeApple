@@ -190,6 +190,10 @@ void ConfigureDataDirectory() {
       snapshotFrom:_adapter->select_candidate(static_cast<std::size_t>(index))];
 }
 
+- (MetasequoiaInputSnapshot *)switchToShuangpin:(BOOL)usesShuangpin {
+  return [self snapshotFrom:_adapter->switch_to_shuangpin(usesShuangpin)];
+}
+
 - (MetasequoiaInputSnapshot *)snapshotFrom:
     (metasequoia::apple::InputSnapshot)snapshot {
   NSMutableArray<NSString *> *candidates =

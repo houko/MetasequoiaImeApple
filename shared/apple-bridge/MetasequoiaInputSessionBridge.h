@@ -25,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (MetasequoiaInputSnapshot *)commitRaw;
 - (MetasequoiaInputSnapshot *)cancel;
 - (MetasequoiaInputSnapshot *)selectCandidateAtIndex:(NSUInteger)index;
+- (MetasequoiaInputSnapshot *)switchToShuangpin:(BOOL)usesShuangpin;
 
 @end
 

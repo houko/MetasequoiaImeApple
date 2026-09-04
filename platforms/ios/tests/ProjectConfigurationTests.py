@@ -143,6 +143,21 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertNotIn("space.widthAnchor.constraint(greaterThanOrEqualToConstant: 110)", controller)
         self.assertNotIn("enter.widthAnchor.constraint(equalToConstant: 72)", controller)
 
+    def test_keyboard_exposes_a_persisted_full_and_double_pinyin_switch(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+        bridge_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.h").read_text()
+        adapter_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/InputSessionAdapter.h").read_text()
+
+        self.assertIn("schemeButton", controller)
+        self.assertIn("toggleScheme", controller)
+        self.assertIn("UserDefaults.standard.bool(forKey: schemePreferenceKey)", controller)
+        self.assertIn("UserDefaults.standard.set(usesShuangpin, forKey: schemePreferenceKey)", controller)
+        self.assertIn("session.switch(toShuangpin: usesShuangpin)", controller)
+        self.assertIn('usesShuangpin ? "小鹤" : "全拼"', controller)
+        self.assertIn('schemeButton.accessibilityIdentifier = "schemeButton"', controller)
+        self.assertIn("switchToShuangpin", bridge_header)
+        self.assertIn("switch_to_shuangpin", adapter_header)
+
 
 if __name__ == "__main__":
     unittest.main()
