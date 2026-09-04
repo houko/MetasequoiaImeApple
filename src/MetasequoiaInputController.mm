@@ -7,7 +7,7 @@
 #import "InputMenu.h"
 #include "InputModeRouting.h"
 #import "PreferencesWindowController.h"
-#import "UpdateChecker.h"
+#import "UpdateController.h"
 #include "StringConversion.h"
 #include "CandidateSelectionState.h"
 #include "InputControllerKeyRouting.h"
@@ -547,6 +547,11 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     [[MetasequoiaPreferencesWindowController sharedController] showAndActivate];
 }
 
+- (void)checkForUpdates:(id)sender
+{
+    [[MetasequoiaUpdateController sharedController] checkForUpdates:sender];
+}
+
 - (void)setEnglishInputMode:(BOOL)enabled client:(id)sender
 {
     if (enabled)
@@ -572,8 +577,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 
 - (NSMenu *)menu
 {
-    return CreateMetasequoiaInputMenu(self, [MetasequoiaPreferencesWindowController storedEnglishInputMode],
-                                      [MetasequoiaUpdateChecker sharedChecker].availableVersion);
+    return CreateMetasequoiaInputMenu(self, [MetasequoiaPreferencesWindowController storedEnglishInputMode]);
 }
 
 - (NSUInteger)recognizedEvents:(id)sender

@@ -1,4 +1,5 @@
 #import "../src/PreferencesWindowController.h"
+#import "../src/UpdateController.h"
 
 #import <AppKit/AppKit.h>
 
@@ -166,6 +167,9 @@ int main()
                 "The software-update control did not show the installed-version state.");
         require([((NSButton *)updateView).accessibilityHelp containsString:@"检查 GitHub"],
                 "The software-update control did not expose its current state to assistive technology.");
+        require(((NSButton *)updateView).action == @selector(checkForUpdates:) &&
+                    ((NSButton *)updateView).target == controller,
+                "The software-update control did not invoke the in-place Sparkle updater.");
 
         __block bool resetStartedAfterCancel = false;
         id cancelObserver = [[NSNotificationCenter defaultCenter]

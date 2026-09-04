@@ -21,6 +21,8 @@ The application also incorporates the following components:
 - spdlog — MIT License
   Copyright (c) 2016-present, Gabi Melman and spdlog contributors
   https://github.com/gabime/spdlog
+- Sparkle — MIT License and bundled third-party licenses
+  https://github.com/sparkle-project/Sparkle
 
 Complete license texts for these components are included alongside this
 notice in the application's Resources/Licenses directory.

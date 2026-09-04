@@ -686,6 +686,14 @@ class ReleasePackageTests(unittest.TestCase):
             with zipfile.ZipFile(update_archive) as update_zip:
                 update_names = update_zip.namelist()
                 self.assertIn("MetasequoiaIME.app/Contents/Info.plist", update_names)
+                self.assertIn(
+                    "MetasequoiaIME.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle",
+                    update_names,
+                )
+                self.assertIn(
+                    "MetasequoiaIME.app/Contents/Resources/Licenses/Sparkle-LICENSE.txt",
+                    update_names,
+                )
                 self.assertFalse(any(name.endswith("Install.command") for name in update_names))
                 self.assertFalse(any(name.endswith("UNSIGNED_BUILD.txt") for name in update_names))
 
@@ -693,6 +701,10 @@ class ReleasePackageTests(unittest.TestCase):
                 names = release_zip.namelist()
                 package_root = f"MetasequoiaIME-v{version}/"
                 self.assertIn(f"{package_root}MetasequoiaIME.app/Contents/Info.plist", names)
+                self.assertIn(
+                    f"{package_root}MetasequoiaIME.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle",
+                    names,
+                )
                 self.assertIn(f"{package_root}Install.command", names)
                 self.assertIn(f"{package_root}Open Settings.command", names)
                 self.assertIn(f"{package_root}Uninstall.command", names)

@@ -3,7 +3,7 @@
 
 #import "InputSourceRegistration.h"
 #import "PreferencesWindowController.h"
-#import "UpdateChecker.h"
+#import "UpdateController.h"
 
 #include <cstdio>
 
@@ -54,7 +54,7 @@ int main(int argc, const char *argv[])
             NSLog(@"Failed to initialize the Metasequoia InputMethodKit server.");
             return 1;
         }
-        [[MetasequoiaUpdateChecker sharedChecker] checkForUpdatesIfNeeded];
+        (void)[MetasequoiaUpdateController sharedController];
         [application run];
         (void)server;
     }
