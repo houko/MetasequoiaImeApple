@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.26.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.25.0...v0.26.0) (2026-09-04)
+
+
+### Features
+
+* **ios:** add English shift and caps lock ([#157](https://github.com/metasequoiaime/MSIME-Apple/pull/157)) ([e432e55](https://github.com/metasequoiaime/MSIME-Apple/commit/e432e55aa635225a06c1a0fd52b3fd689b421c1a))
+* **ios:** add pinyin scheme switch ([#152](https://github.com/metasequoiaime/MSIME-Apple/pull/152)) ([e626ed7](https://github.com/metasequoiaime/MSIME-Apple/commit/e626ed779735de4cc9571aa7e4ab335d46515915))
+
+
+### Bug Fixes
+
+* **deps:** use canonical dictionary repository ([#155](https://github.com/metasequoiaime/MSIME-Apple/pull/155)) ([bb417f8](https://github.com/metasequoiaime/MSIME-Apple/commit/bb417f8feaaa61df60b12147784bb87477a8eaf3))
+* **ios:** adapt action row to narrow screens ([#150](https://github.com/metasequoiaime/MSIME-Apple/pull/150)) ([33e4c52](https://github.com/metasequoiaime/MSIME-Apple/commit/33e4c5279130e6a68ea6a647285298375f0741c8))
+* **ios:** isolate UI tests on main actor ([#156](https://github.com/metasequoiaime/MSIME-Apple/pull/156)) ([47bb395](https://github.com/metasequoiaime/MSIME-Apple/commit/47bb39589dee50b834bd2e85e3aa1cecd9b9346e))
+* **ios:** use system input mode menu ([#153](https://github.com/metasequoiaime/MSIME-Apple/pull/153)) ([9985534](https://github.com/metasequoiaime/MSIME-Apple/commit/99855347ae8df9c1808a5dc29ec2822187732702))
+* **release:** use canonical Apple repository URLs ([#154](https://github.com/metasequoiaime/MSIME-Apple/pull/154)) ([381af7d](https://github.com/metasequoiaime/MSIME-Apple/commit/381af7db8d78d0b18d2c463afd1ea82da2df820b))
+
 ## [0.25.0](https://github.com/houko/MetasequoiaImeApple/compare/v0.24.0...v0.25.0) (2026-09-04)
 
 
