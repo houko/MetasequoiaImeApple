@@ -23,6 +23,8 @@ public:
   InputSessionAdapter &operator=(const InputSessionAdapter &) = delete;
 
   InputSnapshot handle_character(char character);
+  InputSnapshot handle_candidate_key(char character);
+  InputSnapshot handle_punctuation(char character);
   InputSnapshot handle_backspace();
   InputSnapshot commit_candidate();
   InputSnapshot commit_raw();

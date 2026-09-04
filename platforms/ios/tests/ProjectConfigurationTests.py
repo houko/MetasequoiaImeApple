@@ -70,6 +70,17 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn('URLForResource:@"msime.db" withExtension:@"sha256"', bridge)
         self.assertIn('setenv("METASEQUOIA_IME_DATA_DIR"', bridge)
 
+    def test_keyboard_exposes_engine_owned_number_and_punctuation_routing(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+        bridge_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.h").read_text()
+
+        self.assertIn("symbolRows", controller)
+        self.assertIn("toggleLayout", controller)
+        self.assertIn("session.handleCandidateKey", controller)
+        self.assertIn("session.handlePunctuation", controller)
+        self.assertIn("handleCandidateKey", bridge_header)
+        self.assertIn("handlePunctuation", bridge_header)
+
 
 if __name__ == "__main__":
     unittest.main()

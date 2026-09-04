@@ -59,6 +59,25 @@ int RunTest() {
             "Idle Backspace was swallowed by the engine adapter.");
     Require(!adapter.handle_character('N').handled,
             "Unsupported uppercase input was swallowed by the adapter.");
+
+    const auto punctuation = adapter.handle_punctuation('.');
+    Require(punctuation.handled && punctuation.commit.has_value() &&
+                *punctuation.commit == "。",
+            "The adapter did not expose engine-owned Chinese punctuation.");
+
+    Require(adapter.handle_character('n').handled &&
+                adapter.handle_character('i').handled,
+            "The candidate-key fixture did not start a composition.");
+    const auto unavailableCandidate = adapter.handle_candidate_key('1');
+    Require(!unavailableCandidate.handled &&
+                unavailableCandidate.preedit == "ni",
+            "An unavailable numbered candidate was swallowed.");
+    const auto composedPunctuation = adapter.handle_punctuation(',');
+    Require(composedPunctuation.handled &&
+                composedPunctuation.commit.has_value() &&
+                *composedPunctuation.commit == "ni，" &&
+                composedPunctuation.preedit.empty(),
+            "Punctuation did not atomically commit the raw composition.");
   }
 
   user_dictionary::close_default_user_database();
