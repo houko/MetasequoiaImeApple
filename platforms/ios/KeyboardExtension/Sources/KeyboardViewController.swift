@@ -2,18 +2,26 @@ import UIKit
 
 @MainActor
 final class KeyboardViewController: UIInputViewController {
+  private enum LetterCaseState {
+    case lowercase, shifted, capsLock
+  }
+
   private let session = MetasequoiaInputSessionBridge()
   private let preeditLabel = UILabel()
   private let candidateScrollView = UIScrollView()
   private let candidateStack = UIStackView()
   private let languageModeButton = UIButton()
   private let schemeButton = UIButton()
+  private var letterButtons: [(button: UIButton, lowercase: String)] = []
   private var letterRowViews: [UIView] = []
   private var symbolRowViews: [UIView] = []
   private var layoutToggleButton: UIButton?
+  private weak var shiftButton: UIButton?
   private var isChineseMode = true
   private var usesShuangpin = false
   private var showsSymbols = false
+  private var letterCaseState = LetterCaseState.lowercase
+  private var lastShiftTapTime: TimeInterval?
   private let schemePreferenceKey = "inputSchemeUsesShuangpin"
 
   private let letterRows = [
@@ -59,8 +67,8 @@ final class KeyboardViewController: UIInputViewController {
     ])
 
     root.addArrangedSubview(makeCandidateStrip())
-    for row in letterRows {
-      let rowView = makeLetterRow(row)
+    for (index, row) in letterRows.enumerated() {
+      let rowView = makeLetterRow(row, includesShift: index == letterRows.count - 1)
       letterRowViews.append(rowView)
       root.addArrangedSubview(rowView)
     }
@@ -127,14 +135,24 @@ final class KeyboardViewController: UIInputViewController {
     return container
   }
 
-  private func makeLetterRow(_ letters: [Character]) -> UIStackView {
+  private func makeLetterRow(_ letters: [Character], includesShift: Bool) -> UIStackView {
     let row = makeRow()
+    if includesShift {
+      let button = makeSymbolKey(symbol: "shift", accessibilityLabel: "大写") { [weak self] in
+        self?.toggleLetterCase()
+      }
+      button.accessibilityIdentifier = "shiftButton"
+      button.isHidden = isChineseMode
+      shiftButton = button
+      row.addArrangedSubview(button)
+    }
     for letter in letters {
       let text = String(letter)
-      row.addArrangedSubview(
-        makeKey(title: text, accessibilityLabel: text.uppercased()) { [weak self] in
-          self?.handleCharacter(text)
-        })
+      let button = makeKey(title: text, accessibilityLabel: text.uppercased()) { [weak self] in
+        self?.handleCharacter(text)
+      }
+      letterButtons.append((button: button, lowercase: text))
+      row.addArrangedSubview(button)
     }
     return row
   }
@@ -220,7 +238,13 @@ final class KeyboardViewController: UIInputViewController {
     if isChineseMode {
       render(session.handleCharacter(character))
     } else {
-      textDocumentProxy.insertText(character)
+      let output = letterCaseState == .lowercase ? character : character.uppercased()
+      textDocumentProxy.insertText(output)
+      if letterCaseState == .shifted {
+        letterCaseState = .lowercase
+        lastShiftTapTime = nil
+        updateLetterCaseControls()
+      }
     }
   }
 
@@ -260,8 +284,63 @@ final class KeyboardViewController: UIInputViewController {
   private func toggleInputMode() {
     let snapshot = isChineseMode ? session.commitCandidate() : session.cancel()
     isChineseMode.toggle()
+    letterCaseState = .lowercase
+    lastShiftTapTime = nil
     updateLanguageModeButton()
+    updateLetterCaseControls()
     render(snapshot)
+  }
+
+  private func toggleLetterCase() {
+    guard !isChineseMode else { return }
+
+    let now = ProcessInfo.processInfo.systemUptime
+    if letterCaseState == .shifted,
+      let lastShiftTapTime,
+      now - lastShiftTapTime <= 0.35
+    {
+      letterCaseState = .capsLock
+    } else {
+      letterCaseState = letterCaseState == .lowercase ? .shifted : .lowercase
+    }
+    self.lastShiftTapTime = now
+    updateLetterCaseControls()
+  }
+
+  private func updateLetterCaseControls() {
+    let usesUppercase = !isChineseMode && letterCaseState != .lowercase
+    for (button, lowercase) in letterButtons {
+      if var configuration = button.configuration {
+        configuration.title = usesUppercase ? lowercase.uppercased() : lowercase
+        button.configuration = configuration
+      }
+      button.accessibilityLabel =
+        usesUppercase
+        ? "大写 \(lowercase.uppercased())" : "字母 \(lowercase.uppercased())"
+    }
+
+    shiftButton?.isHidden = isChineseMode
+    guard let button = shiftButton, var configuration = button.configuration else { return }
+    switch letterCaseState {
+    case .lowercase:
+      configuration.image = UIImage(systemName: "shift")
+      configuration.background.backgroundColor = MetasequoiaTheme.keyBackground
+      button.accessibilityLabel = "大写"
+      button.accessibilityValue = "关闭"
+    case .shifted:
+      configuration.image = UIImage(systemName: "shift.fill")
+      configuration.background.backgroundColor =
+        MetasequoiaTheme.forestUIColor.withAlphaComponent(0.22)
+      button.accessibilityLabel = "大写"
+      button.accessibilityValue = "下一字母"
+    case .capsLock:
+      configuration.image = UIImage(systemName: "capslock.fill")
+      configuration.background.backgroundColor =
+        MetasequoiaTheme.forestUIColor.withAlphaComponent(0.32)
+      button.accessibilityLabel = "大写锁定"
+      button.accessibilityValue = "开启"
+    }
+    button.configuration = configuration
   }
 
   private func updateLanguageModeButton() {
