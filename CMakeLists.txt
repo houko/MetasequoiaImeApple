@@ -18,19 +18,14 @@ set(METASEQUOIA_SPARKLE_URL
 
 add_subdirectory(vendor/MetasequoiaImeEngine engine)
 
-add_library(MetasequoiaImeMacCore STATIC src/InputSession.cpp)
-target_include_directories(MetasequoiaImeMacCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(MetasequoiaImeMacCore PUBLIC MetasequoiaIme::Engine)
-target_compile_options(MetasequoiaImeMacCore PRIVATE -Wall -Wextra -Wpedantic -Werror)
-
 if(BUILD_TESTING)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(INPUT_METHOD_KIT_FRAMEWORK InputMethodKit REQUIRED)
-    add_executable(MetasequoiaImeMacTests tests/InputSessionTests.cpp)
-    target_link_libraries(MetasequoiaImeMacTests PRIVATE MetasequoiaImeMacCore)
-    target_compile_options(MetasequoiaImeMacTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
-    add_test(NAME input_session COMMAND MetasequoiaImeMacTests)
+    add_executable(MetasequoiaCandidateSelectionStateTests tests/CandidateSelectionStateTests.cpp)
+    target_link_libraries(MetasequoiaCandidateSelectionStateTests PRIVATE MetasequoiaIme::Engine)
+    target_compile_options(MetasequoiaCandidateSelectionStateTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    add_test(NAME candidate_selection_state COMMAND MetasequoiaCandidateSelectionStateTests)
     add_executable(MetasequoiaInputControllerKeyRoutingTests tests/InputControllerKeyRoutingTests.mm)
     target_compile_options(MetasequoiaInputControllerKeyRoutingTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(MetasequoiaInputControllerKeyRoutingTests PRIVATE ${APPKIT_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
@@ -137,7 +132,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources HEADER_FILE_ONLY TRUE)
     set_target_properties(MetasequoiaIME PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/MetasequoiaIME-Info.plist MACOSX_BUNDLE_BUNDLE_NAME "Metasequoia IME" MACOSX_BUNDLE_GUI_IDENTIFIER "com.houko.inputmethod.MetasequoiaIME" MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION} OUTPUT_NAME MetasequoiaIME BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "@executable_path/../Frameworks")
     target_compile_options(MetasequoiaIME PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
-    target_link_libraries(MetasequoiaIME PRIVATE MetasequoiaImeMacCore MetasequoiaSparkle ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
+    target_link_libraries(MetasequoiaIME PRIVATE MetasequoiaIme::Engine MetasequoiaSparkle ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
     add_custom_command(TARGET MetasequoiaIME POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_DIR:MetasequoiaIME>/Contents/Frameworks"
         COMMAND /usr/bin/ditto "${METASEQUOIA_SPARKLE_FRAMEWORK}"

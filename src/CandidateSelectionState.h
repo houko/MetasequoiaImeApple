@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CandidatePageSize.h"
-#include "InputSession.h"
+#include "core/input_session.h"
 
 #include <cstddef>
 #include <optional>

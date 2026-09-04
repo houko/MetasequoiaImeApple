@@ -11,7 +11,7 @@
 #include "StringConversion.h"
 #include "CandidateSelectionState.h"
 #include "InputControllerKeyRouting.h"
-#include "InputSession.h"
+#include "core/input_session.h"
 
 #import <Carbon/Carbon.h>
 
@@ -51,7 +51,7 @@ SessionPreferences ReadSessionPreferences()
     };
 }
 
-bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, const SessionPreferences &preferences)
+bool SessionMatchesPreferences(const metasequoia::InputSession &session, const SessionPreferences &preferences)
 {
     return session.scheme_type() == preferences.scheme &&
            session.quanpin_autocorrect_enabled() == preferences.autocorrectEnabled &&
@@ -63,7 +63,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
 
 @implementation MetasequoiaInputController
 {
-    std::unique_ptr<metasequoia::mac::InputSession> _session;
+    std::unique_ptr<metasequoia::InputSession> _session;
     metasequoia::mac::CandidateSelectionState _candidateSelection;
     IMKCandidates *_candidatePanel;
     NSArray *_candidateData;
@@ -130,7 +130,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     {
         return;
     }
-    _session = std::make_unique<metasequoia::mac::InputSession>(
+    _session = std::make_unique<metasequoia::InputSession>(
         preferences.scheme, preferences.autocorrectEnabled, preferences.helpcodeEnabled,
         preferences.chinesePunctuationEnabled, preferences.candidateLearningEnabled);
     _candidateSelection.reset();
@@ -275,7 +275,7 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
         return NO;
     }
 
-    metasequoia::mac::KeyResult result;
+    metasequoia::KeyResult result;
     switch (metasequoia::mac::ClassifyControllerKey(event.keyCode, [_candidatePanel isVisible]))
     {
     case metasequoia::mac::ControllerKeyAction::MoveCandidateLeft:
@@ -370,13 +370,13 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
                            pageStart:_candidatePageStart];
         return YES;
     case metasequoia::mac::ControllerKeyAction::Backspace:
-        result = _session->handle_command(metasequoia::mac::Command::Backspace);
+        result = _session->handle_command(metasequoia::Command::Backspace);
         break;
     case metasequoia::mac::ControllerKeyAction::CommitRaw:
-        result = _session->handle_command(metasequoia::mac::Command::CommitRaw);
+        result = _session->handle_command(metasequoia::Command::CommitRaw);
         break;
     case metasequoia::mac::ControllerKeyAction::Cancel:
-        result = _session->handle_command(metasequoia::mac::Command::Cancel);
+        result = _session->handle_command(metasequoia::Command::Cancel);
         break;
     case metasequoia::mac::ControllerKeyAction::CommitCandidate:
         result = _candidateSelection.commit(*_session);
@@ -431,14 +431,14 @@ bool SessionMatchesPreferences(const metasequoia::mac::InputSession &session, co
     {
         return;
     }
-    const auto result = _session->handle_command(metasequoia::mac::Command::CommitCandidate);
+    const auto result = _session->handle_command(metasequoia::Command::CommitCandidate);
     if (result.handled)
     {
         [self applyResult:result client:sender];
     }
 }
 
-- (void)applyResult:(const metasequoia::mac::KeyResult &)result client:(id)sender
+- (void)applyResult:(const metasequoia::KeyResult &)result client:(id)sender
 {
     id<IMKTextInput> client = sender;
     const NSRange replacementRange = NSMakeRange(NSNotFound, NSNotFound);
