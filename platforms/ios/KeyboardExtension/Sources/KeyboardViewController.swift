@@ -18,6 +18,8 @@ final class KeyboardViewController: UIInputViewController {
   private var layoutToggleButton: UIButton?
   private weak var shiftButton: UIButton?
   private weak var enterButton: UIButton?
+  private var backspaceRepeatTimer: Timer?
+  private var didRepeatBackspace = false
   private var isChineseMode = true
   private var usesShuangpin = false
   private var showsSymbols = false
@@ -58,6 +60,11 @@ final class KeyboardViewController: UIInputViewController {
     super.textDidChange(textInput)
     updateReturnKey()
     updateAutomaticCapitalization()
+  }
+
+  override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    cancelBackspacePress()
   }
 
   private func installKeyboard() {
@@ -209,9 +216,13 @@ final class KeyboardViewController: UIInputViewController {
       self, action: #selector(handleInputModeButton(_:event:)), for: .allTouchEvents)
     row.addArrangedSubview(globe)
 
-    let delete = makeSymbolKey(symbol: "delete.left", accessibilityLabel: "删除") { [weak self] in
-      self?.handleBackspace()
-    }
+    let delete = makeSymbolKey(symbol: "delete.left", accessibilityLabel: "删除")
+    delete.addTarget(self, action: #selector(beginBackspacePress), for: .touchDown)
+    delete.addTarget(self, action: #selector(finishBackspacePress), for: .touchUpInside)
+    delete.addTarget(
+      self,
+      action: #selector(cancelBackspacePress),
+      for: [.touchUpOutside, .touchCancel, .touchDragExit])
     row.addArrangedSubview(delete)
 
     let space = makeKey(title: "空格", accessibilityLabel: "空格") { [weak self] in
@@ -481,6 +492,40 @@ final class KeyboardViewController: UIInputViewController {
       textDocumentProxy.deleteBackward()
     }
     render(snapshot)
+  }
+
+  @objc private func beginBackspacePress() {
+    cancelBackspacePress()
+    didRepeatBackspace = false
+
+    let timer = Timer(
+      timeInterval: 0.075,
+      target: self,
+      selector: #selector(repeatBackspace),
+      userInfo: nil,
+      repeats: true)
+    timer.fireDate = Date(timeIntervalSinceNow: 0.4)
+    RunLoop.main.add(timer, forMode: .common)
+    backspaceRepeatTimer = timer
+  }
+
+  @objc private func finishBackspacePress() {
+    let repeated = didRepeatBackspace
+    cancelBackspacePress()
+    if !repeated {
+      handleBackspace()
+    }
+  }
+
+  @objc private func cancelBackspacePress() {
+    backspaceRepeatTimer?.invalidate()
+    backspaceRepeatTimer = nil
+    didRepeatBackspace = false
+  }
+
+  @objc private func repeatBackspace() {
+    didRepeatBackspace = true
+    handleBackspace()
   }
 
   private func handleSpace() {
