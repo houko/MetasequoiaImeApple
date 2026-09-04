@@ -85,7 +85,7 @@ if [[ "$current_notes" != *"$mode_marker"* || "$current_notes" != *"$install_gui
             printf '%s\n\n' "$install_guidance_marker"
             printf '%s\n' '### Install on macOS'
             printf '%s\n' '- **Recommended: ZIP.** Verify its `.sha256`, extract it, then run `Install.command`. It installs for the current user, registers and enables the exact input source, and does not automatically log out or restart the Mac.'
-            printf '%s\n' '- **Compatibility option: PKG.** The native Installer copies the same app but cannot reliably enable the current GUI user’s input source. After installation, enable 水杉 in System Settings > Keyboard > Text Input. The package does not force a logout or restart; macOS may still require a later logout before a newly copied input method appears.'
+            printf '%s\n' '- **PKG option.** The native Installer copies the same app and attempts to register and enable 水杉 for the logged-in GUI user. If no GUI user is logged in or macOS blocks the app, enable it later in System Settings > Keyboard > Text Input > Edit. The package does not force a logout or restart; macOS may still require a later logout before a newly copied input method appears.'
         fi
     } > "$release_notes"
     gh release edit "$TAG_NAME" --repo "$GH_REPO" --notes-file "$release_notes"
