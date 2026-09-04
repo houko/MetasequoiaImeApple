@@ -25,6 +25,11 @@
     return self.updaterController.updater.canCheckForUpdates;
 }
 
+- (BOOL)automaticallyChecksForUpdates
+{
+    return self.updaterController.updater.automaticallyChecksForUpdates;
+}
+
 - (void)checkForUpdates:(id)sender
 {
     [self.updaterController checkForUpdates:sender];
@@ -70,6 +75,11 @@
 - (BOOL)canCheckForUpdates
 {
     return self.driver.canCheckForUpdates;
+}
+
+- (BOOL)automaticallyChecksForUpdates
+{
+    return self.driver.automaticallyChecksForUpdates;
 }
 
 - (void)checkForUpdates:(id)sender

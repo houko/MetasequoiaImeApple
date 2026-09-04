@@ -8,9 +8,24 @@
 #include <stdexcept>
 
 @interface MetasequoiaPreferencesWindowController (Testing)
+- (instancetype)initWithUpdateController:(MetasequoiaUpdateController *)updateController;
 - (void)refreshControls;
+- (void)refreshUpdateControls;
 - (void)selectPreferencesPage:(id)sender;
 - (void)openWebsite:(id)sender;
+- (void)openFeedback:(id)sender;
+@end
+
+@interface PreferencesFakeUpdateDriver : NSObject <MetasequoiaUpdateDriver>
+@property(nonatomic) BOOL canCheckForUpdates;
+@property(nonatomic) BOOL automaticallyChecksForUpdates;
+@end
+
+@implementation PreferencesFakeUpdateDriver
+- (void)checkForUpdates:(id)sender
+{
+    (void)sender;
+}
 @end
 
 namespace
@@ -97,6 +112,20 @@ NSButton *FindButtonWithTitle(NSView *view, NSString *title)
     }
     return nil;
 }
+
+NSInteger CountButtonsWithAction(NSView *view, SEL action)
+{
+    NSInteger count = 0;
+    if ([view isKindOfClass:[NSButton class]] && ((NSButton *)view).action == action)
+    {
+        ++count;
+    }
+    for (NSView *subview in view.subviews)
+    {
+        count += CountButtonsWithAction(subview, action);
+    }
+    return count;
+}
 } // namespace
 
 int main()
@@ -145,31 +174,43 @@ int main()
         require(![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled],
                 "The disabled Wubi auto-commit preference was not stored.");
 
+        PreferencesFakeUpdateDriver *updateDriver = [[PreferencesFakeUpdateDriver alloc] init];
+        updateDriver.canCheckForUpdates = YES;
+        updateDriver.automaticallyChecksForUpdates = YES;
+        MetasequoiaUpdateController *updateController =
+            [[MetasequoiaUpdateController alloc] initWithDriver:updateDriver activationHandler:^{}];
         MetasequoiaPreferencesWindowController *controller =
-            [[MetasequoiaPreferencesWindowController alloc] init];
+            [[MetasequoiaPreferencesWindowController alloc] initWithUpdateController:updateController];
         [controller refreshControls];
         NSButton *generalNavigationButton = FindButtonWithTitle(controller.window.contentView, @"键盘输入");
         NSButton *appearanceNavigationButton = FindButtonWithTitle(controller.window.contentView, @"外观");
         NSButton *dataNavigationButton = FindButtonWithTitle(controller.window.contentView, @"词库与数据");
-        require(generalNavigationButton != nil && appearanceNavigationButton != nil && dataNavigationButton != nil,
+        NSButton *updatesNavigationButton = FindButtonWithTitle(controller.window.contentView, @"更新与反馈");
+        require(generalNavigationButton != nil && appearanceNavigationButton != nil && dataNavigationButton != nil &&
+                    updatesNavigationButton != nil,
                 "The settings window did not expose all sidebar destinations.");
         NSColor *generalTitleColor = [generalNavigationButton.attributedTitle attribute:NSForegroundColorAttributeName
                                                                                 atIndex:0
                                                                          effectiveRange:nil];
         require([generalTitleColor isEqual:[NSColor whiteColor]],
                 "The settings sidebar did not render navigation titles in white.");
+        require([generalNavigationButton.contentTintColor isEqual:[NSColor whiteColor]] &&
+                    ![generalNavigationButton.image isTemplate],
+                "The settings sidebar did not render navigation symbols in white.");
         require(generalNavigationButton.state == NSControlStateValueOn &&
                     appearanceNavigationButton.state == NSControlStateValueOff &&
                     dataNavigationButton.state == NSControlStateValueOff &&
+                    updatesNavigationButton.state == NSControlStateValueOff &&
                     [generalNavigationButton.accessibilityValue integerValue] == 1 &&
                     [appearanceNavigationButton.accessibilityValue integerValue] == 0,
                 "The settings sidebar did not mark the initial page as selected.");
         NSView *generalPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"键盘输入设置页");
         NSView *appearancePage = FindViewWithAccessibilityLabel(controller.window.contentView, @"外观设置页");
         NSView *dataPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"词库与数据设置页");
-        require(generalPage != nil && appearancePage != nil && dataPage != nil,
+        NSView *updatesPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"更新与反馈设置页");
+        require(generalPage != nil && appearancePage != nil && dataPage != nil && updatesPage != nil,
                 "The settings window did not create all functional pages.");
-        require(!generalPage.hidden && appearancePage.hidden && dataPage.hidden,
+        require(!generalPage.hidden && appearancePage.hidden && dataPage.hidden && updatesPage.hidden,
                 "The settings window did not open on the keyboard-input page.");
         [appearanceNavigationButton performClick:nil];
         require(generalPage.hidden && !appearancePage.hidden && dataPage.hidden &&
@@ -180,6 +221,10 @@ int main()
         require(generalPage.hidden && appearancePage.hidden && !dataPage.hidden &&
                     dataNavigationButton.state == NSControlStateValueOn,
                 "The data sidebar item did not reveal and select the data page.");
+        [updatesNavigationButton performClick:nil];
+        require(generalPage.hidden && appearancePage.hidden && dataPage.hidden && !updatesPage.hidden &&
+                    updatesNavigationButton.state == NSControlStateValueOn,
+                "The updates sidebar item did not reveal and select the updates page.");
         [generalNavigationButton performClick:nil];
 
         NSView *candidatePageShortcutView =
@@ -254,14 +299,22 @@ int main()
         NSView *candidatePageShortcutCard =
             FindViewWithAccessibilityLabel(controller.window.contentView, @"候选翻页快捷键卡片");
         NSView *learningCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"候选与学习卡片");
+        NSView *softwareUpdateCard =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"软件更新卡片");
+        NSView *feedbackCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"反馈与帮助卡片");
         require(schemeCard.frame.size.width == behaviorCard.frame.size.width &&
                     schemeCard.frame.size.width == candidatePageShortcutCard.frame.size.width &&
-                    schemeCard.frame.size.width == learningCard.frame.size.width,
+                    schemeCard.frame.size.width == learningCard.frame.size.width &&
+                    schemeCard.frame.size.width == softwareUpdateCard.frame.size.width &&
+                    schemeCard.frame.size.width == feedbackCard.frame.size.width,
                 "The settings cards did not consistently fill the content width.");
         NSRect candidatePageShortcutCardRect =
             [generalPage convertRect:candidatePageShortcutCard.bounds fromView:candidatePageShortcutCard];
         require(NSMaxY(candidatePageShortcutCardRect) <= NSMaxY(generalPage.bounds),
                 "The candidate page shortcut card overflowed the keyboard-input page.");
+        NSRect feedbackCardRect = [updatesPage convertRect:feedbackCard.bounds fromView:feedbackCard];
+        require(NSMaxY(feedbackCardRect) <= NSMaxY(updatesPage.bounds),
+                "The feedback card overflowed the updates page.");
 
         NSView *view = FindViewWithAccessibilityLabel(controller.window.contentView, @"候选排列");
         require([view isKindOfClass:[NSPopUpButton class]],
@@ -348,16 +401,39 @@ int main()
         require([resetLearningView isKindOfClass:[NSButton class]],
                 "The settings window did not expose the learned-data reset button.");
         NSButton *resetLearningButton = (NSButton *)resetLearningView;
-        NSView *updateView = FindViewWithAccessibilityLabel(controller.window.contentView, @"软件更新");
-        require([updateView isKindOfClass:[NSButton class]],
-                "The settings window did not expose the software-update control.");
-        require([((NSButton *)updateView).title containsString:@"检查更新"],
-                "The software-update control did not show the installed-version state.");
-        require([((NSButton *)updateView).accessibilityHelp containsString:@"msime.app"],
-                "The software-update control did not expose its current state to assistive technology.");
-        require(((NSButton *)updateView).action == @selector(checkForUpdates:) &&
-                    ((NSButton *)updateView).target == controller,
-                "The software-update control did not invoke the in-place Sparkle updater.");
+        NSView *versionView = FindViewWithAccessibilityLabel(controller.window.contentView, @"当前版本");
+        require([versionView isKindOfClass:[NSTextField class]] &&
+                    ((NSTextField *)versionView).stringValue.length > 0,
+                "The updates page did not expose the installed version.");
+        NSView *automaticUpdatesView =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"自动更新状态");
+        require([automaticUpdatesView isKindOfClass:[NSTextField class]] &&
+                    [((NSTextField *)automaticUpdatesView).stringValue isEqualToString:@"已开启自动检查"],
+                "The updates page did not show the enabled automatic-check state.");
+        updateDriver.automaticallyChecksForUpdates = NO;
+        [controller refreshUpdateControls];
+        require([((NSTextField *)automaticUpdatesView).stringValue isEqualToString:@"自动检查已关闭"],
+                "The updates page did not refresh the disabled automatic-check state.");
+        NSView *checkNowView = FindViewWithAccessibilityLabel(controller.window.contentView, @"立即检查更新");
+        require([checkNowView isKindOfClass:[NSButton class]] &&
+                    [((NSButton *)checkNowView).title containsString:@"检查更新"] &&
+                    [((NSButton *)checkNowView).accessibilityHelp containsString:@"msime.app"] &&
+                    ((NSButton *)checkNowView).action == @selector(checkForUpdates:) &&
+                    ((NSButton *)checkNowView).target == controller,
+                "The updates page did not expose an in-place update action.");
+        require(CountButtonsWithAction(controller.window.contentView, @selector(checkForUpdates:)) == 1,
+                "The settings window exposed duplicate software-update actions.");
+        NSView *feedbackView = FindViewWithAccessibilityLabel(controller.window.contentView, @"提交反馈");
+        require([feedbackView isKindOfClass:[NSButton class]] &&
+                    ((NSButton *)feedbackView).action == @selector(openFeedback:) &&
+                    ((NSButton *)feedbackView).target == controller,
+                "The updates page did not expose a feedback action.");
+        NSColor *feedbackTitleColor = [((NSButton *)feedbackView).attributedTitle
+            attribute:NSForegroundColorAttributeName
+              atIndex:0
+       effectiveRange:nil];
+        require([feedbackTitleColor isEqual:[NSColor linkColor]],
+                "The updates-page actions did not remain visually distinct from disabled controls.");
 
         __block bool resetStartedAfterCancel = false;
         id cancelObserver = [[NSNotificationCenter defaultCenter]
@@ -500,7 +576,7 @@ int main()
                         standaloneCloseObserved = true;
                     }];
         MetasequoiaPreferencesWindowController *standaloneController =
-            [[MetasequoiaPreferencesWindowController alloc] init];
+            [[MetasequoiaPreferencesWindowController alloc] initWithUpdateController:updateController];
         [standaloneController showAndActivateForStandaloneLaunch];
         NSView *standaloneResetView = FindViewWithAccessibilityLabel(standaloneController.window.contentView,
                                                                      @"清除学习数据");
