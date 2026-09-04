@@ -47,7 +47,7 @@ int main()
     {
         [NSApplication sharedApplication];
         PreferencesTarget *target = [[PreferencesTarget alloc] init];
-        NSMenu *menu = CreateMetasequoiaInputMenu(target, NO);
+        NSMenu *menu = CreateMetasequoiaInputMenu(target, NO, nil);
 
         require(menu.numberOfItems == 4, "The input menu did not contain both input modes and settings.");
         NSMenuItem *chineseItem = [menu itemAtIndex:0];
@@ -70,10 +70,12 @@ int main()
 
         [menu performActionForItemAtIndex:1];
         require(target.englishSelected, "The English input mode action was not dispatched.");
-        NSMenu *englishMenu = CreateMetasequoiaInputMenu(target, YES);
+        NSMenu *englishMenu = CreateMetasequoiaInputMenu(target, YES, @"0.21.0");
         require([englishMenu itemAtIndex:0].state == NSControlStateValueOff &&
                     [englishMenu itemAtIndex:1].state == NSControlStateValueOn,
                 "The English input mode was not represented as selected.");
+        require([[englishMenu itemAtIndex:3].title containsString:@"新版本 v0.21.0"],
+                "The input menu did not surface an available update.");
         [englishMenu performActionForItemAtIndex:0];
         require(target.chineseSelected, "The Chinese input mode action was not dispatched.");
 

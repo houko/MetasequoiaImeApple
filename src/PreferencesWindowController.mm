@@ -4,6 +4,7 @@
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
 #import "DictionaryInstaller.h"
+#import "UpdateChecker.h"
 
 NSNotificationName const MetasequoiaWillResetLearnedDataNotification =
     @"MetasequoiaWillResetLearnedDataNotification";
@@ -60,6 +61,7 @@ void ConfigureCard(NSBox *card)
     NSButton *_inputModeShortcutButton;
     NSButton *_resetLearningButton;
     NSTextField *_statusLabel;
+    NSButton *_updateButton;
 }
 
 + (instancetype)sharedController
@@ -410,12 +412,10 @@ void ConfigureCard(NSBox *card)
     restoreButton.bezelStyle = NSBezelStyleRounded;
     restoreButton.translatesAutoresizingMaskIntoConstraints = NO;
 
-    NSString *version = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-    NSString *versionText = version.length == 0 ? @"开发版本" : [@"版本 " stringByAppendingString:version];
-    NSTextField *versionLabel = [NSTextField labelWithString:versionText];
-    versionLabel.font = [NSFont systemFontOfSize:11.0];
-    versionLabel.textColor = [NSColor tertiaryLabelColor];
-    versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    _updateButton = [NSButton buttonWithTitle:@"检查更新…" target:self action:@selector(checkForUpdates:)];
+    _updateButton.bezelStyle = NSBezelStyleInline;
+    _updateButton.accessibilityLabel = @"软件更新";
+    _updateButton.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSButton *closeButton = [NSButton buttonWithTitle:@"关闭" target:self action:@selector(close:)];
     closeButton.bezelStyle = NSBezelStyleRounded;
@@ -454,7 +454,7 @@ void ConfigureCard(NSBox *card)
     [dataCard addSubview:learningDataDescription];
     [dataCard addSubview:_resetLearningButton];
     [settingsPanel addSubview:restoreButton];
-    [settingsPanel addSubview:versionLabel];
+    [settingsPanel addSubview:_updateButton];
     [settingsPanel addSubview:closeButton];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -549,13 +549,84 @@ void ConfigureCard(NSBox *card)
         [_resetLearningButton.widthAnchor constraintGreaterThanOrEqualToConstant:118.0],
         [restoreButton.leadingAnchor constraintEqualToAnchor:titleLabel.leadingAnchor],
         [restoreButton.bottomAnchor constraintEqualToAnchor:settingsPanel.bottomAnchor constant:-20.0],
-        [versionLabel.centerXAnchor constraintEqualToAnchor:settingsPanel.centerXAnchor],
-        [versionLabel.centerYAnchor constraintEqualToAnchor:restoreButton.centerYAnchor],
+        [_updateButton.centerXAnchor constraintEqualToAnchor:settingsPanel.centerXAnchor],
+        [_updateButton.centerYAnchor constraintEqualToAnchor:restoreButton.centerYAnchor],
         [closeButton.trailingAnchor constraintEqualToAnchor:settingsPanel.trailingAnchor constant:-28.0],
         [closeButton.bottomAnchor constraintEqualToAnchor:settingsPanel.bottomAnchor constant:-20.0],
         [closeButton.widthAnchor constraintGreaterThanOrEqualToConstant:80.0],
     ]];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(updateAvailabilityChanged:)
+                                                 name:MetasequoiaUpdateAvailabilityDidChangeNotification
+                                               object:[MetasequoiaUpdateChecker sharedChecker]];
+    [self refreshUpdateButton];
     return self;
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)refreshUpdateButton
+{
+    MetasequoiaUpdateChecker *checker = [MetasequoiaUpdateChecker sharedChecker];
+    if (checker.availableVersion != nil)
+    {
+        _updateButton.title = [NSString stringWithFormat:@"下载 v%@…", checker.availableVersion];
+        _updateButton.toolTip = @"在 GitHub Releases 中下载最新版本";
+        _updateButton.accessibilityHelp =
+            [NSString stringWithFormat:@"有新版本 v%@，打开 GitHub Releases 下载", checker.availableVersion];
+        _updateButton.contentTintColor = MetasequoiaBrandColor();
+        _updateButton.enabled = YES;
+        return;
+    }
+    NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+    _updateButton.title = version.length == 0 ? @"检查更新…" : [NSString stringWithFormat:@"检查更新（v%@）…", version];
+    _updateButton.toolTip = @"从 GitHub 检查水杉输入法的最新正式版本";
+    _updateButton.accessibilityHelp = version.length == 0
+                                          ? @"检查 GitHub 上的最新正式版本"
+                                          : [NSString stringWithFormat:@"当前版本 v%@，检查 GitHub 上的最新正式版本", version];
+    _updateButton.contentTintColor = nil;
+    _updateButton.enabled = YES;
+}
+
+- (void)updateAvailabilityChanged:(NSNotification *)notification
+{
+    (void)notification;
+    [self refreshUpdateButton];
+}
+
+- (void)checkForUpdates:(id)sender
+{
+    (void)sender;
+    MetasequoiaUpdateChecker *checker = [MetasequoiaUpdateChecker sharedChecker];
+    if (checker.releaseURL != nil)
+    {
+        if (![NSWorkspace.sharedWorkspace openURL:checker.releaseURL])
+        {
+            _updateButton.title = @"无法打开下载页，重试…";
+            _updateButton.accessibilityHelp = @"无法打开 GitHub Releases 下载页，再次尝试打开";
+        }
+        return;
+    }
+
+    _updateButton.enabled = NO;
+    _updateButton.title = @"正在检查更新…";
+    _updateButton.accessibilityHelp = @"正在从 GitHub 检查最新正式版本";
+    [checker checkForUpdates:^(MetasequoiaUpdateCheckState state) {
+        [self refreshUpdateButton];
+        if (state == MetasequoiaUpdateCheckStateCurrent)
+        {
+            self->_updateButton.title = @"已是最新版本";
+            self->_updateButton.accessibilityHelp = @"当前安装的水杉输入法已是最新正式版本";
+        }
+        else if (state == MetasequoiaUpdateCheckStateFailed)
+        {
+            self->_updateButton.title = @"检查失败，重试…";
+            self->_updateButton.accessibilityHelp = @"无法检查更新，再次尝试连接 GitHub";
+        }
+    }];
 }
 
 - (void)refreshControls
@@ -593,6 +664,7 @@ void ConfigureCard(NSBox *card)
 {
     [self refreshControls];
     [self refreshDictionaryStatus];
+    [self refreshUpdateButton];
     [self showWindow:nil];
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
