@@ -219,8 +219,55 @@ int main()
             return failureState == MetasequoiaUpdateCheckStateFailed;
         });
 
+        NSString *retrySuiteName =
+            [@"MetasequoiaUpdateCheckerRetryTests." stringByAppendingString:NSUUID.UUID.UUIDString];
+        NSUserDefaults *retryDefaults = [[NSUserDefaults alloc] initWithSuiteName:retrySuiteName];
+        [retryDefaults removePersistentDomainForName:retrySuiteName];
+        __block NSDate *retryNow = now;
+        __block NSInteger retryFetchCount = 0;
+        MetasequoiaUpdateChecker *retryChecker =
+            [[MetasequoiaUpdateChecker alloc] initWithDefaults:retryDefaults
+                                               currentVersion:@"0.20.13"
+                                                      fetcher:^(MetasequoiaUpdateFetchCompletion completion) {
+                                                          ++retryFetchCount;
+                                                          if (retryFetchCount == 1)
+                                                          {
+                                                              NSError *error = [NSError
+                                                                  errorWithDomain:NSURLErrorDomain
+                                                                             code:NSURLErrorNotConnectedToInternet
+                                                                         userInfo:nil];
+                                                              completion(nil, 0, error);
+                                                          }
+                                                          else
+                                                          {
+                                                              completion(unsignedRelease, 200, nil);
+                                                          }
+                                                      }
+                                                        clock:^NSDate * {
+                                                            return retryNow;
+                                                        }];
+        __block BOOL initialFailureFinished = NO;
+        [retryChecker checkForUpdates:^(MetasequoiaUpdateCheckState state) {
+            initialFailureFinished = state == MetasequoiaUpdateCheckStateFailed;
+        }];
+        WaitForCondition(^BOOL {
+            return initialFailureFinished;
+        });
+        retryNow = [now dateByAddingTimeInterval:30.0 * 60.0];
+        [retryChecker checkForUpdatesIfNeeded];
+        require(retryFetchCount == 1, "A failed update check retried before the one-hour backoff elapsed.");
+        retryNow = [now dateByAddingTimeInterval:61.0 * 60.0];
+        [retryChecker checkForUpdatesIfNeeded];
+        WaitForCondition(^BOOL {
+            return retryFetchCount == 2 && retryChecker.availableVersion != nil;
+        });
+        retryNow = [now dateByAddingTimeInterval:3.0 * 60.0 * 60.0];
+        [retryChecker checkForUpdatesIfNeeded];
+        require(retryFetchCount == 2, "A successful update check ignored the daily throttle.");
+
         [defaults removePersistentDomainForName:suiteName];
         [coalescingDefaults removePersistentDomainForName:coalescingSuiteName];
+        [retryDefaults removePersistentDomainForName:retrySuiteName];
     }
     return 0;
 }
