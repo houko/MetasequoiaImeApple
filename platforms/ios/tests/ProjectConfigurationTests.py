@@ -81,6 +81,14 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("handleCandidateKey", bridge_header)
         self.assertIn("handlePunctuation", bridge_header)
 
+    def test_candidate_surface_exposes_numbered_native_chips(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("makeCandidateButton(candidate: candidate, number: index + 1)", controller)
+        self.assertIn('configuration.title = "\\(number)  \\(candidate)"', controller)
+        self.assertIn("configuration.background.cornerRadius", controller)
+        self.assertIn('button.accessibilityLabel = "候选词 \\(number)：\\(candidate)"', controller)
+
 
 if __name__ == "__main__":
     unittest.main()
