@@ -12,6 +12,26 @@ write_output() {
     fi
 }
 
+gh_api_retry() {
+    local attempts=${METASEQUOIA_GH_API_MAX_ATTEMPTS:-3}
+    local delay=${METASEQUOIA_GH_API_RETRY_DELAY:-2}
+    local attempt
+    if [[ ! "$attempts" =~ ^[1-9][0-9]*$ || ! "$delay" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+        printf 'Invalid GitHub API retry settings.\n' >&2
+        return 2
+    fi
+    for ((attempt = 1; attempt <= attempts; ++attempt)); do
+        if gh api "$@"; then
+            return 0
+        fi
+        if ((attempt < attempts)); then
+            printf 'GitHub API request failed (attempt %d/%d); retrying in %ss.\n' "$attempt" "$attempts" "$delay" >&2
+            sleep "$delay"
+        fi
+    done
+    return 1
+}
+
 if [[ "$RELEASE_BRANCH" != release-please--* ]]; then
     printf 'Refusing to promote a non-Release-Please branch: %s\n' "$RELEASE_BRANCH" >&2
     exit 1
@@ -25,13 +45,13 @@ if [[ ! "$EXPECTED_PREVIOUS_RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
     exit 1
 fi
 
-base_sha=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)
+base_sha=$(gh_api_retry "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)
 if [[ "$base_sha" != "$GITHUB_SHA" ]]; then
     printf 'main advanced from %s to %s; refusing stale release promotion.\n' "$GITHUB_SHA" "$base_sha" >&2
     exit 1
 fi
 
-head_sha=$(gh api "repos/$GH_REPO/git/ref/heads/$RELEASE_BRANCH" --jq .object.sha)
+head_sha=$(gh_api_retry "repos/$GH_REPO/git/ref/heads/$RELEASE_BRANCH" --jq .object.sha)
 if [[ ! "$head_sha" =~ ^[0-9a-f]{40}$ || "$head_sha" == "$base_sha" ]]; then
     printf 'Release Please branch returned an invalid release commit: %s\n' "$head_sha" >&2
     exit 1
@@ -41,7 +61,7 @@ if [[ "$head_sha" == "$EXPECTED_PREVIOUS_RELEASE_SHA" ]]; then
     exit 1
 fi
 
-commit_json=$(gh api "repos/$GH_REPO/git/commits/$head_sha")
+commit_json=$(gh_api_retry "repos/$GH_REPO/git/commits/$head_sha")
 message=$(jq -er '.message | select(type == "string")' <<< "$commit_json")
 parent_count=$(jq -er '.parents | length' <<< "$commit_json")
 parent_sha=$(jq -er '.parents[0].sha | select(type == "string")' <<< "$commit_json")
@@ -57,7 +77,7 @@ if [[ "$author" != "$expected_author" ]]; then
 fi
 
 fetch_file() {
-    gh api "repos/$GH_REPO/contents/$1?ref=$2" --jq .content | base64 --decode
+    gh_api_retry "repos/$GH_REPO/contents/$1?ref=$2" --jq .content | base64 --decode
 }
 
 base_version=$(fetch_file version.txt "$base_sha")
@@ -80,7 +100,7 @@ if [[ "$message" != "chore(main): release $head_version" ]]; then
     exit 1
 fi
 
-compare_json=$(gh api "repos/$GH_REPO/compare/$base_sha...$head_sha")
+compare_json=$(gh_api_retry "repos/$GH_REPO/compare/$base_sha...$head_sha")
 if [[ "$(jq -er .status <<< "$compare_json")" != ahead || \
       "$(jq -er .ahead_by <<< "$compare_json")" != 1 || \
       "$(jq -er .behind_by <<< "$compare_json")" != 0 ]]; then
@@ -150,14 +170,14 @@ if [[ -z "$run_id" ]]; then
 fi
 gh run watch "$run_id" --repo "$GH_REPO" --exit-status --interval 10
 
-current_base_sha=$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)
-current_head_sha=$(gh api "repos/$GH_REPO/git/ref/heads/$RELEASE_BRANCH" --jq .object.sha)
+current_base_sha=$(gh_api_retry "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)
+current_head_sha=$(gh_api_retry "repos/$GH_REPO/git/ref/heads/$RELEASE_BRANCH" --jq .object.sha)
 if [[ "$current_base_sha" != "$base_sha" || "$current_head_sha" != "$head_sha" ]]; then
     printf 'main or the release branch advanced while CI was running; refusing promotion.\n' >&2
     exit 1
 fi
 
-gh api --method PATCH "repos/$GH_REPO/git/refs/heads/main" -f sha="$head_sha" -F force=false >/dev/null
+gh_api_retry --method PATCH "repos/$GH_REPO/git/refs/heads/main" -f sha="$head_sha" -F force=false >/dev/null
 write_output "promoted=true"
 write_output "target_sha=$head_sha"
 write_output "tag_name=v$head_version"
