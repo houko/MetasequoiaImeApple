@@ -47,3 +47,29 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :TISInputSourceID' build/MetasequoiaIME.app/Contents/Info.plist)" = "com.houko.inputmethod.MetasequoiaIME"
           test "$(/usr/libexec/PlistBuddy -c 'Print :TISIntendedLanguage' build/MetasequoiaIME.app/Contents/Info.plist)" = "zh-Hans"
           test "$(/usr/libexec/PlistBuddy -c 'Print :ComponentInputModeDict:tsInputModeListKey:com.houko.inputmethod.MetasequoiaIME.Hans:tsInputModeScriptKey' build/MetasequoiaIME.app/Contents/Info.plist)" = "smSimpChinese"
+
+  ios:
+    name: iOS Simulator
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install project generator
+        run: brew install xcodegen
+      - name: Validate keyboard configuration
+        run: python3 platforms/ios/tests/ProjectConfigurationTests.py
+      - name: Generate Xcode project
+        run: |
+          mkdir -p build/ios
+          xcodegen generate --spec platforms/ios/project.yml --project build/ios --project-root .
+      - name: Build host app and keyboard extension
+        run: |
+          xcodebuild \
+            -project build/ios/MetasequoiaImeIOS.xcodeproj \
+            -scheme MetasequoiaImeIOS \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios-derived \
+            CODE_SIGNING_ALLOWED=NO \
+            build

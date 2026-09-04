@@ -1,0 +1,131 @@
+import SwiftUI
+import UIKit
+
+struct OnboardingView: View {
+  @State private var sampleText = ""
+
+  private let steps = [
+    ("1", "打开键盘设置", "前往“设置 → 通用 → 键盘 → 键盘”。"),
+    ("2", "添加水杉输入法", "选择“添加新键盘”，再选择水杉输入法。"),
+    ("3", "切换并开始输入", "在输入框长按地球键，选择水杉输入法。"),
+  ]
+
+  var body: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 28) {
+        header
+
+        VStack(spacing: 0) {
+          ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+            stepRow(
+              number: step.0, title: step.1, detail: step.2, drawsLine: index < steps.count - 1)
+          }
+        }
+        .padding(.horizontal, 20)
+        .background(.background, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+        Button(action: openSettings) {
+          Label("打开系统设置", systemImage: "gearshape.fill")
+            .font(.headline)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white)
+        .background(
+          MetasequoiaTheme.forest, in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
+        .accessibilityHint("打开水杉输入法的系统设置页面")
+
+        VStack(alignment: .leading, spacing: 10) {
+          Text("启用后试一试")
+            .font(.headline)
+            .foregroundStyle(MetasequoiaTheme.ink)
+          TextField("在这里试试水杉键盘", text: $sampleText)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 16)
+            .frame(minHeight: 52)
+            .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+              RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(MetasequoiaTheme.needle.opacity(0.35), lineWidth: 1)
+            }
+            .accessibilityIdentifier("keyboardTryoutField")
+        }
+
+        Text("键盘扩展默认不请求“允许完全访问”。输入内容保留在设备上。")
+          .font(.footnote)
+          .foregroundStyle(.secondary)
+          .frame(maxWidth: .infinity, alignment: .center)
+      }
+      .padding(.horizontal, 22)
+      .padding(.vertical, 30)
+    }
+    .background(MetasequoiaTheme.mist.ignoresSafeArea())
+    .tint(MetasequoiaTheme.forest)
+  }
+
+  private var header: some View {
+    HStack(alignment: .center, spacing: 18) {
+      MetasequoiaMark()
+        .stroke(
+          MetasequoiaTheme.forest,
+          style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+        )
+        .frame(width: 58, height: 76)
+        .padding(12)
+        .background(.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .accessibilityHidden(true)
+
+      VStack(alignment: .leading, spacing: 5) {
+        Text("水杉输入法")
+          .font(.system(.largeTitle, design: .rounded).weight(.bold))
+          .foregroundStyle(MetasequoiaTheme.ink)
+        Text("同一颗引擎，原生 iOS 键盘")
+          .font(.subheadline.weight(.medium))
+          .foregroundStyle(MetasequoiaTheme.needle)
+      }
+    }
+  }
+
+  private func stepRow(number: String, title: String, detail: String, drawsLine: Bool) -> some View
+  {
+    HStack(alignment: .top, spacing: 16) {
+      VStack(spacing: 0) {
+        Text(number)
+          .font(.system(.headline, design: .rounded).weight(.bold))
+          .foregroundStyle(.white)
+          .frame(width: 34, height: 34)
+          .background(MetasequoiaTheme.cone, in: Circle())
+        if drawsLine {
+          Rectangle()
+            .fill(MetasequoiaTheme.needle.opacity(0.3))
+            .frame(width: 2, height: 54)
+        }
+      }
+
+      VStack(alignment: .leading, spacing: 5) {
+        Text(title)
+          .font(.headline)
+          .foregroundStyle(MetasequoiaTheme.ink)
+        Text(detail)
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .padding(.top, 5)
+
+      Spacer(minLength: 0)
+    }
+    .padding(.top, 18)
+  }
+
+  private func openSettings() {
+    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+    UIApplication.shared.open(url)
+  }
+}
+
+#Preview {
+  OnboardingView()
+}
