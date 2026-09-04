@@ -90,10 +90,12 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertNotIn("ref: ${{ github.sha }}", workflow)
         self.assertIn("$RUNNER_TEMP/detect-release-signing.sh", workflow)
         self.assertIn("$RUNNER_TEMP/package-release.sh", workflow)
+        self.assertIn("$RUNNER_TEMP/InstallerDistribution.xml.in", workflow)
         self.assertIn("$RUNNER_TEMP/uninstall.sh", workflow)
         self.assertIn("METASEQUOIA_PROJECT_ROOT", workflow)
         self.assertIn("METASEQUOIA_RELEASE_INSTALL_SCRIPT", workflow)
         self.assertIn("METASEQUOIA_RELEASE_UNINSTALL_SCRIPT", workflow)
+        self.assertIn("METASEQUOIA_INSTALLER_DISTRIBUTION", workflow)
         self.assertIn("$RUNNER_TEMP/publish-release.sh", workflow)
         self.assertIn("git merge-base --is-ancestor HEAD refs/remotes/origin/main", workflow)
         self.assertLess(workflow.index("name: Determine release signing mode"), workflow.index("name: Check out release tag"))
@@ -108,7 +110,10 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("enable full-pinyin autocorrection", readme)
         self.assertIn("native 水杉输入法设置 panel", readme)
         self.assertIn("current user's copy in `~/Library/Input Methods`", readme)
-        self.assertIn("does not require administrator privileges", readme)
+        self.assertIn("may request administrator authorization", readme)
+        self.assertIn("without logging out or administrator privileges", readme)
+        self.assertIn("will not log out or restart the Mac automatically", readme)
+        self.assertIn("recommended option when 水杉 should be available immediately", readme)
         self.assertNotIn("installs the input method system-wide", readme)
         self.assertIn("InputMethodServerPreferencesWindowControllerClass", info_plist)
         self.assertIn("@METASEQUOIA_IME_DICTIONARY_SHA256@", info_plist)
@@ -261,7 +266,10 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertEqual(submodule_value("vendor/MetasequoiaImeEngine", "branch"), "feat/macos-portability")
 
     def test_release_scripts_have_valid_zsh_syntax(self):
-        for relative_path in ("scripts/install-release.sh", "scripts/package_release.sh"):
+        for relative_path in (
+            "scripts/install-release.sh",
+            "scripts/package_release.sh",
+        ):
             result = subprocess.run(["zsh", "-n", str(PROJECT_ROOT / relative_path)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
         result = subprocess.run(

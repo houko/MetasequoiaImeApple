@@ -7,6 +7,8 @@ install_script=${METASEQUOIA_RELEASE_INSTALL_SCRIPT:-$project_root/scripts/insta
 install_script=${install_script:A}
 uninstall_script=${METASEQUOIA_RELEASE_UNINSTALL_SCRIPT:-$project_root/scripts/uninstall.sh}
 uninstall_script=${uninstall_script:A}
+installer_distribution=${METASEQUOIA_INSTALLER_DISTRIBUTION:-$project_root/resources/InstallerDistribution.xml.in}
+installer_distribution=${installer_distribution:A}
 tag_name=${1:-}
 source_bundle=${2:-$project_root/build/MetasequoiaIME.app}
 output_dir=${3:-$project_root/dist}
@@ -62,7 +64,10 @@ if [[ ! -f "$uninstall_script" ]]; then
     print -u2 "Release uninstall script not found at $uninstall_script"
     exit 1
 fi
-
+if [[ ! -f "$installer_distribution" ]]; then
+    print -u2 "Installer distribution template not found at $installer_distribution"
+    exit 1
+fi
 bundle_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$source_bundle/Contents/Info.plist")
 if [[ "$bundle_version" != "$version" ]]; then
     print -u2 "Bundle version $bundle_version does not match tag $tag_name."
@@ -162,7 +167,7 @@ fi
 ditto -c -k --keepParent "$package_root" "$archive_path"
 (cd "$staging_root" && shasum -a 256 "$archive_name") > "$checksum_path"
 pkgbuild --component "$packaged_bundle" --identifier com.houko.inputmethod.MetasequoiaIME.pkg --version "$version" --install-location "Library/Input Methods" "$component_package"
-sed "s/@VERSION@/$version/g" "$project_root/resources/InstallerDistribution.xml.in" > "$distribution_file"
+sed "s/@VERSION@/$version/g" "$installer_distribution" > "$distribution_file"
 mkdir -p "$installer_resources"
 ditto "$project_root/LICENSE" "$installer_resources/LICENSE"
 ditto "$project_root/THIRD_PARTY_NOTICES.txt" "$installer_resources/THIRD_PARTY_NOTICES.txt"
@@ -184,6 +189,9 @@ fi
 printf '%s\n' \
     '' \
     'Installation scope: current user (~/Library/Input Methods).' \
+    'The native Installer may request administrator authorization.' \
+    'The installer will not log out or restart the Mac automatically.' \
+    'macOS may list a newly copied input method only after you log out and back in at a convenient time.' \
     '' \
     'Uninstall from Terminal with:' \
     '"$HOME/Library/Input Methods/MetasequoiaIME.app/Contents/Resources/Uninstall.command"' \

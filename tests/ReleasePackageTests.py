@@ -431,6 +431,14 @@ class ReleasePackageTests(unittest.TestCase):
             )
             fake_xcrun.chmod(0o755)
 
+            legacy_project_root = temporary / "legacy-project-root"
+            legacy_project_root.mkdir()
+            shutil.copy2(PROJECT_ROOT / "LICENSE", legacy_project_root / "LICENSE")
+            shutil.copy2(
+                PROJECT_ROOT / "THIRD_PARTY_NOTICES.txt",
+                legacy_project_root / "THIRD_PARTY_NOTICES.txt",
+            )
+
             output = temporary / "output"
             environment = os.environ.copy()
             environment.update(
@@ -442,12 +450,15 @@ class ReleasePackageTests(unittest.TestCase):
                     "METASEQUOIA_DEVELOPER_ID_INSTALLER": "Developer ID Installer: Test",
                     "METASEQUOIA_NOTARY_PROFILE": "metasequoia-test-notary",
                     "METASEQUOIA_RELEASE_ASSET_SUFFIX": "",
-                    "METASEQUOIA_PROJECT_ROOT": str(PROJECT_ROOT),
+                    "METASEQUOIA_PROJECT_ROOT": str(legacy_project_root),
                     "METASEQUOIA_RELEASE_INSTALL_SCRIPT": str(
                         PROJECT_ROOT / "scripts/install-release.sh"
                     ),
                     "METASEQUOIA_RELEASE_UNINSTALL_SCRIPT": str(
                         PROJECT_ROOT / "scripts/uninstall.sh"
+                    ),
+                    "METASEQUOIA_INSTALLER_DISTRIBUTION": str(
+                        PROJECT_ROOT / "resources/InstallerDistribution.xml.in"
                     ),
                 }
             )
@@ -877,6 +888,13 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertEqual(domains.attrib["enable_localSystem"], "false")
             self.assertEqual(distribution.find("license").attrib["file"], "LICENSE")
             self.assertEqual(distribution.find("readme").attrib["file"], "InstallerReadMe.txt")
+            package_reference = next(
+                reference
+                for reference in distribution.findall("pkg-ref")
+                if reference.attrib.get("id") == "com.houko.inputmethod.MetasequoiaIME.pkg"
+                and reference.text
+            )
+            self.assertNotIn("onConclusion", package_reference.attrib)
             installer_readme = (expanded_package / "Resources/InstallerReadMe.txt").read_text()
             self.assertIn("UNSIGNED TEST BUILD", installer_readme)
             self.assertIn("not Developer ID signed or notarized", installer_readme)
@@ -884,6 +902,8 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertIn("Third-party notices", installer_readme)
             self.assertIn("MetasequoiaImeEngine", installer_readme)
             self.assertIn("Contents/Resources/Uninstall.command", installer_readme)
+            self.assertIn("may request administrator authorization", installer_readme)
+            self.assertIn("will not log out or restart the Mac automatically", installer_readme)
 
             component_info_path = next(expanded_package.glob("*.pkg/PackageInfo"))
             component_info = ElementTree.parse(component_info_path).getroot()
@@ -891,6 +911,7 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertEqual(component_info.attrib["version"], version)
             self.assertEqual(component_info.attrib["install-location"], "Library/Input Methods")
             self.assertEqual(component_info.attrib["relocatable"], "false")
+            self.assertEqual(component_info.attrib["auth"], "root")
             upgrade_bundle = component_info.find("upgrade-bundle/bundle")
             self.assertIsNotNone(upgrade_bundle)
             self.assertEqual(upgrade_bundle.attrib["id"], "com.houko.inputmethod.MetasequoiaIME")
@@ -900,6 +921,7 @@ class ReleasePackageTests(unittest.TestCase):
             )
             self.assertTrue(packaged_uninstaller.is_file())
             self.assertTrue(os.access(packaged_uninstaller, os.X_OK))
+            self.assertFalse((component_info_path.parent / "Scripts").exists())
             self.assertTrue(
                 (
                     component_info_path.parent
