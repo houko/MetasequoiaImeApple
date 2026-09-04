@@ -2,7 +2,7 @@
 
 This repository contains the native Apple-platform frontends for Metasequoia IME. The released macOS frontend uses InputMethodKit and AppKit. An iOS host app and custom keyboard extension are being added incrementally. Both platforms consume the same C++ composition engine while keeping their lifecycle, input routing, candidate presentation, settings, and accessibility UI native and independent.
 
-The target module boundaries and migration sequence are documented in [Apple platform architecture](docs/apple-platform-architecture.md). The current `src/`, `resources/`, `scripts/`, and `tests/` directories still contain the macOS implementation; a follow-up pull request will move them under `platforms/macos/` without changing runtime behavior.
+The target module boundaries and migration sequence are documented in [Apple platform architecture](docs/apple-platform-architecture.md). The released macOS implementation lives under `platforms/macos/`; iOS code is kept under `platforms/ios/` as it is introduced.
 
 ## Platform status
 
@@ -29,7 +29,7 @@ The current release supports full-pinyin composition, live candidates from the o
 git clone --recursive https://github.com/houko/MetasequoiaImeApple.git
 cd MetasequoiaImeApple
 brew install cmake boost fmt spdlog
-./scripts/build.sh
+./platforms/macos/scripts/build.sh
 ```
 
 The dictionary build generates `vendor/MetasequoiaImeDict/out/msime.db` from the official source data. The generated database is intentionally not committed.
@@ -37,7 +37,7 @@ The dictionary build generates `vendor/MetasequoiaImeDict/out/msime.db` from the
 ## Install for the current user
 
 ```sh
-./scripts/install.sh
+./platforms/macos/scripts/install.sh
 ```
 
 Then enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit. The installer copies the signed bundle to `~/Library/Input Methods` and registers that exact bundle with macOS; it does not require administrator privileges.
@@ -55,7 +55,7 @@ The text input menu also shows whether 水杉 is in 中文输入 or 英文输入
 ## Development tests
 
 ```sh
-python3 tests/create_fixture_dictionary.py /tmp/metasequoia-ime-test/msime.db
+python3 platforms/macos/tests/create_fixture_dictionary.py /tmp/metasequoia-ime-test/msime.db
 cmake -S . -B build-test -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$(brew --prefix)" -DMETASEQUOIA_IME_DICTIONARY=/tmp/metasequoia-ime-test/msime.db
 cmake --build build-test --parallel
 ctest --test-dir build-test --output-on-failure --timeout 20

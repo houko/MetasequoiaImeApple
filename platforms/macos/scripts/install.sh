@@ -11,13 +11,13 @@ if [[ "$home_directory" == / ]]; then
     exit 1
 fi
 
-project_root=${0:A:h:h}
+project_root=${0:A:h:h:h:h}
 source_bundle="$project_root/build/MetasequoiaIME.app"
 destination_root="$home_directory/Library/Input Methods"
 destination_bundle="$destination_root/MetasequoiaIME.app"
 
 if [[ ! -d "$source_bundle" ]]; then
-    print -u2 "Build output is missing. Run scripts/build.sh first."
+    print -u2 "Build output is missing. Run platforms/macos/scripts/build.sh first."
     exit 1
 fi
 
@@ -117,7 +117,7 @@ fi
 moved_new=true
 mv "$staging_bundle" "$destination_bundle"
 codesign --verify --deep --strict --verbose=2 "$destination_bundle"
-xcrun swift "$project_root/scripts/register_input_source.swift" "$destination_bundle"
+xcrun swift "$project_root/platforms/macos/scripts/register_input_source.swift" "$destination_bundle"
 install_complete=true
 print "Installed $destination_bundle"
 print "Enable 水杉输入法 in System Settings > Keyboard > Text Input > Edit."

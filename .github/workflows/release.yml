@@ -49,7 +49,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           RELEASE_PR: ${{ steps.release.outputs.pr }}
-        run: bash scripts/merge-release-pr.sh
+        run: bash platforms/macos/scripts/merge-release-pr.sh
       - name: Finalize automated release
         if: ${{ github.event_name == 'push' && steps.merge_release_pr.outputs.merged == 'true' }}
         id: finalized_release
@@ -88,25 +88,25 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           path: .release-automation
           sparse-checkout: |
-            resources/InstallerDistribution.xml.in
-            scripts/detect-release-signing.sh
-            scripts/install-release.sh
-            scripts/open-settings.sh
-            scripts/uninstall.sh
-            scripts/package_release.sh
-            scripts/generate-sparkle-appcast.sh
-            scripts/publish-release.sh
+            platforms/macos/resources/InstallerDistribution.xml.in
+            platforms/macos/scripts/detect-release-signing.sh
+            platforms/macos/scripts/install-release.sh
+            platforms/macos/scripts/open-settings.sh
+            platforms/macos/scripts/uninstall.sh
+            platforms/macos/scripts/package_release.sh
+            platforms/macos/scripts/generate-sparkle-appcast.sh
+            platforms/macos/scripts/publish-release.sh
           persist-credentials: false
       - name: Stage trusted release automation
         run: |
-          install -m 0644 .release-automation/resources/InstallerDistribution.xml.in "$RUNNER_TEMP/InstallerDistribution.xml.in"
-          install -m 0755 .release-automation/scripts/detect-release-signing.sh "$RUNNER_TEMP/detect-release-signing.sh"
-          install -m 0755 .release-automation/scripts/install-release.sh "$RUNNER_TEMP/install-release.sh"
-          install -m 0755 .release-automation/scripts/open-settings.sh "$RUNNER_TEMP/open-settings.sh"
-          install -m 0755 .release-automation/scripts/uninstall.sh "$RUNNER_TEMP/uninstall.sh"
-          install -m 0755 .release-automation/scripts/package_release.sh "$RUNNER_TEMP/package-release.sh"
-          install -m 0755 .release-automation/scripts/generate-sparkle-appcast.sh "$RUNNER_TEMP/generate-sparkle-appcast.sh"
-          install -m 0755 .release-automation/scripts/publish-release.sh "$RUNNER_TEMP/publish-release.sh"
+          install -m 0644 .release-automation/platforms/macos/resources/InstallerDistribution.xml.in "$RUNNER_TEMP/InstallerDistribution.xml.in"
+          install -m 0755 .release-automation/platforms/macos/scripts/detect-release-signing.sh "$RUNNER_TEMP/detect-release-signing.sh"
+          install -m 0755 .release-automation/platforms/macos/scripts/install-release.sh "$RUNNER_TEMP/install-release.sh"
+          install -m 0755 .release-automation/platforms/macos/scripts/open-settings.sh "$RUNNER_TEMP/open-settings.sh"
+          install -m 0755 .release-automation/platforms/macos/scripts/uninstall.sh "$RUNNER_TEMP/uninstall.sh"
+          install -m 0755 .release-automation/platforms/macos/scripts/package_release.sh "$RUNNER_TEMP/package-release.sh"
+          install -m 0755 .release-automation/platforms/macos/scripts/generate-sparkle-appcast.sh "$RUNNER_TEMP/generate-sparkle-appcast.sh"
+          install -m 0755 .release-automation/platforms/macos/scripts/publish-release.sh "$RUNNER_TEMP/publish-release.sh"
       - name: Determine release signing mode
         id: signing
         env:
@@ -159,7 +159,7 @@ jobs:
           security default-keychain -s "$keychain"
           xcrun notarytool store-credentials metasequoia-notary --keychain "$keychain" --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD"
       - name: Build dictionary
-        run: python3 scripts/build_dictionary.py
+        run: python3 platforms/macos/scripts/build_dictionary.py
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix)"
       - name: Build

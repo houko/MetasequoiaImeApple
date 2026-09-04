@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-UNINSTALLER = PROJECT_ROOT / "scripts/uninstall.sh"
+MACOS_ROOT = Path(__file__).resolve().parents[1]
+UNINSTALLER = MACOS_ROOT / "scripts/uninstall.sh"
 
 
 class UninstallTests(unittest.TestCase):

@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 DICTIONARY_ROOT = ROOT / "vendor" / "MetasequoiaImeDict"
 OUTPUT = DICTIONARY_ROOT / "out" / "msime.db"
 BUILD_SCRIPTS = DICTIONARY_ROOT / "makecikudb" / "quanpindb" / "makedb" / "multi_table_has_jp"
