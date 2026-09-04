@@ -264,9 +264,28 @@ class ReleasePackageTests(unittest.TestCase):
                     self.assertFalse(any(destination.parent.glob(".MetasequoiaIME.backup.*")))
 
             for arguments in pkill_log.read_text().splitlines():
-                self.assertEqual(arguments, f"-TERM -x -u {os.geteuid()} MetasequoiaIME")
+                self.assertIn(f"-TERM -u {os.geteuid()} -f ^", arguments)
+                self.assertIn("/Contents/MacOS/MetasequoiaIME( |$)", arguments)
             for arguments in pgrep_log.read_text().splitlines():
-                self.assertEqual(arguments, f"-x -u {os.geteuid()} MetasequoiaIME")
+                self.assertIn(f"-u {os.geteuid()} -f ^", arguments)
+                self.assertIn("/Contents/MacOS/MetasequoiaIME( |$)", arguments)
+
+    def test_installers_scope_process_shutdown_to_installed_bundle(self):
+        for installer in (MACOS_ROOT / "scripts/install.sh", MACOS_ROOT / "scripts/install-release.sh"):
+            with self.subTest(installer=installer.name):
+                script = installer.read_text()
+                self.assertIn(
+                    'pkill -TERM -u "$EUID" -f "$process_pattern"',
+                    script,
+                )
+                self.assertIn(
+                    'pgrep -u "$EUID" -f "$process_pattern"',
+                    script,
+                )
+                self.assertNotIn(
+                    'pkill -TERM -x -u "$EUID" MetasequoiaIME',
+                    script,
+                )
 
     def test_installers_reject_concurrent_installation(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
