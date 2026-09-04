@@ -31,8 +31,11 @@ if [[ ! "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 archive="$dist_dir/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX.zip"
+update_archive="$dist_dir/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX-update.zip"
 installer="$dist_dir/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX.pkg"
-for artifact in "$installer" "$installer.sha256" "$archive" "$archive.sha256"; do
+appcast="$dist_dir/appcast.xml"
+for artifact in "$installer" "$installer.sha256" "$archive" "$archive.sha256" \
+    "$update_archive" "$update_archive.sha256" "$appcast"; do
     if [[ ! -f "$artifact" ]]; then
         printf 'Release artifact is missing: %s\n' "$artifact" >&2
         exit 1
@@ -54,6 +57,7 @@ done
     }
     verify_checksum_manifest "$(basename "$installer")" "$(basename "$installer.sha256")"
     verify_checksum_manifest "$(basename "$archive")" "$(basename "$archive.sha256")"
+    verify_checksum_manifest "$(basename "$update_archive")" "$(basename "$update_archive.sha256")"
 )
 
 mode_marker="<!-- metasequoia-release-mode:$release_mode -->"
@@ -87,5 +91,6 @@ if [[ "$current_notes" != *"$mode_marker"* || "$current_notes" != *"$install_gui
     gh release edit "$TAG_NAME" --repo "$GH_REPO" --notes-file "$release_notes"
 fi
 
-gh release upload "$TAG_NAME" --repo "$GH_REPO" "$installer" "$installer.sha256" "$archive" "$archive.sha256" --clobber
+gh release upload "$TAG_NAME" --repo "$GH_REPO" "$installer" "$installer.sha256" "$archive" "$archive.sha256" \
+    "$update_archive" "$update_archive.sha256" "$appcast" --clobber
 gh release edit "$TAG_NAME" --repo "$GH_REPO" --draft=false

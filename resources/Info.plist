@@ -65,10 +65,20 @@
     <string>MetasequoiaPreferencesWindowController</string>
     <key>LSBackgroundOnly</key>
     <true/>
+    <key>LSMinimumSystemVersion</key>
+    <string>@CMAKE_OSX_DEPLOYMENT_TARGET@</string>
     <key>MetasequoiaDictionarySHA256</key>
     <string>@METASEQUOIA_IME_DICTIONARY_SHA256@</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>SUFeedURL</key>
+    <string>https://github.com/houko/MetasequoiaImeMac/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>rSAufajnup+T+d+I4LTs4EAhe5M8bwHemWDKao3CB/E=</string>
+    <key>SURequireSignedFeed</key>
+    <true/>
+    <key>SUVerifyUpdateBeforeExtraction</key>
+    <true/>
     <key>TISInputSourceID</key>
     <string>com.houko.inputmethod.MetasequoiaIME</string>
     <key>TISIntendedLanguage</key>

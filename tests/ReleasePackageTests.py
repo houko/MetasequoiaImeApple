@@ -478,9 +478,12 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
 
             archive = output / f"MetasequoiaIME-v{version}-macos-universal.zip"
+            update_archive = output / f"MetasequoiaIME-v{version}-macos-universal-update.zip"
             installer_package = output / f"MetasequoiaIME-v{version}-macos-universal.pkg"
             self.assertTrue(archive.is_file())
             self.assertTrue(archive.with_suffix(".zip.sha256").is_file())
+            self.assertTrue(update_archive.is_file())
+            self.assertTrue(update_archive.with_suffix(".zip.sha256").is_file())
             self.assertTrue(installer_package.is_file())
             self.assertTrue(installer_package.with_suffix(".pkg.sha256").is_file())
             self.assertFalse(any(output.glob("*-unsigned.*")))
@@ -665,6 +668,7 @@ class ReleasePackageTests(unittest.TestCase):
                 env=environment,
             )
             archive = output / f"MetasequoiaIME-v{version}-macos-universal-unsigned.zip"
+            update_archive = output / f"MetasequoiaIME-v{version}-macos-universal-unsigned-update.zip"
             checksum = archive.with_suffix(f"{archive.suffix}.sha256")
             digest, filename = checksum.read_text().split()
             actual_digest = hashlib.sha256()
@@ -674,6 +678,16 @@ class ReleasePackageTests(unittest.TestCase):
 
             self.assertEqual(filename, archive.name)
             self.assertEqual(digest, actual_digest.hexdigest())
+
+            update_checksum = update_archive.with_suffix(f"{update_archive.suffix}.sha256")
+            update_digest, update_filename = update_checksum.read_text().split()
+            self.assertEqual(update_filename, update_archive.name)
+            self.assertEqual(update_digest, hashlib.sha256(update_archive.read_bytes()).hexdigest())
+            with zipfile.ZipFile(update_archive) as update_zip:
+                update_names = update_zip.namelist()
+                self.assertIn("MetasequoiaIME.app/Contents/Info.plist", update_names)
+                self.assertFalse(any(name.endswith("Install.command") for name in update_names))
+                self.assertFalse(any(name.endswith("UNSIGNED_BUILD.txt") for name in update_names))
 
             with zipfile.ZipFile(archive) as release_zip:
                 names = release_zip.namelist()
@@ -1005,6 +1019,8 @@ class ReleasePackageTests(unittest.TestCase):
             asset_names = (
                 f"MetasequoiaIME-v{version}-macos-universal-unsigned.zip",
                 f"MetasequoiaIME-v{version}-macos-universal-unsigned.zip.sha256",
+                f"MetasequoiaIME-v{version}-macos-universal-unsigned-update.zip",
+                f"MetasequoiaIME-v{version}-macos-universal-unsigned-update.zip.sha256",
                 f"MetasequoiaIME-v{version}-macos-universal-unsigned.pkg",
                 f"MetasequoiaIME-v{version}-macos-universal-unsigned.pkg.sha256",
             )
