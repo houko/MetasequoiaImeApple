@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.29.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.28.0...v0.29.0) (2026-09-04)
+
+
+### Features
+
+* **mac:** add keyboard input settings and Wubi ([#171](https://github.com/metasequoiaime/MSIME-Apple/issues/171)) ([92ff49d](https://github.com/metasequoiaime/MSIME-Apple/commit/92ff49d69d8fa538590fa0cd0aa9aeb60bcdf2c9))
+* **mac:** add live candidate appearance preview ([#173](https://github.com/metasequoiaime/MSIME-Apple/issues/173)) ([43cce5e](https://github.com/metasequoiaime/MSIME-Apple/commit/43cce5ee259b8a98abf993dc2aa401dee7589c6b))
+* **mac:** add Wubi behavior settings ([#176](https://github.com/metasequoiaime/MSIME-Apple/issues/176)) ([6dd7532](https://github.com/metasequoiaime/MSIME-Apple/commit/6dd7532b061bf7b8299ad17486ccf4f2b2f95b86))
+
+
+### Bug Fixes
+
+* **ci:** ignore non-pinyin dictionary indexes ([#174](https://github.com/metasequoiaime/MSIME-Apple/issues/174)) ([77abbe3](https://github.com/metasequoiaime/MSIME-Apple/commit/77abbe3ad8638b28923fb2c49c3b907208da8833))
+* **release:** create draft after direct promotion ([#172](https://github.com/metasequoiaime/MSIME-Apple/issues/172)) ([5120fab](https://github.com/metasequoiaime/MSIME-Apple/commit/5120fab08457f36b1ef054727fbba0ad15bbe063))
+
 ## [0.28.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.27.0...v0.28.0) (2026-09-04)
 
 
