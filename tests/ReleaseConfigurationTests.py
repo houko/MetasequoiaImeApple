@@ -31,7 +31,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
     def test_release_version_matches_cmake_project_version(self):
         manifest = json.loads((PROJECT_ROOT / ".release-please-manifest.json").read_text())
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
-        project_line = next(line for line in cmake.splitlines() if line.startswith("project(MetasequoiaImeMac "))
+        project_line = next(line for line in cmake.splitlines() if line.startswith("project(MetasequoiaImeApple "))
         match = re.search(r"VERSION ([0-9]+\.[0-9]+\.[0-9]+)", project_line)
 
         self.assertIsNotNone(match)
@@ -283,7 +283,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("SECURITY.md", privacy)
         self.assertIn("latest published version", security)
         self.assertIn("Do not open a public issue", security)
-        self.assertIn("MetasequoiaImeMac security report", security)
+        self.assertIn("MetasequoiaImeApple security report", security)
         self.assertIn("PRIVACY.md", readme)
         self.assertIn("SECURITY.md", readme)
 

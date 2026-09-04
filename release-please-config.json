@@ -3,7 +3,7 @@
   "packages": {
     ".": {
       "release-type": "simple",
-      "package-name": "MetasequoiaImeMac",
+      "package-name": "MetasequoiaImeApple",
       "include-component-in-tag": false,
       "include-v-in-tag": true,
       "version-file": "version.txt",

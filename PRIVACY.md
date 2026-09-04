@@ -2,7 +2,7 @@
 
 Metasequoia IME for macOS processes keystrokes, pre-edit text, and candidates locally on the user's Mac. The application does not send typed text, candidates, learned words, preferences, diagnostics, analytics, or crash reports over the network. It does not include cloud synchronization.
 
-The app contacts GitHub's public Releases API at most once per day to discover new stable versions, and when the user manually requests an update check. The request does not include typed text, preferences, or dictionary data. GitHub may receive the IP address and standard network request metadata. Opening an available update uses the corresponding fixed page under `github.com/houko/MetasequoiaImeMac`.
+The app contacts GitHub's public Releases API at most once per day to discover new stable versions, and when the user manually requests an update check. The request does not include typed text, preferences, or dictionary data. GitHub may receive the IP address and standard network request metadata. Opening an available update uses the corresponding fixed page under `github.com/houko/MetasequoiaImeApple`.
 
 The input method stores its settings in the current user's macOS preferences. When candidate learning is enabled, learned word-frequency changes are stored locally under `~/Library/Application Support/metasequoiaime/`. The bundled dictionary is copied to the same directory so it can be upgraded safely. These files are available only through the permissions of the local macOS account; users should protect that account and its backups as they would other personal data.
 

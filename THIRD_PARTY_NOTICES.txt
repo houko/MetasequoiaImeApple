@@ -4,7 +4,7 @@ Metasequoia IME for macOS — Third-Party Notices
 This application embeds MetasequoiaImeEngine, which is distributed under
 the GNU General Public License version 3. The complete license is provided
 in GPL-3.0.txt. Source code is available from:
-https://github.com/houko/MetasequoiaImeMac
+https://github.com/houko/MetasequoiaImeApple
 https://github.com/houko/MetasequoiaImeEngine
 
 The application also incorporates the following components:
