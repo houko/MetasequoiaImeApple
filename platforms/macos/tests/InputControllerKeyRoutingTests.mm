@@ -2,6 +2,7 @@
 #include "../src/CandidatePanelStyle.h"
 #include "../src/CandidatePageSize.h"
 #include "../src/CandidateFontSize.h"
+#include "../src/CandidateDisplay.h"
 #include "../src/InputModeRouting.h"
 #include "../src/FullWidthInput.h"
 #include "../src/InputSchemePreference.h"
@@ -73,6 +74,7 @@ int main()
     using metasequoia::mac::CandidatePageSizeOptionIndex;
     using metasequoia::mac::CandidatePageShortcut;
     using metasequoia::mac::CandidateSelectionKeys;
+    using metasequoia::mac::CandidateDisplayText;
     using metasequoia::mac::ClassifyControllerKey;
     using metasequoia::mac::IsPrimaryCandidateDirection;
     using metasequoia::mac::NormalizeCandidatePageSize;
@@ -95,6 +97,17 @@ int main()
                 !metasequoia::mac::ShouldAutoCommitUniqueWubiCandidate(true, SchemeType::Wubi, 3, 1) &&
                 !metasequoia::mac::ShouldAutoCommitUniqueWubiCandidate(true, SchemeType::Wubi, 4, 2),
             "The four-code unique Wubi policy auto-committed outside its exact conditions.");
+
+    const std::filesystem::path helpcodeDataDirectory =
+        std::filesystem::path(__FILE__).parent_path() / "../../../vendor/MetasequoiaImeHelpCode";
+    require(setenv("METASEQUOIA_IME_DATA_DIR", helpcodeDataDirectory.lexically_normal().c_str(), 1) == 0,
+            "The candidate display test could not select its helpcode data.");
+    require(CandidateDisplayText(WordItem{"ni", "你", 1}, SchemeType::Quanpin, true) == "你(rX)" &&
+                CandidateDisplayText(WordItem{"nimen", "你们", 1}, SchemeType::Shuangpin, true) == "你们(rR)",
+            "Pinyin candidate display did not append the configured auxiliary code.");
+    require(CandidateDisplayText(WordItem{"ni", "你", 1}, SchemeType::Quanpin, false) == "你" &&
+                CandidateDisplayText(WordItem{"abcd", "你", 1}, SchemeType::Wubi, true) == "你",
+            "Candidate display exposed auxiliary codes when the feature or scheme did not allow them.");
 
     const auto dictionarySuffix =
         std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count());

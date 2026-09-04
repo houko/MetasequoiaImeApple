@@ -432,6 +432,19 @@ class ReleaseConfigurationTests(unittest.TestCase):
             submodule_value("vendor/MetasequoiaImeDict", "url"),
             "https://github.com/metasequoiaime/MSIME-Dict.git",
         )
+        self.assertEqual(
+            submodule_value("vendor/MetasequoiaImeHelpCode", "path"),
+            "vendor/MetasequoiaImeHelpCode",
+        )
+        self.assertEqual(
+            submodule_value("vendor/MetasequoiaImeHelpCode", "url"),
+            "https://github.com/metasequoiaime/MetasequoiaImeHelpCode.git",
+        )
+
+    def test_macos_bundle_packages_helpcode_assets(self):
+        cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
+        self.assertIn("vendor/MetasequoiaImeHelpCode/helpcodes", cmake)
+        self.assertIn("Resources/helpcodes", cmake)
 
     def test_release_scripts_have_valid_zsh_syntax(self):
         for relative_path in (
