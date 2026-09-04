@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.31.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.30.1...v0.31.0) (2026-09-04)
+
+
+### Features
+
+* **mac:** add updates and feedback settings page ([#179](https://github.com/metasequoiaime/MSIME-Apple/issues/179)) ([3b39c44](https://github.com/metasequoiaime/MSIME-Apple/commit/3b39c440803ad3d2c1ddf7807863f104c7b86679))
+
+
+### Bug Fixes
+
+* **mac:** auto-enable input source after pkg install ([#182](https://github.com/metasequoiaime/MSIME-Apple/issues/182)) ([c3d79a6](https://github.com/metasequoiaime/MSIME-Apple/commit/c3d79a68cbabbeaf3ca5d5c4b0178e5def6b5a58))
+* **mac:** enable input source after development install ([#180](https://github.com/metasequoiaime/MSIME-Apple/issues/180)) ([1a53ff5](https://github.com/metasequoiaime/MSIME-Apple/commit/1a53ff584e525eeaf4a5c8766f214e4b17b68d46))
+* **mac:** keep input menu icon visible in dark mode ([#185](https://github.com/metasequoiaime/MSIME-Apple/issues/185)) ([4058dba](https://github.com/metasequoiaime/MSIME-Apple/commit/4058dba386ebf141062128602c7c483c7625deb0))
+* **mac:** preserve menu icon retina metadata ([#181](https://github.com/metasequoiaime/MSIME-Apple/issues/181)) ([7a61ff4](https://github.com/metasequoiaime/MSIME-Apple/commit/7a61ff4e8d1ff5b630d375192be383b2a4c67f31))
+* **release:** document pkg auto-enable behavior ([#184](https://github.com/metasequoiaime/MSIME-Apple/issues/184)) ([28b154d](https://github.com/metasequoiaime/MSIME-Apple/commit/28b154d1bddb8a92c3538dc23a9c76d4f0462888))
+
 ## [0.30.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.30.0...v0.30.1) (2026-09-04)
 
 
