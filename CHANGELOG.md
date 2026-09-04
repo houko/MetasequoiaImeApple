@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.23.2...v0.24.0) (2026-09-04)
+
+
+### Features
+
+* **updater:** install updates in place ([#137](https://github.com/houko/MetasequoiaImeMac/issues/137)) ([816b1ed](https://github.com/houko/MetasequoiaImeMac/commit/816b1ed6b6c301b231ea61d23d0019f925ecfad5))
+
 ## [0.23.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.23.1...v0.23.2) (2026-09-04)
 
 
