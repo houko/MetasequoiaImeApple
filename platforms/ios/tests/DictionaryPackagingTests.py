@@ -31,6 +31,10 @@ class DictionaryPackagingTests(unittest.TestCase):
                     CREATE INDEX idx_key_2_n ON tbl_2_n(key);
                     INSERT INTO tbl_2_n VALUES ('ni''hao', 'nh', '你好', 332885);
                     INSERT INTO tbl_2_n VALUES ('ni''hao', 'nh', '拟好', 1999);
+
+                    CREATE TABLE wubi86 (key TEXT, value TEXT, weight INTEGER DEFAULT 0);
+                    CREATE INDEX idx_wubi86_key_weight ON wubi86(key, weight DESC);
+                    INSERT INTO wubi86 VALUES ('aaaa', '工', 1000);
                     """
                 )
 
@@ -67,6 +71,11 @@ class DictionaryPackagingTests(unittest.TestCase):
                         "SELECT name FROM sqlite_master WHERE type='index' ORDER BY name"
                     ).fetchall(),
                     [("idx_jp_1_n",), ("idx_key_1_n",), ("idx_key_2_n",)],
+                )
+                self.assertIsNone(
+                    database.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='wubi86'"
+                    ).fetchone()
                 )
 
             self.assertEqual(digest.read_text().strip(), hashlib.sha256(output.read_bytes()).hexdigest())
