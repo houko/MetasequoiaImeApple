@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.21.1...v0.21.2) (2026-09-04)
+
+
+### Bug Fixes
+
+* **install:** enable registered input source ([#124](https://github.com/houko/MetasequoiaImeMac/issues/124)) ([c1e1611](https://github.com/houko/MetasequoiaImeMac/commit/c1e1611b08302a606ba6f766409a882d429db698))
+
 ## [0.21.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.21.0...v0.21.1) (2026-09-04)
 
 
