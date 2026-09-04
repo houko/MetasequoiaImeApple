@@ -643,7 +643,7 @@ class ReleasePackageTests(unittest.TestCase):
         ).stdout
         self.assertIn("pixelWidth: 32", menu_icon_properties)
         self.assertIn("pixelHeight: 36", menu_icon_properties)
-        self.assertIn("hasAlpha: yes", menu_icon_properties)
+        self.assertIn("hasAlpha: no", menu_icon_properties)
         self.assertIn("dpiWidth: 144", menu_icon_properties)
         self.assertIn("dpiHeight: 144", menu_icon_properties)
 

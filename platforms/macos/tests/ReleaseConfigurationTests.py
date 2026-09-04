@@ -61,6 +61,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertEqual(input_mode["tsInputModePaletteIconFileKey"], menu_icon)
         self.assertTrue((MACOS_ROOT / "resources" / menu_icon).is_file())
         self.assertIn(menu_icon, (PROJECT_ROOT / "CMakeLists.txt").read_text())
+        menu_icon_svg = (MACOS_ROOT / "resources" / "MetasequoiaIMEMenuIcon.svg").read_text()
+        self.assertIn('<rect width="32" height="36" fill="#fff" />', menu_icon_svg)
 
         icon_path = MACOS_ROOT / "resources" / menu_icon
         dpi_output = subprocess.check_output(
@@ -69,6 +71,12 @@ class ReleaseConfigurationTests(unittest.TestCase):
         )
         self.assertRegex(dpi_output, r"dpiWidth:\s*144(?:\.0+)?")
         self.assertRegex(dpi_output, r"dpiHeight:\s*144(?:\.0+)?")
+
+        alpha_output = subprocess.check_output(
+            ["sips", "-g", "hasAlpha", str(icon_path)],
+            text=True,
+        )
+        self.assertRegex(alpha_output, r"hasAlpha:\s*no")
 
     def test_release_version_matches_cmake_project_version(self):
         manifest = json.loads((PROJECT_ROOT / ".release-please-manifest.json").read_text())
