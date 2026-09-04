@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.32.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.31.0...v0.32.0) (2026-09-04)
+
+
+### Features
+
+* **mac:** support full-width input toggle ([#187](https://github.com/metasequoiaime/MSIME-Apple/issues/187)) ([4d2de2b](https://github.com/metasequoiaime/MSIME-Apple/commit/4d2de2b7fd6d29adb9a4005cdb0ce4ed617e64de))
+
+
+### Bug Fixes
+
+* **mac:** route letters through full-width mode ([#188](https://github.com/metasequoiaime/MSIME-Apple/issues/188)) ([31f7e28](https://github.com/metasequoiaime/MSIME-Apple/commit/31f7e284d9b05d0dbd585d9955808d8044f66713))
+* **release:** gate signature verification for unsigned builds ([#191](https://github.com/metasequoiaime/MSIME-Apple/issues/191)) ([1b10b32](https://github.com/metasequoiaime/MSIME-Apple/commit/1b10b3290e69d6454bfa85dbd292e9bd0d7343d3))
+* **release:** skip unsigned Sparkle appcast ([#189](https://github.com/metasequoiaime/MSIME-Apple/issues/189)) ([6732c6c](https://github.com/metasequoiaime/MSIME-Apple/commit/6732c6cf59bbccb3ae794b5b549a0327a6a86b98))
+
 ## [0.31.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.30.1...v0.31.0) (2026-09-04)
 
 
