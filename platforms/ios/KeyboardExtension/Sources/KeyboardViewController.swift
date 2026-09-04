@@ -81,7 +81,6 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       root.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -5),
       root.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
       root.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -7),
-      view.heightAnchor.constraint(greaterThanOrEqualToConstant: 270),
     ])
 
     root.addArrangedSubview(makeCandidateStrip())
