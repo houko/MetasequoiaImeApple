@@ -12,6 +12,15 @@ MACOS_ROOT = PROJECT_ROOT / "platforms" / "macos"
 
 
 class ReleaseConfigurationTests(unittest.TestCase):
+    def test_ci_cancels_duplicate_runs_for_the_same_source_branch(self):
+        workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text()
+
+        self.assertIn(
+            "group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}",
+            workflow,
+        )
+        self.assertIn("cancel-in-progress: true", workflow)
+
     def test_current_repository_links_use_the_canonical_apple_repository(self):
         canonical_repository = "https://github.com/metasequoiaime/MSIME-Apple"
         current_metadata = "\n".join(
