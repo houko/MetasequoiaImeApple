@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.23.0...v0.23.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **update:** retry failed checks sooner ([#130](https://github.com/houko/MetasequoiaImeMac/issues/130)) ([b0681e5](https://github.com/houko/MetasequoiaImeMac/commit/b0681e524ad15336d7314a3b53525e4330503c56))
+
 ## [0.23.0](https://github.com/houko/MetasequoiaImeMac/compare/v0.22.0...v0.23.0) (2026-09-04)
 
 
