@@ -195,6 +195,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("$RUNNER_TEMP/publish-release.sh", workflow)
         self.assertIn("$RUNNER_TEMP/generate-sparkle-appcast.sh", workflow)
         self.assertIn("SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}", workflow)
+        self.assertIn("steps.signing.outputs.signing_enabled == 'true'", workflow)
+        self.assertIn("Unsigned releases do not publish a Sparkle appcast", workflow)
         self.assertIn("Sparkle-2.9.6.tar.xz", workflow)
         self.assertIn("52bf9e88cdd972fc0c81501377a880e90d47031bd8ca5462488f843e2609e192", workflow)
         self.assertLess(workflow.index("name: Generate signed Sparkle appcast"), workflow.index("name: Upload and publish release"))
