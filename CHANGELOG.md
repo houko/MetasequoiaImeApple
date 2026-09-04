@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.26.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.25.0...v0.26.0) (2026-09-04)
+
+
+### Features
+
+* **ios:** add English shift and caps lock ([e432e55](https://github.com/metasequoiaime/MSIME-Apple/commit/e432e55aa635225a06c1a0fd52b3fd689b421c1a))
+* **ios:** add English shift and caps lock ([7e82aea](https://github.com/metasequoiaime/MSIME-Apple/commit/7e82aea3e40e7b71f0a39660ed9b78d2f696e236))
+* **ios:** add pinyin scheme switch ([e626ed7](https://github.com/metasequoiaime/MSIME-Apple/commit/e626ed779735de4cc9571aa7e4ab335d46515915))
+* **ios:** add pinyin scheme switch ([d070170](https://github.com/metasequoiaime/MSIME-Apple/commit/d070170fe3c199ae8bf7c72c45729134384a51d5))
+
+
+### Bug Fixes
+
+* **deps:** use canonical dictionary repository ([bb417f8](https://github.com/metasequoiaime/MSIME-Apple/commit/bb417f8feaaa61df60b12147784bb87477a8eaf3))
+* **deps:** use canonical dictionary repository ([1ca66d1](https://github.com/metasequoiaime/MSIME-Apple/commit/1ca66d1951c0d08f61f786d42224ce691fc440c3))
+* **ios:** adapt action row to narrow screens ([33e4c52](https://github.com/metasequoiaime/MSIME-Apple/commit/33e4c5279130e6a68ea6a647285298375f0741c8))
+* **ios:** adapt action row to narrow screens ([05fc434](https://github.com/metasequoiaime/MSIME-Apple/commit/05fc4343ea674c446262bc5576dce45fcd19a3b7))
+* **ios:** isolate UI tests on main actor ([47bb395](https://github.com/metasequoiaime/MSIME-Apple/commit/47bb39589dee50b834bd2e85e3aa1cecd9b9346e))
+* **ios:** isolate UI tests on main actor ([97e3d39](https://github.com/metasequoiaime/MSIME-Apple/commit/97e3d398d5a22e53557e8bccc5281749455080fb))
+* **ios:** use system input mode menu ([9985534](https://github.com/metasequoiaime/MSIME-Apple/commit/99855347ae8df9c1808a5dc29ec2822187732702))
+* **ios:** use system input mode menu ([aca239d](https://github.com/metasequoiaime/MSIME-Apple/commit/aca239d5069522225d22ee30b259acd28c379d06))
+* **release:** use canonical Apple repository URLs ([381af7d](https://github.com/metasequoiaime/MSIME-Apple/commit/381af7db8d78d0b18d2c463afd1ea82da2df820b))
+* **release:** use canonical Apple repository URLs ([1265d23](https://github.com/metasequoiaime/MSIME-Apple/commit/1265d236bc19a2fdaa1a323afbb4e0f920b503fd))
+
 ## [0.25.0](https://github.com/houko/MetasequoiaImeApple/compare/v0.24.0...v0.25.0) (2026-09-04)
 
 
