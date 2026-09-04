@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.33.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.32.0...v0.33.0) (2026-09-04)
+
+
+### Features
+
+* **mac:** align settings layout with reference design ([#193](https://github.com/metasequoiaime/MSIME-Apple/issues/193)) ([2705e35](https://github.com/metasequoiaime/MSIME-Apple/commit/2705e35bfffa5620d56a0d64e4ecc7c539acb272))
+
+
+### Bug Fixes
+
+* **mac:** stretch settings rows across cards ([#194](https://github.com/metasequoiaime/MSIME-Apple/issues/194)) ([850a9ed](https://github.com/metasequoiaime/MSIME-Apple/commit/850a9ed886c4f01b612b0121b0aefeace93d50f4))
+* **release:** disable unsigned automatic update polling ([#195](https://github.com/metasequoiaime/MSIME-Apple/issues/195)) ([06d0f3c](https://github.com/metasequoiaime/MSIME-Apple/commit/06d0f3cc3989d82b83af6778ec7bedac90585626))
+* **release:** retry transient GitHub API failures ([#196](https://github.com/metasequoiaime/MSIME-Apple/issues/196)) ([2462620](https://github.com/metasequoiaime/MSIME-Apple/commit/24626201d1a07baf1215dc5bd4051b9b8e512f27))
+
 ## [0.32.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.31.0...v0.32.0) (2026-09-04)
 
 
