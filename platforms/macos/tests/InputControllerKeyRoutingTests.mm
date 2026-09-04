@@ -3,6 +3,7 @@
 #include "../src/CandidatePageSize.h"
 #include "../src/CandidateFontSize.h"
 #include "../src/InputModeRouting.h"
+#include "../src/FullWidthInput.h"
 #include "../src/InputSchemePreference.h"
 #include "../src/WubiCommitPolicy.h"
 
@@ -244,6 +245,16 @@ int main()
                 ClassifyControllerKey(kVK_ANSI_A, true, CandidatePageShortcut::MinusEqual, '-', false) ==
                     ControllerKeyAction::MoveCandidatePageUp,
             "Candidate paging followed a US physical key instead of the active keyboard layout.");
+    require(metasequoia::mac::IsFullWidthInputToggle(
+                kVK_ANSI_H, NSEventModifierFlagOption | NSEventModifierFlagShift),
+            "Option+Shift+H was not recognized as the full-width toggle.");
+    require(!metasequoia::mac::IsFullWidthInputToggle(
+                 kVK_ANSI_H, NSEventModifierFlagOption | NSEventModifierFlagShift | NSEventModifierFlagCommand),
+            "A competing Command modifier incorrectly triggered the full-width toggle.");
+    require(metasequoia::mac::IsFullWidthConvertibleCharacter('A') &&
+                metasequoia::mac::FullWidthCharacter('A') == 0xFF21 &&
+                metasequoia::mac::FullWidthCharacter(' ') == 0x3000,
+            "ASCII full-width conversion did not preserve the expected Unicode mapping.");
 
     const std::initializer_list<std::pair<unsigned short, ControllerKeyAction>> navigationKeys = {
         {kVK_LeftArrow, ControllerKeyAction::MoveCandidateLeft},

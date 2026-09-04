@@ -149,6 +149,7 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
+        [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:NO];
         [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:NO];
         [MetasequoiaPreferencesWindowController setStoredScheme:2];
         require([MetasequoiaPreferencesWindowController storedScheme] == 2,
@@ -171,6 +172,8 @@ int main()
                 "The English input-mode state was not stored.");
         require(![MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled],
                 "The disabled input-mode shortcut preference was not stored.");
+        require(![MetasequoiaPreferencesWindowController storedFullWidthInputEnabled],
+                "The disabled full-width input preference was not stored.");
         require(![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled],
                 "The disabled Wubi auto-commit preference was not stored.");
 
@@ -248,8 +251,15 @@ int main()
         NSButton *quanpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"全拼输入");
         NSButton *shuangpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"小鹤双拼");
         NSButton *wubiSchemeButton = FindButtonWithTitle(controller.window.contentView, @"五笔输入（86 五笔）");
+        NSButton *fullWidthButton = FindButtonWithTitle(controller.window.contentView, @"Option+Shift+H 切换全半角");
         require(quanpinSchemeButton != nil && shuangpinSchemeButton != nil && wubiSchemeButton != nil,
                 "The keyboard-input page did not expose every supported input scheme.");
+        require(fullWidthButton != nil && fullWidthButton.state == NSControlStateValueOff,
+                "The keyboard-input page did not expose the full-width input toggle.");
+        fullWidthButton.state = NSControlStateValueOn;
+        require([NSApp sendAction:fullWidthButton.action to:fullWidthButton.target from:fullWidthButton] &&
+                    [MetasequoiaPreferencesWindowController storedFullWidthInputEnabled],
+                "The full-width input toggle did not persist its enabled state.");
         require(wubiSchemeButton.state == NSControlStateValueOn,
                 "The keyboard-input page did not reflect the stored Wubi scheme.");
         [shuangpinSchemeButton performClick:nil];
@@ -525,6 +535,7 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidatePageShortcut:2];
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
+        [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:YES];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:YES];
         NSButton *restoreDefaultsButton = FindButtonWithTitle(controller.window.contentView, @"恢复默认设置");
@@ -540,6 +551,7 @@ int main()
                     [MetasequoiaPreferencesWindowController storedCandidatePageShortcut] == 0 &&
                     [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] &&
                     [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] &&
+                    ![MetasequoiaPreferencesWindowController storedFullWidthInputEnabled] &&
                     ![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled],
                 "Restoring defaults did not restore every visible setting.");
         NSArray<NSString *> *preferenceKeys = @[
@@ -553,6 +565,7 @@ int main()
             @"MetasequoiaImeCandidatePageShortcut",
             @"MetasequoiaImeCandidateLearning",
             @"MetasequoiaImeInputModeShortcutEnabled",
+            @"MetasequoiaImeFullWidthInputEnabled",
             @"MetasequoiaImeWubiAutoCommitUnique",
         ];
         for (NSString *key in preferenceKeys)

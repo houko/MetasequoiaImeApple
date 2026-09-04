@@ -35,6 +35,7 @@ NSString * const kCandidatePageShortcutPreferenceKey = @"MetasequoiaImeCandidate
 NSString * const kCandidateLearningPreferenceKey = @"MetasequoiaImeCandidateLearning";
 NSString * const kEnglishInputModePreferenceKey = @"MetasequoiaImeEnglishInputMode";
 NSString * const kInputModeShortcutPreferenceKey = @"MetasequoiaImeInputModeShortcutEnabled";
+NSString * const kFullWidthInputPreferenceKey = @"MetasequoiaImeFullWidthInputEnabled";
 NSString * const kWubiAutoCommitUniquePreferenceKey = @"MetasequoiaImeWubiAutoCommitUnique";
 
 NSColor *MetasequoiaBrandColor()
@@ -345,6 +346,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     MetasequoiaCandidatePreviewView *_candidatePreview;
     NSButton *_candidateLearningButton;
     NSButton *_inputModeShortcutButton;
+    NSButton *_fullWidthInputButton;
     NSButton *_wubiAutoCommitButton;
     NSButton *_resetLearningButton;
     NSTextField *_statusLabel;
@@ -522,6 +524,19 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kInputModeShortcutPreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaInputModeShortcutDidChangeNotification"
+                                                        object:@(enabled)];
+}
+
++ (BOOL)storedFullWidthInputEnabled
+{
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:kFullWidthInputPreferenceKey];
+    return value == nil ? NO : [value boolValue];
+}
+
++ (void)setFullWidthInputEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kFullWidthInputPreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaFullWidthInputDidChangeNotification"
                                                         object:@(enabled)];
 }
 
@@ -712,6 +727,10 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                                     target:self
                                                     action:@selector(inputModeShortcutChanged:)];
     _inputModeShortcutButton.accessibilityLabel = @"Shift+Space 切换中英文";
+    _fullWidthInputButton = [NSButton checkboxWithTitle:@"Option+Shift+H 切换全半角"
+                                                   target:self
+                                                   action:@selector(fullWidthInputChanged:)];
+    _fullWidthInputButton.accessibilityLabel = @"Option+Shift+H 切换全半角";
 
     _candidatePageShortcutButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     [_candidatePageShortcutButton addItemsWithTitles:@[ @"- / =", @"[ / ]", @"Page Up / Page Down" ]];
@@ -721,7 +740,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 
     NSBox *schemeCard = CardWithViews(schemeRows, 2.0);
     NSBox *behaviorCard =
-        CardWithViews(@[ _autocorrectButton, _chinesePunctuationButton, _inputModeShortcutButton ], 9.0);
+        CardWithViews(@[ _autocorrectButton, _chinesePunctuationButton, _inputModeShortcutButton,
+                         _fullWidthInputButton ], 9.0);
     NSBox *shortcutCard = CardWithViews(@[ PreferenceRow(@"上翻 / 下翻", _candidatePageShortcutButton) ], 0.0);
     schemeCard.accessibilityLabel = @"输入方式卡片";
     behaviorCard.accessibilityLabel = @"中英文状态切换卡片";
@@ -1050,6 +1070,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                fontSize:[MetasequoiaPreferencesWindowController storedCandidateFontSize]];
     _candidateLearningButton.state = [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _inputModeShortcutButton.state = [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+    _fullWidthInputButton.state = [MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]
+                                      ? NSControlStateValueOn
+                                      : NSControlStateValueOff;
     _wubiAutoCommitButton.state =
         [MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled] ? NSControlStateValueOn
                                                                                    : NSControlStateValueOff;
@@ -1193,6 +1216,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:button.state == NSControlStateValueOn];
 }
 
+- (void)fullWidthInputChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:button.state == NSControlStateValueOn];
+}
+
 - (void)wubiAutoCommitUniqueChanged:(id)sender
 {
     NSButton *button = (NSButton *)sender;
@@ -1259,6 +1288,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
              kCandidateLearningPreferenceKey,
              kInputModeShortcutPreferenceKey,
              kWubiAutoCommitUniquePreferenceKey,
+             kFullWidthInputPreferenceKey,
          ])
     {
         [defaults removeObjectForKey:key];
@@ -1287,6 +1317,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                   object:@([MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled])];
     [notifications postNotificationName:@"MetasequoiaWubiAutoCommitUniqueDidChangeNotification"
                                   object:@([MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled])];
+    [notifications postNotificationName:@"MetasequoiaFullWidthInputDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedFullWidthInputEnabled])];
     [self refreshControls];
 }
 
