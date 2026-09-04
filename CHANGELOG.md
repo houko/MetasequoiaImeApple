@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.2](https://github.com/houko/MetasequoiaImeMac/compare/v0.23.1...v0.23.2) (2026-09-04)
+
+
+### Bug Fixes
+
+* **ui:** add dedicated input source icon ([#133](https://github.com/houko/MetasequoiaImeMac/issues/133)) ([63c65d6](https://github.com/houko/MetasequoiaImeMac/commit/63c65d64897051259f70dd1ebebe8a1afa521b44))
+
 ## [0.23.1](https://github.com/houko/MetasequoiaImeMac/compare/v0.23.0...v0.23.1) (2026-09-04)
 
 
