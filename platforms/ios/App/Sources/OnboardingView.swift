@@ -3,6 +3,7 @@ import UIKit
 
 struct OnboardingView: View {
   @State private var sampleText = ""
+  @State private var usesShuangpin = InputSchemePreference.usesShuangpin
 
   private let steps = [
     ("1", "打开键盘设置", "前往“设置 → 通用 → 键盘 → 键盘”。"),
@@ -37,6 +38,44 @@ struct OnboardingView: View {
         )
         .accessibilityIdentifier("openKeyboardSettingsButton")
         .accessibilityHint("打开水杉输入法的系统设置页面")
+
+        VStack(alignment: .leading, spacing: 16) {
+          HStack(spacing: 12) {
+            Image(systemName: "character.cursor.ibeam")
+              .font(.system(size: 17, weight: .semibold))
+              .foregroundStyle(MetasequoiaTheme.forest)
+              .frame(width: 38, height: 38)
+              .background(MetasequoiaTheme.mist, in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+              Text("输入方案")
+                .font(.headline)
+                .foregroundStyle(MetasequoiaTheme.ink)
+              Text("设置会同步到水杉键盘")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            }
+          }
+
+          Picker("输入方案", selection: $usesShuangpin) {
+            Text("全拼").tag(false)
+            Text("小鹤双拼").tag(true)
+          }
+          .pickerStyle(.segmented)
+          .accessibilityIdentifier("inputSchemePicker")
+          .onChange(of: usesShuangpin) { newValue in
+            InputSchemePreference.usesShuangpin = newValue
+          }
+        }
+        .padding(18)
+        .background(.background, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+          RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .stroke(MetasequoiaTheme.needle.opacity(0.12), lineWidth: 1)
+        }
+        .onAppear {
+          usesShuangpin = InputSchemePreference.usesShuangpin
+        }
 
         VStack(alignment: .leading, spacing: 10) {
           Text("启用后试一试")

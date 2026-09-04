@@ -72,7 +72,7 @@ MSIME-Apple/
 
 The iOS frontend is a custom keyboard extension. It inserts and removes text only through `textDocumentProxy`, and it must expose the system next-keyboard action when required. Secure text fields, phone-pad fields, and applications that reject third-party keyboards can replace or disable the extension; those are operating-system boundaries rather than engine failures.
 
-The first usable keyboard will run entirely on-device without Open Access. App Group configuration and `RequestsOpenAccess` will be introduced only in a later, explicit feature when shared settings or dictionaries require them. Network access is not part of the base architecture.
+The keyboard runs entirely on-device without Open Access. The host app and keyboard extension use a narrowly scoped App Group for shared settings, beginning with the input-scheme choice. `RequestsOpenAccess` remains disabled, and network access is not part of the base architecture.
 
 Extension memory and startup time are stricter than on macOS. The bridge therefore creates engine state lazily, avoids background services, and tears down platform objects with the extension lifecycle. Dictionary packaging and memory measurements must be verified on a real device before declaring the iOS frontend production-ready.
 

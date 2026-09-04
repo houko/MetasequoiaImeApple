@@ -97,6 +97,25 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn('TextField("在这里试试水杉键盘"', onboarding)
         self.assertIn('.accessibilityIdentifier("keyboardTryoutField")', onboarding)
 
+    def test_host_app_exposes_the_shared_input_scheme_setting(self):
+        onboarding = (IOS_ROOT / "App/Sources/OnboardingView.swift").read_text()
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn(
+            "@State private var usesShuangpin = InputSchemePreference.usesShuangpin",
+            onboarding,
+        )
+        self.assertIn('Picker("输入方案", selection: $usesShuangpin)', onboarding)
+        self.assertIn('Text("全拼").tag(false)', onboarding)
+        self.assertIn('Text("小鹤双拼").tag(true)', onboarding)
+        self.assertIn('.accessibilityIdentifier("inputSchemePicker")', onboarding)
+        self.assertIn("InputSchemePreference.usesShuangpin = newValue", onboarding)
+        self.assertIn("private var hasComposition = false", controller)
+        self.assertIn("override func viewWillAppear", controller)
+        self.assertIn("synchronizeInputSchemePreference()", controller)
+        self.assertIn("guard !hasComposition else { return }", controller)
+        self.assertIn("hasComposition = !snapshot.preedit.isEmpty", controller)
+
     def test_ci_creates_the_generated_project_output_directory(self):
         workflow = (IOS_ROOT.parents[1] / ".github/workflows/ci.yml").read_text()
 

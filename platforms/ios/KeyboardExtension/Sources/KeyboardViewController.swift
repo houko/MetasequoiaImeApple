@@ -20,6 +20,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private weak var enterButton: UIButton?
   private var backspaceRepeatTimer: Timer?
   private var didRepeatBackspace = false
+  private var hasComposition = false
   private var isChineseMode = true
   private var usesShuangpin = false
   private var showsSymbols = false
@@ -50,6 +51,11 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     installKeyboard()
     updateReturnKey()
     updateCandidateStrip(preedit: "", candidates: [])
+  }
+
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    synchronizeInputSchemePreference()
   }
 
   override func textWillChange(_ textInput: UITextInput?) {
@@ -261,6 +267,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private func handleCharacter(_ character: String) {
     playInputClick()
     if isChineseMode {
+      synchronizeInputSchemePreference()
       render(session.handleCharacter(character))
     } else {
       let output = letterCaseState == .lowercase ? character : character.uppercased()
@@ -464,6 +471,17 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     render(snapshot)
   }
 
+  private func synchronizeInputSchemePreference() {
+    guard !hasComposition else { return }
+    let sharedValue = InputSchemePreference.usesShuangpin
+    guard sharedValue != usesShuangpin else { return }
+
+    usesShuangpin = sharedValue
+    let snapshot = session.switch(toShuangpin: usesShuangpin)
+    updateSchemeButton()
+    render(snapshot)
+  }
+
   private func updateSchemeButton() {
     var configuration = UIButton.Configuration.plain()
     configuration.title = usesShuangpin ? "小鹤" : "全拼"
@@ -561,6 +579,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     if let commitText = snapshot.commitText {
       textDocumentProxy.insertText(commitText)
     }
+    hasComposition = !snapshot.preedit.isEmpty
     updateCandidateStrip(preedit: snapshot.preedit, candidates: snapshot.candidates)
   }
 
