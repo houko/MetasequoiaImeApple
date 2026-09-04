@@ -58,21 +58,30 @@ done
 
 mode_marker="<!-- metasequoia-release-mode:$release_mode -->"
 opposite_marker="<!-- metasequoia-release-mode:$opposite_mode -->"
+install_guidance_marker="<!-- metasequoia-install-guidance:v1 -->"
 current_notes=$(gh release view "$TAG_NAME" --repo "$GH_REPO" --json body --jq '.body // ""')
 if [[ "$current_notes" == *"$opposite_marker"* ]]; then
     printf '%s\n' "Release $TAG_NAME is already locked to $opposite_mode artifacts; refusing to switch it to $release_mode." >&2
     exit 1
 fi
 
-if [[ "$current_notes" != *"$mode_marker"* ]]; then
+if [[ "$current_notes" != *"$mode_marker"* || "$current_notes" != *"$install_guidance_marker"* ]]; then
     release_notes=${RUNNER_TEMP:-${TMPDIR:-/tmp}}/metasequoia-release-notes.md
     {
         if [[ -n "$current_notes" ]]; then
             printf '%s\n\n' "$current_notes"
         fi
-        printf '%s\n' "$mode_marker"
-        if [[ "$release_mode" == unsigned ]]; then
-            printf '%s\n' '> [!WARNING] These macOS artifacts are not Developer ID signed or notarized because release signing credentials were not configured. The asset filenames are marked unsigned.'
+        if [[ "$current_notes" != *"$mode_marker"* ]]; then
+            printf '%s\n' "$mode_marker"
+            if [[ "$release_mode" == unsigned ]]; then
+                printf '%s\n' '> [!WARNING] These macOS artifacts are not Developer ID signed or notarized because release signing credentials were not configured. The asset filenames are marked unsigned.'
+            fi
+        fi
+        if [[ "$current_notes" != *"$install_guidance_marker"* ]]; then
+            printf '%s\n\n' "$install_guidance_marker"
+            printf '%s\n' '### Install on macOS'
+            printf '%s\n' '- **Recommended: ZIP.** Verify its `.sha256`, extract it, then run `Install.command`. It installs for the current user, registers and enables the exact input source, and does not automatically log out or restart the Mac.'
+            printf '%s\n' '- **Compatibility option: PKG.** The native Installer copies the same app but cannot reliably enable the current GUI user’s input source. After installation, enable 水杉 in System Settings > Keyboard > Text Input. The package does not force a logout or restart; macOS may still require a later logout before a newly copied input method appears.'
         fi
     } > "$release_notes"
     gh release edit "$TAG_NAME" --repo "$GH_REPO" --notes-file "$release_notes"
