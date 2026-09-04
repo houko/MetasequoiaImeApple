@@ -85,7 +85,11 @@ if [[ "$bundle_version" != "$version" ]]; then
     exit 1
 fi
 
-codesign --verify --deep --strict --verbose=2 "$source_bundle"
+if [[ "$require_release_signing" == true ]]; then
+    codesign --verify --deep --strict --verbose=2 "$source_bundle"
+else
+    printf '%s\n' 'Unsigned release: skipping source bundle Developer ID signature verification.'
+fi
 mkdir -p "$output_dir"
 staging_root=$(mktemp -d "$output_dir/.package.XXXXXX")
 package_root="$staging_root/MetasequoiaIME-$tag_name"
