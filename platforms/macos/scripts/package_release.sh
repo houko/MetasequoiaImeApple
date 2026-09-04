@@ -108,6 +108,7 @@ component_package="$staging_root/MetasequoiaIME.pkg"
 distribution_file="$staging_root/Distribution.xml"
 installer_resources="$staging_root/InstallerResources"
 installer_readme="$installer_resources/InstallerReadMe.txt"
+pkg_scripts="$staging_root/pkg-scripts"
 backup_root="$staging_root/PreviousAssets"
 publish_started=false
 publish_complete=false
@@ -177,6 +178,9 @@ if [[ "$asset_suffix" == -unsigned ]]; then
 fi
 chmod +x "$package_root/Install.command"
 chmod +x "$package_root/Uninstall.command"
+mkdir -p "$pkg_scripts"
+ditto "$project_root/platforms/macos/scripts/pkg-postinstall.sh" "$pkg_scripts/postinstall"
+chmod +x "$pkg_scripts/postinstall"
 if [[ -n "$notary_profile" ]]; then
     notary_input="$staging_root/MetasequoiaIME-notary.zip"
     ditto -c -k --keepParent "$packaged_bundle" "$notary_input"
@@ -188,7 +192,7 @@ ditto -c -k --keepParent "$packaged_bundle" "$update_archive_path"
 (cd "$staging_root" && shasum -a 256 "$update_archive_name") > "$update_checksum_path"
 ditto -c -k --keepParent "$package_root" "$archive_path"
 (cd "$staging_root" && shasum -a 256 "$archive_name") > "$checksum_path"
-pkgbuild --component "$packaged_bundle" --identifier com.houko.inputmethod.MetasequoiaIME.pkg --version "$version" --install-location "Library/Input Methods" "$component_package"
+pkgbuild --component "$packaged_bundle" --identifier com.houko.inputmethod.MetasequoiaIME.pkg --version "$version" --scripts "$pkg_scripts" --install-location "Library/Input Methods" "$component_package"
 sed "s/@VERSION@/$version/g" "$installer_distribution" > "$distribution_file"
 mkdir -p "$installer_resources"
 ditto "$project_root/LICENSE" "$installer_resources/LICENSE"
@@ -212,6 +216,7 @@ printf '%s\n' \
     '' \
     'Installation scope: current user (~/Library/Input Methods).' \
     'The native Installer may request administrator authorization.' \
+    'After installation, the package attempts to register and enable 水杉 for the logged-in GUI user.' \
     'The installer will not log out or restart the Mac automatically.' \
     'macOS may list a newly copied input method only after you log out and back in at a convenient time.' \
     '' \

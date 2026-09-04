@@ -444,6 +444,12 @@ class ReleasePackageTests(unittest.TestCase):
                 PROJECT_ROOT / "THIRD_PARTY_NOTICES.txt",
                 legacy_project_root / "THIRD_PARTY_NOTICES.txt",
             )
+            legacy_scripts = legacy_project_root / "platforms/macos/scripts"
+            legacy_scripts.mkdir(parents=True)
+            shutil.copy2(
+                MACOS_ROOT / "scripts/pkg-postinstall.sh",
+                legacy_scripts / "pkg-postinstall.sh",
+            )
 
             output = temporary / "output"
             environment = os.environ.copy()
@@ -1019,6 +1025,7 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertIn("MetasequoiaImeEngine", installer_readme)
             self.assertIn("Contents/Resources/Uninstall.command", installer_readme)
             self.assertIn("may request administrator authorization", installer_readme)
+            self.assertIn("attempts to register and enable 水杉", installer_readme)
             self.assertIn("will not log out or restart the Mac automatically", installer_readme)
 
             component_info_path = next(expanded_package.glob("*.pkg/PackageInfo"))
@@ -1037,7 +1044,13 @@ class ReleasePackageTests(unittest.TestCase):
             )
             self.assertTrue(packaged_uninstaller.is_file())
             self.assertTrue(os.access(packaged_uninstaller, os.X_OK))
-            self.assertFalse((component_info_path.parent / "Scripts").exists())
+            pkg_postinstall = component_info_path.parent / "Scripts/postinstall"
+            self.assertTrue(pkg_postinstall.is_file())
+            self.assertTrue(os.access(pkg_postinstall, os.X_OK))
+            postinstall_source = pkg_postinstall.read_text()
+            self.assertIn("launchctl asuser", postinstall_source)
+            self.assertIn("--register-input-source", postinstall_source)
+            self.assertIn("input source registration will be deferred", postinstall_source)
             self.assertTrue(
                 (
                     component_info_path.parent
