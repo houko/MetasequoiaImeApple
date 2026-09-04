@@ -709,6 +709,11 @@ class ReleasePackageTests(unittest.TestCase):
             with zipfile.ZipFile(update_archive) as update_zip:
                 update_names = update_zip.namelist()
                 self.assertIn("MetasequoiaIME.app/Contents/Info.plist", update_names)
+                update_info = plistlib.loads(update_zip.read("MetasequoiaIME.app/Contents/Info.plist"))
+                self.assertFalse(
+                    update_info["SUEnableAutomaticChecks"],
+                    "Unsigned releases must not poll the intentionally absent Sparkle appcast.",
+                )
                 self.assertIn(
                     "MetasequoiaIME.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle",
                     update_names,
