@@ -74,6 +74,8 @@ targets:
     sources:
       - path: platforms/ios/App/Sources
       - path: platforms/ios/SharedUI
+      - path: platforms/ios/SharedResources/PrivacyInfo.xcprivacy
+        buildPhase: resources
     settings:
       base:
         GENERATE_INFOPLIST_FILE: NO
@@ -90,6 +92,8 @@ targets:
     sources:
       - path: platforms/ios/KeyboardExtension/Sources
       - path: platforms/ios/SharedUI
+      - path: platforms/ios/SharedResources/PrivacyInfo.xcprivacy
+        buildPhase: resources
       - path: platforms/ios/KeyboardExtension/Resources/msime.db
         buildPhase: resources
       - path: platforms/ios/KeyboardExtension/Resources/msime.db.sha256
