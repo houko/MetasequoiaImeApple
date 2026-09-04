@@ -33,9 +33,9 @@
                 <key>TISIntendedLanguage</key>
                 <string>zh-Hans</string>
                 <key>tsInputModeMenuIconFileKey</key>
-                <string>MetasequoiaIME.icns</string>
+                <string>MetasequoiaIMEMenuIcon.tiff</string>
                 <key>tsInputModePaletteIconFileKey</key>
-                <string>MetasequoiaIME.icns</string>
+                <string>MetasequoiaIMEMenuIcon.tiff</string>
                 <key>tsInputModeCharacterRepertoireKey</key>
                 <array>
                     <string>Hans</string>
@@ -82,6 +82,6 @@
         <string>Hans</string>
     </array>
     <key>tsInputMethodIconFileKey</key>
-    <string>MetasequoiaIME.icns</string>
+    <string>MetasequoiaIMEMenuIcon.tiff</string>
 </dict>
 </plist>

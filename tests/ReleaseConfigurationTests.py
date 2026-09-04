@@ -1,5 +1,6 @@
 import json
 import os
+import plistlib
 import re
 import subprocess
 import unittest
@@ -10,6 +11,23 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 class ReleaseConfigurationTests(unittest.TestCase):
+    def test_input_source_uses_a_dedicated_menu_icon(self):
+        with (PROJECT_ROOT / "resources/Info.plist").open("rb") as info_file:
+            info = plistlib.load(info_file)
+
+        app_icon = "MetasequoiaIME.icns"
+        menu_icon = "MetasequoiaIMEMenuIcon.tiff"
+        input_mode = info["ComponentInputModeDict"]["tsInputModeListKey"][
+            "com.houko.inputmethod.MetasequoiaIME.Hans"
+        ]
+
+        self.assertEqual(info["CFBundleIconFile"], app_icon)
+        self.assertEqual(info["tsInputMethodIconFileKey"], menu_icon)
+        self.assertEqual(input_mode["tsInputModeMenuIconFileKey"], menu_icon)
+        self.assertEqual(input_mode["tsInputModePaletteIconFileKey"], menu_icon)
+        self.assertTrue((PROJECT_ROOT / "resources" / menu_icon).is_file())
+        self.assertIn(menu_icon, (PROJECT_ROOT / "CMakeLists.txt").read_text())
+
     def test_release_version_matches_cmake_project_version(self):
         manifest = json.loads((PROJECT_ROOT / ".release-please-manifest.json").read_text())
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()

@@ -78,7 +78,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
     set(METASEQUOIA_IME_UNINSTALLER ${CMAKE_CURRENT_BINARY_DIR}/Uninstall.command)
     configure_file(scripts/uninstall.sh ${METASEQUOIA_IME_UNINSTALLER} COPYONLY)
 
-    set(METASEQUOIA_IME_ICON resources/MetasequoiaIME.icns)
+    set(METASEQUOIA_IME_ICONS resources/MetasequoiaIME.icns resources/MetasequoiaIMEMenuIcon.tiff)
     set(METASEQUOIA_IME_LOCALIZATIONS resources/en.lproj/InfoPlist.strings resources/zh-Hans.lproj/InfoPlist.strings)
     set(METASEQUOIA_IME_LEGAL_RESOURCES
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/GPL-3.0.txt
@@ -87,9 +87,9 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Boost-1.0.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt)
-    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/InputSourceRegistration.mm src/MetasequoiaInputController.mm src/PreferencesWindowController.mm src/StringConversion.mm src/UpdateChecker.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICON} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
+    add_executable(MetasequoiaIME MACOSX_BUNDLE src/main.mm src/DictionaryInstaller.mm src/InputSourceRegistration.mm src/MetasequoiaInputController.mm src/PreferencesWindowController.mm src/StringConversion.mm src/UpdateChecker.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICONS} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
     set_source_files_properties(${METASEQUOIA_IME_DICTIONARY} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-    set_source_files_properties(${METASEQUOIA_IME_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_source_files_properties(${METASEQUOIA_IME_ICONS} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(resources/en.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/en.lproj)
     set_source_files_properties(resources/zh-Hans.lproj/InfoPlist.strings PROPERTIES MACOSX_PACKAGE_LOCATION Resources/zh-Hans.lproj)
     set_source_files_properties(${METASEQUOIA_IME_LEGAL_RESOURCES}
