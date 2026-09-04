@@ -98,6 +98,19 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("session.handleCharacter(symbol)", controller)
         self.assertLess(controller.index(separator_route), controller.index(punctuation_route))
 
+    def test_keyboard_exposes_a_local_chinese_english_mode_switch(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("private var isChineseMode = true", controller)
+        self.assertIn("languageModeButton", controller)
+        self.assertIn("toggleInputMode", controller)
+        self.assertIn("render(session.handleCharacter(character))", controller)
+        self.assertIn("textDocumentProxy.insertText(character)", controller)
+        self.assertIn("if !isChineseMode {\n      textDocumentProxy.insertText(symbol)", controller)
+        self.assertIn("isChineseMode ? session.commitCandidate() : session.cancel()", controller)
+        self.assertIn("isChineseMode ? \"中\" : \"英\"", controller)
+        self.assertIn('languageModeButton.accessibilityIdentifier = "languageModeButton"', controller)
+
 
 if __name__ == "__main__":
     unittest.main()

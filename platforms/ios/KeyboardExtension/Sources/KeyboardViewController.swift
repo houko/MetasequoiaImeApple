@@ -6,9 +6,11 @@ final class KeyboardViewController: UIInputViewController {
   private let preeditLabel = UILabel()
   private let candidateScrollView = UIScrollView()
   private let candidateStack = UIStackView()
+  private let languageModeButton = UIButton()
   private var letterRowViews: [UIView] = []
   private var symbolRowViews: [UIView] = []
   private var layoutToggleButton: UIButton?
+  private var isChineseMode = true
   private var showsSymbols = false
 
   private let letterRows = [
@@ -74,13 +76,19 @@ final class KeyboardViewController: UIInputViewController {
     preeditLabel.adjustsFontForContentSizeCategory = true
     preeditLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
+    updateLanguageModeButton()
+    languageModeButton.addAction(
+      UIAction { [weak self] _ in self?.toggleInputMode() }, for: .primaryActionTriggered)
+    languageModeButton.widthAnchor.constraint(equalToConstant: 36).isActive = true
+
     candidateStack.axis = .horizontal
     candidateStack.spacing = 6
     candidateStack.translatesAutoresizingMaskIntoConstraints = false
     candidateScrollView.showsHorizontalScrollIndicator = false
     candidateScrollView.addSubview(candidateStack)
 
-    let content = UIStackView(arrangedSubviews: [preeditLabel, candidateScrollView])
+    let content = UIStackView(
+      arrangedSubviews: [languageModeButton, preeditLabel, candidateScrollView])
     content.axis = .horizontal
     content.alignment = .center
     content.spacing = 12
@@ -194,10 +202,19 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func handleCharacter(_ character: String) {
-    render(session.handleCharacter(character))
+    if isChineseMode {
+      render(session.handleCharacter(character))
+    } else {
+      textDocumentProxy.insertText(character)
+    }
   }
 
   private func handleSymbol(_ symbol: String) {
+    if !isChineseMode {
+      textDocumentProxy.insertText(symbol)
+      return
+    }
+
     if symbol.count == 1, symbol >= "1", symbol <= "9" {
       let snapshot = session.handleCandidateKey(symbol)
       if !snapshot.isHandled && snapshot.preedit.isEmpty {
@@ -223,6 +240,28 @@ final class KeyboardViewController: UIInputViewController {
 
     render(session.commitRaw())
     textDocumentProxy.insertText(symbol)
+  }
+
+  private func toggleInputMode() {
+    let snapshot = isChineseMode ? session.commitCandidate() : session.cancel()
+    isChineseMode.toggle()
+    updateLanguageModeButton()
+    render(snapshot)
+  }
+
+  private func updateLanguageModeButton() {
+    var configuration = UIButton.Configuration.filled()
+    configuration.title = isChineseMode ? "中" : "英"
+    configuration.baseForegroundColor = .white
+    configuration.baseBackgroundColor = MetasequoiaTheme.forestUIColor
+    configuration.contentInsets = NSDirectionalEdgeInsets(
+      top: 3, leading: 5, bottom: 3, trailing: 5)
+    configuration.background.cornerRadius = 8
+    languageModeButton.configuration = configuration
+    languageModeButton.accessibilityIdentifier = "languageModeButton"
+    languageModeButton.accessibilityLabel =
+      isChineseMode ? "切换到英文输入" : "切换到中文输入"
+    languageModeButton.accessibilityValue = isChineseMode ? "中文输入" : "英文输入"
   }
 
   private func toggleLayout() {
@@ -271,7 +310,8 @@ final class KeyboardViewController: UIInputViewController {
   }
 
   private func updateCandidateStrip(preedit: String, candidates: [String]) {
-    preeditLabel.text = preedit.isEmpty ? "水杉输入法" : preedit
+    preeditLabel.text =
+      preedit.isEmpty ? (isChineseMode ? "水杉输入法" : "英文输入") : preedit
     for view in candidateStack.arrangedSubviews {
       candidateStack.removeArrangedSubview(view)
       view.removeFromSuperview()
