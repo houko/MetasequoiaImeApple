@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.13](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.12...v0.20.13) (2026-09-04)
+
+
+### Bug Fixes
+
+* **install:** register release input source ([#118](https://github.com/houko/MetasequoiaImeMac/issues/118)) ([2f16774](https://github.com/houko/MetasequoiaImeMac/commit/2f167742a09a3ba9d65f7761e64caee4b558c655))
+
 ## [0.20.12](https://github.com/houko/MetasequoiaImeMac/compare/v0.20.11...v0.20.12) (2026-09-04)
 
 
