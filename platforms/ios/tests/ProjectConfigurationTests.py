@@ -111,6 +111,19 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("isChineseMode ? \"中\" : \"英\"", controller)
         self.assertIn('languageModeButton.accessibilityIdentifier = "languageModeButton"', controller)
 
+    def test_project_and_ci_run_native_onboarding_ui_tests(self):
+        project = (IOS_ROOT / "project.yml").read_text()
+        workflow = (IOS_ROOT.parents[1] / ".github/workflows/ci.yml").read_text()
+        runner = (IOS_ROOT / "scripts/run_ui_tests.sh").read_text()
+
+        self.assertIn("MetasequoiaImeIOSUITests:", project)
+        self.assertIn("platforms/ios/UITests", project)
+        self.assertIn("GENERATE_INFOPLIST_FILE: YES", project)
+        self.assertIn("MetasequoiaImeIOSUITests", project.split("test:", 1)[1])
+        self.assertIn("platforms/ios/scripts/run_ui_tests.sh", workflow)
+        self.assertIn("simctl bootstatus", runner)
+        self.assertNotIn("sleep ", runner)
+
 
 if __name__ == "__main__":
     unittest.main()

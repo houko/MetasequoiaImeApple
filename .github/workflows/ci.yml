@@ -79,3 +79,6 @@ jobs:
             -derivedDataPath build/ios-derived \
             CODE_SIGNING_ALLOWED=NO \
             build
+      - name: Test native iOS onboarding
+        timeout-minutes: 15
+        run: bash platforms/ios/scripts/run_ui_tests.sh

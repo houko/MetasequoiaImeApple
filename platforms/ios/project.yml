@@ -107,6 +107,18 @@ targets:
       - target: MetasequoiaAppleBridge
       - sdk: libsqlite3.tbd
 
+  MetasequoiaImeIOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: platforms/ios/UITests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.houko.metasequoiaime.ios.uitests
+    dependencies:
+      - target: MetasequoiaImeIOS
+
 schemes:
   MetasequoiaImeIOS:
     build:
@@ -115,3 +127,6 @@ schemes:
         MetasequoiaKeyboard: all
     run:
       config: Debug
+    test:
+      targets:
+        - MetasequoiaImeIOSUITests
