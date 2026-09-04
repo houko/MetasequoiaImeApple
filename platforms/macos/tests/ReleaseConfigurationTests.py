@@ -335,6 +335,11 @@ class ReleaseConfigurationTests(unittest.TestCase):
             "https://github.com/houko/MetasequoiaImeEngine.git",
         )
         self.assertEqual(submodule_value("vendor/MetasequoiaImeEngine", "branch"), "feat/macos-portability")
+        self.assertEqual(submodule_value("vendor/MetasequoiaImeDict", "path"), "vendor/MetasequoiaImeDict")
+        self.assertEqual(
+            submodule_value("vendor/MetasequoiaImeDict", "url"),
+            "https://github.com/metasequoiaime/MSIME-Dict.git",
+        )
 
     def test_release_scripts_have_valid_zsh_syntax(self):
         for relative_path in (
