@@ -52,6 +52,7 @@ NSString * const kFloatingToolbarPreferenceKey = @"MetasequoiaImeFloatingToolbar
 NSString * const kTraditionalChineseOutputPreferenceKey = @"MetasequoiaImeTraditionalChineseOutput";
 NSString * const kWubiAutoCommitUniquePreferenceKey = @"MetasequoiaImeWubiAutoCommitUnique";
 NSString * const kShuangpinKeymapPreferenceKey = @"MetasequoiaImeShuangpinKeymapEnabled";
+NSString * const kLocalInputModesPreferenceKey = @"MetasequoiaImeLocalInputModesEnabled";
 
 NSColor *MetasequoiaBrandColor()
 {
@@ -421,6 +422,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSView *_wubiSettingsRow;
     NSButton *_autocorrectButton;
     NSButton *_helpcodeButton;
+    NSButton *_localInputModesButton;
     NSPopUpButton *_quanpinHelpcodeSchemaButton;
     NSPopUpButton *_shuangpinHelpcodeSchemaButton;
     NSButton *_chinesePunctuationButton;
@@ -717,6 +719,19 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                       object:@(enabled)];
 }
 
+// Off unless asked for. Turning it on gives Shift+U, Shift+T, Shift+K and Shift+J to the engine's
+// local input modes, and those keystrokes currently insert a bare capital, so a user who types
+// "USA" in Chinese mode would lose that.
++ (BOOL)storedLocalInputModesEnabled
+{
+    return [[NSUserDefaults standardUserDefaults] boolForKey:kLocalInputModesPreferenceKey];
+}
+
++ (void)setLocalInputModesEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kLocalInputModesPreferenceKey];
+}
+
 - (instancetype)initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner
 {
     (void)windowNibName;
@@ -949,6 +964,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     appearancePage.accessibilityLabel = @"外观设置页";
 
     _helpcodeButton = [NSButton checkboxWithTitle:@"启用辅助码" target:self action:@selector(helpcodeChanged:)];
+    _localInputModesButton = [NSButton checkboxWithTitle:@"启用本地输入模式（Shift+U/T/K/J）"
+                                                 target:self
+                                                 action:@selector(localInputModesChanged:)];
+    _localInputModesButton.toolTip =
+        @"未组词时按 Shift+U 输入 Unicode 码点，Shift+T 输入日期时间，Shift+K 输入快捷短语，Shift+J 超级简拼。"
+        @"关闭时这些组合照常输入大写字母。";
     NSArray<NSString *> *helpcodeSchemeTitles =
         @[ @"蓝天小雨点", @"自然码", @"首右2.0", @"首右plus", @"小鹤" ];
     _quanpinHelpcodeSchemaButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
@@ -979,7 +1000,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSBox *learningCard =
         CardWithViews(@[
             _helpcodeButton, PreferenceRow(@"全拼辅助码方案", _quanpinHelpcodeSchemaButton),
-            PreferenceRow(@"双拼辅助码方案", _shuangpinHelpcodeSchemaButton), _candidateLearningButton
+            PreferenceRow(@"双拼辅助码方案", _shuangpinHelpcodeSchemaButton), _candidateLearningButton,
+            _localInputModesButton
         ],
                       9.0);
     NSBox *dictionaryCard = CardWithViews(@[ _statusLabel ], 0.0);
@@ -1259,6 +1281,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                                                               : NSControlStateValueOff;
     _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+    _localInputModesButton.state =
+        [MetasequoiaPreferencesWindowController storedLocalInputModesEnabled] ? NSControlStateValueOn
+                                                                              : NSControlStateValueOff;
     [_quanpinHelpcodeSchemaButton
         selectItemAtIndex:[MetasequoiaPreferencesWindowController storedQuanpinHelpcodeSchema]];
     [_shuangpinHelpcodeSchemaButton
@@ -1358,6 +1383,14 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     NSButton *button = (NSButton *)sender;
     [MetasequoiaPreferencesWindowController setAutocorrectEnabled:button.state == NSControlStateValueOn];
+}
+
+- (void)localInputModesChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController
+        setLocalInputModesEnabled:button.state == NSControlStateValueOn];
+    [self refreshControls];
 }
 
 - (void)helpcodeChanged:(id)sender
@@ -1528,6 +1561,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
              kInputModeShortcutPreferenceKey,
              kWubiAutoCommitUniquePreferenceKey,
              kShuangpinKeymapPreferenceKey,
+             kLocalInputModesPreferenceKey,
              kFullWidthInputPreferenceKey,
              kFloatingToolbarPreferenceKey,
              kTraditionalChineseOutputPreferenceKey,

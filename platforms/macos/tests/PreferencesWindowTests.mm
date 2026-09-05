@@ -297,6 +297,28 @@ int main()
                     [MetasequoiaPreferencesWindowController storedCandidatePageShortcut] == 2,
                 "The candidate page shortcut choice did not persist.");
 
+        // Off by default: turning it on hands Shift+U/T/K/J to the engine's local input modes, and
+        // those keystrokes insert a bare capital today, so it must never arrive switched on.
+        NSButton *localInputModesButton =
+            FindButtonWithTitle(controller.window.contentView, @"启用本地输入模式（Shift+U/T/K/J）");
+        require(localInputModesButton != nil,
+                "The settings window did not expose the local input mode switch.");
+        require(localInputModesButton.state == NSControlStateValueOff,
+                "The local input mode switch did not default to off.");
+        // A real click flips the state before the action runs, so the test has to do the same.
+        localInputModesButton.state = NSControlStateValueOn;
+        require([NSApp sendAction:localInputModesButton.action
+                               to:localInputModesButton.target
+                             from:localInputModesButton] &&
+                    [MetasequoiaPreferencesWindowController storedLocalInputModesEnabled],
+                "The local input mode switch did not persist.");
+        localInputModesButton.state = NSControlStateValueOff;
+        require([NSApp sendAction:localInputModesButton.action
+                               to:localInputModesButton.target
+                             from:localInputModesButton] &&
+                    ![MetasequoiaPreferencesWindowController storedLocalInputModesEnabled],
+                "The local input mode switch did not turn back off.");
+
         NSButton *quanpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"全拼输入");
         NSButton *shuangpinSchemeButton = FindButtonWithTitle(controller.window.contentView, @"双拼输入");
         NSButton *wubiSchemeButton = FindButtonWithTitle(controller.window.contentView, @"五笔输入");

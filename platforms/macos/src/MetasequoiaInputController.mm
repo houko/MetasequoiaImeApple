@@ -109,6 +109,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     BOOL _wubiAutoCommitUniqueEnabled;
     BOOL _serverActive;
     BOOL _shuangpinKeymapEnabled;
+    BOOL _localInputModesEnabled;
     NSTimeInterval _dictionaryRetryAfter;
 }
 
@@ -230,6 +231,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     _session = std::make_unique<metasequoia::InputSession>(
         preferences.scheme, preferences.autocorrectEnabled, preferences.helpcodeEnabled,
         preferences.chinesePunctuationEnabled, preferences.candidateLearningEnabled);
+    [self applyLocalInputModeOptions];
     _candidateSelection.reset();
     _candidateHighlightedIndex = 0;
     _candidatePageStart = 0;
@@ -239,6 +241,32 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [_candidatePanel setCandidateData:_visibleCandidateData];
     [_candidatePanel hide];
     [_shuangpinKeymapPanel orderOut:nil];
+}
+
+// The engine enables every local input mode by default, but this bundle ships only msime.db. Emoji
+// and kaomoji read others.db, temporary English reads english.db and temporary Japanese reads
+// dict_japanese.dat, none of which are fetched, so those four could only ever fail. The remaining
+// four need nothing beyond what is here: Unicode parses its own input, date and time has a built-in
+// provider, quick phrases live in msime.db's quick_parases table, and super jianpin uses the pinyin
+// tables. Turning the whole family off by preference keeps Shift+letter inserting a capital.
+- (void)applyLocalInputModeOptions
+{
+    if (_session == nullptr)
+    {
+        return;
+    }
+
+    _localInputModesEnabled = [MetasequoiaPreferencesWindowController storedLocalInputModesEnabled];
+    metasequoia::LocalModeOptions options;
+    options.unicode = _localInputModesEnabled;
+    options.date_time = _localInputModesEnabled;
+    options.quick_phrase = _localInputModesEnabled;
+    options.super_jianpin = _localInputModesEnabled;
+    options.emoji = false;
+    options.kaomoji = false;
+    options.temporary_english = false;
+    options.temporary_japanese = false;
+    _session->set_local_mode_options(options);
 }
 
 - (BOOL)prepareSessionIfNeeded
@@ -513,17 +541,37 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
                 result = metasequoia::mac::HandleCharacterWithWubiAutoCommit(
                     *_session, static_cast<char>(character), _wubiAutoCommitUniqueEnabled);
             }
+            // Shift and a capital with nothing being composed is how the engine opens a local input
+            // mode. It stays out of the helpcode path above, which only applies during a
+            // composition, and a capital that is not one of the triggers still comes back unhandled
+            // so the application inserts it.
+            else if (_localInputModesEnabled && character >= 'A' && character <= 'Z' &&
+                     !_session->has_composition() && (modifiers & NSEventModifierFlagShift) != 0 &&
+                     (modifiers & ~NSEventModifierFlagShift) == 0)
+            {
+                result = _session->handle_character(static_cast<char>(character), true);
+            }
             else if (character == '\'' && _session->has_composition())
             {
                 result = _session->handle_character(static_cast<char>(character));
             }
-            else if (character >= '1' && character <= '9')
+            // Unicode mode reads a hex code point, so while it is open its digits and its optional
+            // "+" are input rather than candidate numbers. Every other local mode takes letters
+            // only and leaves the digits to selection, which is what they already did.
+            else if ((character >= '0' && character <= '9') || character == '+')
             {
-                result = _candidateSelection.commit_number(
-                    *_session, static_cast<char>(character), _candidatePageSize);
-                if (!result.handled && _session->has_composition())
+                if (_session->local_input_mode() == metasequoia::LocalInputMode::Unicode)
                 {
-                    return YES;
+                    result = _session->handle_character(static_cast<char>(character));
+                }
+                else if (character >= '1' && character <= '9')
+                {
+                    result = _candidateSelection.commit_number(
+                        *_session, static_cast<char>(character), _candidatePageSize);
+                    if (!result.handled && _session->has_composition())
+                    {
+                        return YES;
+                    }
                 }
             }
             else if (character == ',' || character == '.' || character == '?' || character == '!' ||

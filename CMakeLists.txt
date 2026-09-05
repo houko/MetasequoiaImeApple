@@ -28,6 +28,10 @@ if(BUILD_TESTING)
     target_link_libraries(MetasequoiaCandidateSelectionStateTests PRIVATE MetasequoiaIme::Engine)
     target_compile_options(MetasequoiaCandidateSelectionStateTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
     add_test(NAME candidate_selection_state COMMAND MetasequoiaCandidateSelectionStateTests)
+    add_executable(MetasequoiaLocalInputModeTests ${METASEQUOIA_MACOS_ROOT}/tests/LocalInputModeTests.cpp)
+    target_link_libraries(MetasequoiaLocalInputModeTests PRIVATE MetasequoiaIme::Engine)
+    target_compile_options(MetasequoiaLocalInputModeTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    add_test(NAME local_input_modes COMMAND MetasequoiaLocalInputModeTests)
     add_executable(MetasequoiaAppleInputSessionAdapterTests
         platforms/ios/Tests/InputSessionAdapterTests.cpp
         shared/apple-bridge/InputSessionAdapter.cpp

@@ -123,13 +123,26 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("SchemeType::Quanpin", scheme_guard)
         self.assertIn("SchemeType::Shuangpin", scheme_guard)
 
-        # The engine consumes A-Z during a composition as helpcode input. macOS does not offer that, so uppercase must stay unhandled here and commit the leading candidate instead. The full-width and keymap-highlight paths elsewhere in this file legitimately look at uppercase, so scope the check to the key-routing branch.
+        # The engine consumes A-Z during a composition as helpcode input. macOS does not offer that, so uppercase must not reach the session while something is being composed; it commits the leading candidate and the application inserts the capital. The one capital path that is allowed opens a local input mode, and the engine guards every one of those triggers on there being no composition, so this branch has to carry the same guard. The full-width and keymap-highlight paths elsewhere in this file legitimately look at uppercase, so scope the check to the key-routing branch.
         character_branch = controller.split("case metasequoia::mac::ControllerKeyAction::Character:", 1)[1].split(
             "if (!result.handled)", 1
         )[0]
         self.assertIn("if (character >= 'a' && character <= 'z')", character_branch)
-        self.assertNotIn("character <= 'Z'", character_branch)
         self.assertIn("HandleCharacterWithWubiAutoCommit", character_branch)
+
+        uppercase_conditions = [
+            line for line in character_branch.splitlines() if "character <= 'Z'" in line
+        ]
+        self.assertEqual(
+            len(uppercase_conditions),
+            1,
+            "uppercase reaches the session from more than one place in the key-routing branch",
+        )
+        uppercase_branch = character_branch.split("character <= 'Z'", 1)[1].split("}", 1)[0]
+        self.assertIn("!_session->has_composition()", uppercase_branch)
+        self.assertIn("_localInputModesEnabled", character_branch)
+        self.assertIn("NSEventModifierFlagShift", uppercase_branch)
+        self.assertIn("handle_character(static_cast<char>(character), true)", uppercase_branch)
 
     def test_engine_english_learning_stays_unreachable_from_macos(self):
         controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
