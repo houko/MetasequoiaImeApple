@@ -20,6 +20,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
             workflow,
         )
         self.assertIn("cancel-in-progress: true", workflow)
+        self.assertIn("on:\n  push:\n    branches:\n      - main\n  pull_request:\n", workflow)
 
     def test_current_repository_links_use_the_canonical_apple_repository(self):
         canonical_repository = "https://github.com/metasequoiaime/MSIME-Apple"
@@ -229,7 +230,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("不想注销或使用管理员权限", readme)
         self.assertIn("不会自动注销或重启 Mac", readme)
         self.assertIn("希望立即用上水杉、又不想注销或使用管理员权限时的推荐方式", readme)
-        self.assertNotIn("installs the input method system-wide", readme)
+        self.assertNotIn("为所有用户安装", readme)
+        self.assertNotIn("系统级安装", readme)
         self.assertIn("InputMethodServerPreferencesWindowControllerClass", info_plist)
         self.assertIn("METASEQUOIA_DEVELOPMENT_BUNDLE=$<TARGET_BUNDLE_DIR:MetasequoiaIME>", cmake)
         self.assertIn("@METASEQUOIA_IME_DICTIONARY_SHA256@", info_plist)
@@ -351,7 +353,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("并自动为当前用户启用水杉输入法", readme)
         self.assertIn("安装后脚本会自动注册并启用水杉输入法", readme)
         self.assertIn("明确标注为未签名的构建则需要输入 `I UNDERSTAND`", readme)
-        self.assertNotIn("verifies both the code signature and Gatekeeper acceptance", readme)
+        self.assertNotIn("同时校验代码签名与 Gatekeeper", readme)
         self.assertIn("./MetasequoiaIME-vX.Y.Z/Uninstall.command", readme)
         self.assertIn("MetasequoiaIME.app/Contents/Resources/Uninstall.command", readme)
         self.assertIn("默认保留偏好设置与学习数据", readme)
