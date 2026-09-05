@@ -742,6 +742,11 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     }
     window.delegate = self;
     _updateController = updateController;
+    // The floating toolbar menu can hide the bar while this window is open, and this checkbox is the documented way to bring it back, so it must follow the preference instead of waiting for the next refreshControls.
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(floatingToolbarPreferenceDidChange:)
+                                                 name:MetasequoiaFloatingToolbarDidChangeNotification
+                                               object:nil];
 
     NSView *contentView = [[NSView alloc] initWithFrame:frame];
     window.contentView = contentView;
@@ -1236,6 +1241,19 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     {
         [[NSWorkspace sharedWorkspace] openURL:feedback];
     }
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)floatingToolbarPreferenceDidChange:(NSNotification *)notification
+{
+    (void)notification;
+    _floatingToolbarButton.state = [MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled]
+                                       ? NSControlStateValueOn
+                                       : NSControlStateValueOff;
 }
 
 - (void)refreshControls

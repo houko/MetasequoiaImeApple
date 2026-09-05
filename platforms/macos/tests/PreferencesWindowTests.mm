@@ -616,6 +616,12 @@ int main()
                              from:floatingToolbarButton] &&
                     [MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled],
                 "The floating-toolbar control did not persist the selected value.");
+        [MetasequoiaPreferencesWindowController setFloatingToolbarEnabled:NO];
+        require(floatingToolbarButton.state == NSControlStateValueOff,
+                "The floating-toolbar control did not follow the preference after the toolbar menu hid the bar.");
+        [MetasequoiaPreferencesWindowController setFloatingToolbarEnabled:YES];
+        require(floatingToolbarButton.state == NSControlStateValueOn,
+                "The floating-toolbar control did not follow the preference after the bar was re-enabled.");
 
         learningButton.state = NSControlStateValueOn;
         require([NSApp sendAction:learningButton.action to:learningButton.target from:learningButton],
