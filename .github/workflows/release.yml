@@ -208,6 +208,12 @@ jobs:
           security list-keychains -d user -s "$keychain"
           security default-keychain -s "$keychain"
           xcrun notarytool store-credentials metasequoia-notary --keychain "$keychain" --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD"
+      - name: Install dictionary build dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/dict-python"
+          "$RUNNER_TEMP/dict-python/bin/pip" install -r vendor/MetasequoiaImeDict/requirements.txt
+          echo "$RUNNER_TEMP/dict-python/bin" >> "$GITHUB_PATH"
+
       - name: Build dictionary
         run: python3 platforms/macos/scripts/build_dictionary.py
       - name: Configure
