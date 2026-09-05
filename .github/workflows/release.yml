@@ -240,8 +240,20 @@ jobs:
           METASEQUOIA_RELEASE_UNINSTALL_SCRIPT: ${{ runner.temp }}/uninstall.sh
           METASEQUOIA_INSTALLER_DISTRIBUTION: ${{ runner.temp }}/InstallerDistribution.xml.in
         run: exec "$RUNNER_TEMP/package-release.sh" "$TAG_NAME" build/MetasequoiaIME.app dist
+      - name: Detect the Sparkle update key
+        id: sparkle
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          # The secrets context is not available in a step-level if:, so decide here and let the following steps read the output.
+          if [[ -n "${SPARKLE_ED_PRIVATE_KEY:-}" ]]; then
+            printf 'appcast_enabled=true\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'appcast_enabled=false\n' >> "$GITHUB_OUTPUT"
+          fi
       - name: Generate signed Sparkle appcast
-        if: ${{ secrets.SPARKLE_ED_PRIVATE_KEY != '' }}
+        if: ${{ steps.sparkle.outputs.appcast_enabled == 'true' }}
         env:
           GH_REPO: ${{ github.repository }}
           TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
@@ -263,7 +275,7 @@ jobs:
           SPARKLE_TOOLS_DIR="$sparkle_root/bin" \
             exec "$RUNNER_TEMP/generate-sparkle-appcast.sh" "$TAG_NAME" "$update_archive" dist/appcast.xml
       - name: Skip Sparkle appcast without an update key
-        if: ${{ secrets.SPARKLE_ED_PRIVATE_KEY == '' }}
+        if: ${{ steps.sparkle.outputs.appcast_enabled != 'true' }}
         run: echo 'No SPARKLE_ED_PRIVATE_KEY is configured, so this release ships without an appcast and automatic updates stay paused.' >> "$GITHUB_STEP_SUMMARY"
       - name: Revalidate draft release target
         env:

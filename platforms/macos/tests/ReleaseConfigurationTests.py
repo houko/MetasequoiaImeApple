@@ -341,8 +341,15 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("$RUNNER_TEMP/generate-sparkle-appcast.sh", workflow)
         self.assertIn("SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}", workflow)
         self.assertIn("steps.signing.outputs.signing_enabled == 'true'", workflow)
-        self.assertIn("secrets.SPARKLE_ED_PRIVATE_KEY != ''", workflow)
+        self.assertIn("steps.sparkle.outputs.appcast_enabled == 'true'", workflow)
         self.assertNotIn("name: Generate signed Sparkle appcast\n        if: ${{ steps.signing.outputs.signing_enabled", workflow)
+
+        # The secrets context is rejected in a step-level if:, and the workflow then fails to parse and schedules no jobs at all. Release only runs on push to main, so no pull request check can catch it.
+        for workflow_path in sorted((PROJECT_ROOT / ".github/workflows").glob("*.yml")):
+            for number, line in enumerate(workflow_path.read_text().splitlines(), start=1):
+                stripped = line.strip()
+                if stripped.startswith("if:") and "secrets." in stripped:
+                    self.fail(f"{workflow_path.name}:{number} uses the secrets context in a step condition: {stripped}")
         self.assertIn("Unsigned release: skipping Developer ID signature verification before packaging.", workflow)
         self.assertIn("Unsigned release: skipping source bundle Developer ID signature verification.", release_packager)
         self.assertIn("Sparkle-2.9.6.tar.xz", workflow)
