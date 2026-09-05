@@ -174,6 +174,38 @@ int main()
         }
         require(!panel.visible && panel.toolbarDelegate == nil,
                 "A deallocated input controller left the floating toolbar on screen.");
+
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        NSString *savedFrameKey = @"NSWindow Frame MetasequoiaFloatingToolbarFrame";
+        id previousSavedFrame = [defaults objectForKey:savedFrameKey];
+        NSScreen *restoreScreen = panel.screen != nil ? panel.screen : NSScreen.mainScreen;
+        NSRect restoreVisibleFrame =
+            restoreScreen != nil ? restoreScreen.visibleFrame : NSMakeRect(0.0, 0.0, 1200.0, 800.0);
+        NSRect savedFrame = NSMakeRect(std::round(NSMaxX(restoreVisibleFrame) - 220.0 - 60.0),
+                                       std::round(NSMaxY(restoreVisibleFrame) - 44.0 - 60.0),
+                                       220.0,
+                                       44.0);
+        // Serializing through a panel writes exactly the string AppKit itself stores for that frame, so the test does not depend on the private layout of the saved-frame default.
+        MetasequoiaFloatingToolbarPanel *savingPanel = [[MetasequoiaFloatingToolbarPanel alloc] init];
+        [savingPanel setFrame:savedFrame display:NO];
+        [defaults setObject:[savingPanel stringWithSavedFrame] forKey:savedFrameKey];
+
+        MetasequoiaFloatingToolbarPanel *restoredPanel = [[MetasequoiaFloatingToolbarPanel alloc] init];
+        FloatingToolbarTestDelegate *restoredDelegate = [[FloatingToolbarTestDelegate alloc] init];
+        [restoredPanel activateForDelegate:restoredDelegate visible:YES];
+        require(NearlyEqual(NSMinX(restoredPanel.frame), NSMinX(savedFrame)) &&
+                    NearlyEqual(NSMinY(restoredPanel.frame), NSMinY(savedFrame)),
+                "A relaunched floating toolbar did not reopen at the position saved by the previous session.");
+        [restoredPanel deactivateForDelegate:restoredDelegate];
+
+        if (previousSavedFrame != nil)
+        {
+            [defaults setObject:previousSavedFrame forKey:savedFrameKey];
+        }
+        else
+        {
+            [defaults removeObjectForKey:savedFrameKey];
+        }
     }
     return 0;
 }

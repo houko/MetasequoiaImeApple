@@ -111,6 +111,8 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
     self.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces |
                               NSWindowCollectionBehaviorFullScreenAuxiliary;
     [self setFrameAutosaveName:kToolbarFrameAutosaveName];
+    // The autosave name only writes the frame out; a programmatically created window has to read it back itself, and force: is required because this panel is borderless and therefore not resizable.
+    [self setFrameUsingName:kToolbarFrameAutosaveName force:YES];
 
     NSVisualEffectView *background = [[NSVisualEffectView alloc] initWithFrame:self.contentView.bounds];
     background.translatesAutoresizingMaskIntoConstraints = NO;
