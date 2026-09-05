@@ -5,7 +5,7 @@
 namespace
 {
 constexpr CGFloat kPanelWidth = 620.0;
-constexpr CGFloat kPanelHeight = 184.0;
+constexpr CGFloat kPanelHeight = 203.0;
 constexpr CGFloat kScreenMargin = 16.0;
 
 NSDictionary<NSString *, NSString *> *Key(NSString *key, NSString *codes)
@@ -218,6 +218,24 @@ NSArray<NSArray<NSDictionary<NSString *, NSString *> *> *> *MetasequoiaXiaoheKey
     return rows;
 }
 
+NSString *MetasequoiaXiaoheZeroInitialText(void)
+{
+    static NSString *text = [] {
+        const ShuangpinProfile &profile = GetXiaoheShuangpinProfile();
+        NSMutableArray<NSString *> *entries = [NSMutableArray arrayWithCapacity:profile.zero_initials.size()];
+        for (const auto &entry : profile.zero_initials)
+        {
+            [entries addObject:[NSString stringWithFormat:@"%@=%@",
+                                                          DisplayUnit(entry.first),
+                                                          [NSString stringWithUTF8String:entry.second.c_str()]]];
+        }
+        // The profile is an unordered_map, so sort to keep the line stable across runs.
+        [entries sortUsingSelector:@selector(compare:)];
+        return [@"零声母  " stringByAppendingString:[entries componentsJoinedByString:@" · "]];
+    }();
+    return text;
+}
+
 BOOL MetasequoiaShouldShowShuangpinKeymap(BOOL isShuangpin, BOOL enabled, BOOL hasComposition)
 {
     return isShuangpin && enabled && hasComposition;
@@ -296,10 +314,19 @@ NSRect MetasequoiaShuangpinKeymapPanelFrame(NSRect caretRect, NSSize panelSize,
     NSStackView *homeRow = KeyRow(definitions[1], _keyViews);
     NSStackView *bottomRow = KeyRow(definitions[2], _keyViews);
 
+    NSTextField *zeroInitials = [NSTextField labelWithString:MetasequoiaXiaoheZeroInitialText()];
+    zeroInitials.font = [NSFont systemFontOfSize:10.0 weight:NSFontWeightRegular];
+    zeroInitials.textColor = [NSColor secondaryLabelColor];
+    zeroInitials.alignment = NSTextAlignmentCenter;
+    zeroInitials.maximumNumberOfLines = 1;
+    zeroInitials.accessibilityLabel = @"零声母键位";
+    zeroInitials.translatesAutoresizingMaskIntoConstraints = NO;
+
     [background addSubview:header];
     [background addSubview:topRow];
     [background addSubview:homeRow];
     [background addSubview:bottomRow];
+    [background addSubview:zeroInitials];
     [NSLayoutConstraint activateConstraints:@[
         [header.leadingAnchor constraintEqualToAnchor:background.leadingAnchor constant:14.0],
         [header.trailingAnchor constraintEqualToAnchor:background.trailingAnchor constant:-14.0],
@@ -313,7 +340,12 @@ NSRect MetasequoiaShuangpinKeymapPanelFrame(NSRect caretRect, NSSize panelSize,
         [bottomRow.leadingAnchor constraintEqualToAnchor:background.leadingAnchor constant:58.0],
         [bottomRow.trailingAnchor constraintEqualToAnchor:background.trailingAnchor constant:-58.0],
         [bottomRow.topAnchor constraintEqualToAnchor:homeRow.bottomAnchor constant:5.0],
-        [bottomRow.bottomAnchor constraintEqualToAnchor:background.bottomAnchor constant:-10.0],
+        [zeroInitials.leadingAnchor constraintEqualToAnchor:background.leadingAnchor constant:14.0],
+        [zeroInitials.trailingAnchor constraintEqualToAnchor:background.trailingAnchor constant:-14.0],
+        [zeroInitials.topAnchor constraintEqualToAnchor:bottomRow.bottomAnchor constant:6.0],
+        // The height chain from the header down pins the panel, so state this row's height instead of depending on the label's intrinsic metrics.
+        [zeroInitials.heightAnchor constraintEqualToConstant:13.0],
+        [zeroInitials.bottomAnchor constraintEqualToAnchor:background.bottomAnchor constant:-10.0],
     ]];
     background.accessibilityValue = AccessibleKeymapDescription(_keyViews, nil);
     self.contentView = background;
