@@ -12,6 +12,32 @@ MACOS_ROOT = PROJECT_ROOT / "platforms" / "macos"
 
 
 class ReleaseConfigurationTests(unittest.TestCase):
+    def test_shuangpin_beginner_keymap_is_wired_to_the_input_controller(self):
+        readme = (PROJECT_ROOT / "README.md").read_text()
+        cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
+        preferences_controller = (MACOS_ROOT / "src/PreferencesWindowController.mm").read_text()
+        input_controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
+
+        self.assertIn("显示小鹤双拼键位提示", preferences_controller)
+        self.assertIn('accessibilityLabel = @"双拼键位提示行"', preferences_controller)
+        self.assertIn("storedShuangpinKeymapEnabled", preferences_controller)
+        self.assertIn('import "ShuangpinKeymapPanel.h"', input_controller)
+        self.assertIn("_shuangpinKeymapPanel = [[MetasequoiaShuangpinKeymapPanel alloc] init]", input_controller)
+        self.assertIn("storedShuangpinKeymapEnabled", input_controller)
+        self.assertIn("attributesForCharacterIndex:0 lineHeightRectangle:&caretRect", input_controller)
+        self.assertIn("showNearCaretRect:caretRect", input_controller)
+        self.assertGreaterEqual(input_controller.count("[_shuangpinKeymapPanel orderOut:nil]"), 5)
+        reload_session = input_controller.split("- (void)reloadSessionFromPreferences", 1)[1].split(
+            "- (BOOL)prepareSessionIfNeeded", 1
+        )[0]
+        self.assertLess(
+            reload_session.index("storedShuangpinKeymapEnabled"),
+            reload_session.index("_session->has_composition()"),
+        )
+        self.assertIn("ShuangpinKeymapPanel.mm", cmake)
+        self.assertIn("ShuangpinKeymapPanelTests.mm", cmake)
+        self.assertIn("小鹤双拼键位提示", readme)
+
     def test_ci_cancels_duplicate_runs_for_the_same_source_branch(self):
         workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text()
 

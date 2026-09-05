@@ -47,6 +47,12 @@ if(BUILD_TESTING)
     target_compile_options(MetasequoiaFloatingToolbarPanelTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(MetasequoiaFloatingToolbarPanelTests PRIVATE ${APPKIT_FRAMEWORK})
     add_test(NAME floating_toolbar_panel COMMAND MetasequoiaFloatingToolbarPanelTests)
+    add_executable(MetasequoiaShuangpinKeymapPanelTests
+        ${METASEQUOIA_MACOS_ROOT}/tests/ShuangpinKeymapPanelTests.mm
+        ${METASEQUOIA_MACOS_ROOT}/src/ShuangpinKeymapPanel.mm)
+    target_compile_options(MetasequoiaShuangpinKeymapPanelTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
+    target_link_libraries(MetasequoiaShuangpinKeymapPanelTests PRIVATE MetasequoiaIme::Engine ${APPKIT_FRAMEWORK})
+    add_test(NAME shuangpin_keymap_panel COMMAND MetasequoiaShuangpinKeymapPanelTests)
     add_executable(MetasequoiaStringConversionTests ${METASEQUOIA_MACOS_ROOT}/tests/StringConversionTests.mm ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm)
     target_compile_options(MetasequoiaStringConversionTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(MetasequoiaStringConversionTests PRIVATE ${APPKIT_FRAMEWORK})
@@ -140,7 +146,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Sparkle-LICENSE.txt)
-    add_executable(MetasequoiaIME MACOSX_BUNDLE ${METASEQUOIA_MACOS_ROOT}/src/main.mm ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm ${METASEQUOIA_MACOS_ROOT}/src/FloatingToolbarPanel.mm ${METASEQUOIA_MACOS_ROOT}/src/InputSourceRegistration.mm ${METASEQUOIA_MACOS_ROOT}/src/MetasequoiaInputController.mm ${METASEQUOIA_MACOS_ROOT}/src/PreferencesWindowController.mm ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/UpdateController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICONS} ${METASEQUOIA_IME_HELPCODES} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
+    add_executable(MetasequoiaIME MACOSX_BUNDLE ${METASEQUOIA_MACOS_ROOT}/src/main.mm ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm ${METASEQUOIA_MACOS_ROOT}/src/FloatingToolbarPanel.mm ${METASEQUOIA_MACOS_ROOT}/src/InputSourceRegistration.mm ${METASEQUOIA_MACOS_ROOT}/src/MetasequoiaInputController.mm ${METASEQUOIA_MACOS_ROOT}/src/PreferencesWindowController.mm ${METASEQUOIA_MACOS_ROOT}/src/ShuangpinKeymapPanel.mm ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/UpdateController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICONS} ${METASEQUOIA_IME_HELPCODES} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
     set_source_files_properties(${METASEQUOIA_IME_DICTIONARY} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(${METASEQUOIA_IME_ICONS} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(${METASEQUOIA_IME_HELPCODES}
