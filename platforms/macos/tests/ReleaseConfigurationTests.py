@@ -78,6 +78,32 @@ class ReleaseConfigurationTests(unittest.TestCase):
         )
         self.assertRegex(alpha_output, r"hasAlpha:\s*no")
 
+    def test_input_controller_owns_a_native_floating_status_toolbar(self):
+        cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
+        controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
+        readme = (PROJECT_ROOT / "README.md").read_text()
+
+        self.assertIn("FloatingToolbarPanel.mm", cmake)
+        self.assertIn("FloatingToolbarPanelTests.mm", cmake)
+        self.assertIn('#import "FloatingToolbarPanel.h"', controller)
+        self.assertIn("<MetasequoiaFloatingToolbarDelegate>", controller)
+        self.assertIn("[MetasequoiaFloatingToolbarPanel sharedPanel]", controller)
+        self.assertIn("activateForDelegate:self", controller)
+        self.assertIn("deactivateForDelegate:self", controller)
+        refresh_method = controller.split("- (void)refreshFloatingToolbar", 1)[1].split("\n}", 1)[0]
+        self.assertIn("toolbarDelegate != self", refresh_method)
+        self.assertNotIn("activateForDelegate:self", refresh_method)
+        self.assertIn("MetasequoiaFloatingToolbarDidChangeNotification", controller)
+        self.assertIn("floatingToolbarDidRequestToggleInputMode:", controller)
+        self.assertIn("floatingToolbarDidRequestTogglePunctuation:", controller)
+        self.assertIn("floatingToolbarDidRequestToggleFullWidth:", controller)
+        punctuation_method = controller.split("floatingToolbarDidRequestTogglePunctuation:", 1)[1].split("\n}", 1)[0]
+        self.assertLess(
+            punctuation_method.index("commitLeadingCandidate:"),
+            punctuation_method.index("setChinesePunctuationEnabled:"),
+        )
+        self.assertIn("悬浮状态栏", readme)
+
     def test_release_version_matches_cmake_project_version(self):
         manifest = json.loads((PROJECT_ROOT / ".release-please-manifest.json").read_text())
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()

@@ -13,7 +13,7 @@ The target module boundaries and migration sequence are documented in [Apple pla
 
 The iOS work does not port the Windows TSF or WebView2 host. It reuses `MetasequoiaImeEngine` and supplies an iOS-specific UI and text-document adapter.
 
-The current release supports full-pinyin composition, live candidates from the official Metasequoia dictionary, auxiliary-code hints beside pinyin candidates, candidate selection through the native candidate panel or number keys 1–9, Space to commit the leading candidate, Return to commit raw input, Backspace, Escape, composition commit on focus changes, Shift+Space switching between Chinese and direct English input, and an optional full-width mode toggled with Option+Shift+H. When full-width mode is enabled, idle ASCII letters, digits, punctuation, and spaces are converted to their Unicode full-width forms without changing pinyin composition.
+The current release supports full-pinyin composition, live candidates from the official Metasequoia dictionary, auxiliary-code hints beside pinyin candidates, candidate selection through the native candidate panel or number keys 1–9, Space to commit the leading candidate, Return to commit raw input, Backspace, Escape, composition commit on focus changes, Shift+Space switching between Chinese and direct English input, and an optional full-width mode toggled with Option+Shift+H. A native draggable 悬浮状态栏 keeps Chinese/English, punctuation, and full-width state visible and provides one-click access to settings; it can be hidden from the Appearance page. When full-width mode is enabled, idle ASCII letters, digits, punctuation, and spaces are converted to their Unicode full-width forms without changing pinyin composition.
 
 ## Requirements
 

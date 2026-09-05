@@ -14,6 +14,8 @@ NSNotificationName const MetasequoiaWillResetLearnedDataNotification =
     @"MetasequoiaWillResetLearnedDataNotification";
 NSNotificationName const MetasequoiaStandalonePreferencesDidCloseNotification =
     @"MetasequoiaStandalonePreferencesDidCloseNotification";
+NSNotificationName const MetasequoiaFloatingToolbarDidChangeNotification =
+    @"MetasequoiaFloatingToolbarDidChangeNotification";
 
 bool MetasequoiaShouldShowPreferences(int argc, const char *argv[])
 {
@@ -36,6 +38,7 @@ NSString * const kCandidateLearningPreferenceKey = @"MetasequoiaImeCandidateLear
 NSString * const kEnglishInputModePreferenceKey = @"MetasequoiaImeEnglishInputMode";
 NSString * const kInputModeShortcutPreferenceKey = @"MetasequoiaImeInputModeShortcutEnabled";
 NSString * const kFullWidthInputPreferenceKey = @"MetasequoiaImeFullWidthInputEnabled";
+NSString * const kFloatingToolbarPreferenceKey = @"MetasequoiaImeFloatingToolbarEnabled";
 NSString * const kWubiAutoCommitUniquePreferenceKey = @"MetasequoiaImeWubiAutoCommitUnique";
 
 NSColor *MetasequoiaBrandColor()
@@ -405,6 +408,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSButton *_candidateLearningButton;
     NSButton *_inputModeShortcutButton;
     NSButton *_fullWidthInputButton;
+    NSButton *_floatingToolbarButton;
     NSButton *_wubiAutoCommitButton;
     NSButton *_resetLearningButton;
     NSTextField *_statusLabel;
@@ -595,6 +599,19 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kFullWidthInputPreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaFullWidthInputDidChangeNotification"
+                                                        object:@(enabled)];
+}
+
++ (BOOL)storedFloatingToolbarEnabled
+{
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:kFloatingToolbarPreferenceKey];
+    return value == nil ? YES : [value boolValue];
+}
+
++ (void)setFloatingToolbarEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kFloatingToolbarPreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:MetasequoiaFloatingToolbarDidChangeNotification
                                                         object:@(enabled)];
 }
 
@@ -883,9 +900,15 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         ],
                       4.0);
     appearanceCard.accessibilityLabel = @"候选窗口卡片";
-    NSView *appearancePage = PreferencesPage(@"外观", @"调整原生候选窗口的排列、容量与阅读大小。",
+    _floatingToolbarButton =
+        [NSButton checkboxWithTitle:@"显示悬浮状态栏" target:self action:@selector(floatingToolbarChanged:)];
+    _floatingToolbarButton.accessibilityLabel = @"显示悬浮状态栏";
+    NSBox *floatingToolbarCard = CardWithViews(@[ _floatingToolbarButton ], 0.0);
+    floatingToolbarCard.accessibilityLabel = @"悬浮状态栏卡片";
+    NSView *appearancePage = PreferencesPage(@"外观", @"调整候选窗口与输入状态栏的显示方式。",
                                              @[ SectionLabel(@"效果预览"), _candidatePreview,
-                                                SectionLabel(@"候选窗口"), appearanceCard ]);
+                                                SectionLabel(@"候选窗口"), appearanceCard,
+                                                SectionLabel(@"悬浮状态栏"), floatingToolbarCard ]);
     appearancePage.accessibilityLabel = @"外观设置页";
 
     _helpcodeButton = [NSButton checkboxWithTitle:@"启用辅助码" target:self action:@selector(helpcodeChanged:)];
@@ -1155,6 +1178,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     _fullWidthInputButton.state = [MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]
                                       ? NSControlStateValueOn
                                       : NSControlStateValueOff;
+    _floatingToolbarButton.state = [MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled]
+                                       ? NSControlStateValueOn
+                                       : NSControlStateValueOff;
     _wubiAutoCommitButton.state =
         [MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled] ? NSControlStateValueOn
                                                                                    : NSControlStateValueOff;
@@ -1305,6 +1331,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:button.state == NSControlStateValueOn];
 }
 
+- (void)floatingToolbarChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setFloatingToolbarEnabled:button.state == NSControlStateValueOn];
+}
+
 - (void)wubiAutoCommitUniqueChanged:(id)sender
 {
     NSButton *button = (NSButton *)sender;
@@ -1372,6 +1404,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
              kInputModeShortcutPreferenceKey,
              kWubiAutoCommitUniquePreferenceKey,
              kFullWidthInputPreferenceKey,
+             kFloatingToolbarPreferenceKey,
          ])
     {
         [defaults removeObjectForKey:key];
@@ -1402,6 +1435,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                   object:@([MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled])];
     [notifications postNotificationName:@"MetasequoiaFullWidthInputDidChangeNotification"
                                   object:@([MetasequoiaPreferencesWindowController storedFullWidthInputEnabled])];
+    [notifications postNotificationName:MetasequoiaFloatingToolbarDidChangeNotification
+                                  object:@([MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled])];
     [self refreshControls];
 }
 
