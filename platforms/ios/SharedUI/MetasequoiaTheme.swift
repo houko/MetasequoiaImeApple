@@ -14,6 +14,12 @@ enum MetasequoiaTheme {
       : UIColor(red: 24 / 255, green: 92 / 255, blue: 72 / 255, alpha: 1)
   }
 
+  static let coneUIColor = UIColor { traits in
+    traits.userInterfaceStyle == .dark
+      ? UIColor(red: 214 / 255, green: 150 / 255, blue: 105 / 255, alpha: 1)
+      : UIColor(red: 167 / 255, green: 103 / 255, blue: 59 / 255, alpha: 1)
+  }
+
   static let keyboardBackground = UIColor { traits in
     traits.userInterfaceStyle == .dark
       ? UIColor(red: 24 / 255, green: 30 / 255, blue: 27 / 255, alpha: 1)

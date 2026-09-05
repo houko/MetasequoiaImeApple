@@ -175,6 +175,34 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("handleInputModeList(from:", controller)
         self.assertNotIn("URLSession", controller)
 
+    def test_engine_diagnostics_reach_the_keyboard(self):
+        # KeyResult carries a diagnostic when the key was handled but something behind it failed,
+        # such as a candidate the user dictionary could not learn. The bridge used to drop it on the
+        # floor, so the keyboard could not report anything and the failure was silent.
+        adapter_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/InputSessionAdapter.h").read_text()
+        adapter = (IOS_ROOT.parents[1] / "shared/apple-bridge/InputSessionAdapter.cpp").read_text()
+        bridge_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.h").read_text()
+        bridge = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.mm").read_text()
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("std::optional<std::string> diagnostic;", adapter_header)
+        self.assertIn("snapshot.diagnostic = std::move(result.diagnostic);", adapter)
+        self.assertIn("NSString *diagnosticText;", bridge_header)
+        self.assertIn("diagnosticText:diagnosticText", bridge)
+
+        self.assertIn("showDiagnostic(snapshot.diagnosticText)", controller)
+        self.assertIn("private var diagnosticDismissTimer: Timer?", controller)
+        self.assertIn('diagnosticLabel.accessibilityIdentifier = "diagnosticLabel"', controller)
+        # The strip is the empty slot a diagnostic can occupy, and the message clears itself so it
+        # never becomes permanent furniture in a 38pt bar.
+        self.assertIn(
+            "candidateScrollView.isHidden = visibleCandidates.isEmpty || visibleDiagnostic != nil",
+            controller,
+        )
+        self.assertIn("override func viewWillDisappear", controller)
+        disappear = controller.split("override func viewWillDisappear", 1)[1].split("\n  }", 1)[0]
+        self.assertIn("diagnosticDismissTimer?.invalidate()", disappear)
+
     def test_setting_row_icons_stay_out_of_the_accessibility_tree(self):
         # Both icons sit next to a title and a subtitle that already carry the row's meaning. Left
         # visible, VoiceOver reads the symbol's system name where it has one and its raw identifier
