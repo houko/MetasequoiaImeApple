@@ -10,6 +10,7 @@
 #import "InputMenu.h"
 #include "InputModeRouting.h"
 #include "FullWidthInput.h"
+#include "HelpcodeSchemaPreference.h"
 #include "InputSchemePreference.h"
 #include "WubiCommitPolicy.h"
 #import "PreferencesWindowController.h"
@@ -18,10 +19,12 @@
 #include "CandidateSelectionState.h"
 #include "InputControllerKeyRouting.h"
 #include "core/input_session.h"
+#include "common/helpcode_utils.h"
 
 #import <Carbon/Carbon.h>
 
 #include <memory>
+#include <string>
 
 namespace
 {
@@ -32,6 +35,7 @@ struct SessionPreferences
     SchemeType scheme;
     bool autocorrectEnabled;
     bool helpcodeEnabled;
+    std::string helpcodeSchema;
     bool chinesePunctuationEnabled;
     metasequoia::mac::CandidatePanelStyle candidatePanelStyle;
     size_t candidatePageSize;
@@ -42,11 +46,16 @@ struct SessionPreferences
 
 SessionPreferences ReadSessionPreferences()
 {
+    const SchemeType scheme = metasequoia::mac::EngineSchemeForStoredPreference(
+        static_cast<int>([MetasequoiaPreferencesWindowController storedScheme]));
+    const NSInteger helpcodeSchema = scheme == SchemeType::Shuangpin
+                                         ? [MetasequoiaPreferencesWindowController storedShuangpinHelpcodeSchema]
+                                         : [MetasequoiaPreferencesWindowController storedQuanpinHelpcodeSchema];
     return {
-        metasequoia::mac::EngineSchemeForStoredPreference(
-            static_cast<int>([MetasequoiaPreferencesWindowController storedScheme])),
+        scheme,
         [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] == YES,
         [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] == YES,
+        metasequoia::mac::HelpcodeSchemaIdentifier(static_cast<int>(helpcodeSchema)),
         [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] == YES,
         metasequoia::mac::NormalizeCandidatePanelStyle(
             [MetasequoiaPreferencesWindowController storedCandidatePanelStyle]),
@@ -75,6 +84,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 @implementation MetasequoiaInputController
 {
     std::unique_ptr<metasequoia::InputSession> _session;
+    std::string _activeHelpcodeSchema;
     metasequoia::mac::CandidateSelectionState _candidateSelection;
     IMKCandidates *_candidatePanel;
     MetasequoiaFloatingToolbarPanel *_floatingToolbarPanel;
@@ -174,6 +184,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 {
     if (_session != nullptr && _session->has_composition())
     {
+        HelpcodeUtils::select_helpcode_schema(_activeHelpcodeSchema);
         return;
     }
 
@@ -182,7 +193,10 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [_candidatePanel setSelectionKeys:metasequoia::mac::CandidateSelectionKeys(preferences.candidatePageSize)];
     [_candidatePanel setAttributes:metasequoia::mac::CandidatePanelAttributes(preferences.candidateFontSize)];
     _wubiAutoCommitUniqueEnabled = preferences.wubiAutoCommitUniqueEnabled;
-    if (_session != nullptr && SessionMatchesPreferences(*_session, preferences))
+    const bool helpcodeSchemaMatches = _activeHelpcodeSchema == preferences.helpcodeSchema;
+    HelpcodeUtils::select_helpcode_schema(preferences.helpcodeSchema);
+    _activeHelpcodeSchema = preferences.helpcodeSchema;
+    if (_session != nullptr && helpcodeSchemaMatches && SessionMatchesPreferences(*_session, preferences))
     {
         return;
     }

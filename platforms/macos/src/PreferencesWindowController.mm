@@ -3,6 +3,7 @@
 #include "CandidateFontSize.h"
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
+#include "HelpcodeSchemaPreference.h"
 #include "InputControllerKeyRouting.h"
 #include "InputSchemePreference.h"
 #import "DictionaryInstaller.h"
@@ -36,6 +37,8 @@ NSToolbarItemIdentifier const kUpdatesToolbarItemIdentifier = @"MetasequoiaPrefe
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
+NSString * const kQuanpinHelpcodeSchemaPreferenceKey = @"MetasequoiaImeQuanpinHelpcodeSchema";
+NSString * const kShuangpinHelpcodeSchemaPreferenceKey = @"MetasequoiaImeShuangpinHelpcodeSchema";
 NSString * const kChinesePunctuationPreferenceKey = @"MetasequoiaImeChinesePunctuation";
 NSString * const kCandidatePanelStylePreferenceKey = @"MetasequoiaImeCandidatePanelStyle";
 NSString * const kCandidatePageSizePreferenceKey = @"MetasequoiaImeCandidatePageSize";
@@ -410,6 +413,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSView *_wubiSettingsRow;
     NSButton *_autocorrectButton;
     NSButton *_helpcodeButton;
+    NSPopUpButton *_quanpinHelpcodeSchemaButton;
+    NSPopUpButton *_shuangpinHelpcodeSchemaButton;
     NSButton *_chinesePunctuationButton;
     NSPopUpButton *_candidatePanelStyleButton;
     NSPopUpButton *_candidatePageSizeButton;
@@ -486,6 +491,40 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kHelpcodePreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaHelpcodeDidChangeNotification"
                                                         object:@(enabled)];
+}
+
++ (NSInteger)storedQuanpinHelpcodeSchema
+{
+    const NSInteger schema = [[NSUserDefaults standardUserDefaults]
+        integerForKey:kQuanpinHelpcodeSchemaPreferenceKey];
+    return metasequoia::mac::NormalizeHelpcodeSchemaPreference(static_cast<int>(schema));
+}
+
++ (void)setQuanpinHelpcodeSchema:(NSInteger)schema
+{
+    const NSInteger normalizedSchema =
+        metasequoia::mac::NormalizeHelpcodeSchemaPreference(static_cast<int>(schema));
+    [[NSUserDefaults standardUserDefaults] setInteger:normalizedSchema
+                                               forKey:kQuanpinHelpcodeSchemaPreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaHelpcodeDidChangeNotification"
+                                                        object:@(normalizedSchema)];
+}
+
++ (NSInteger)storedShuangpinHelpcodeSchema
+{
+    const NSInteger schema = [[NSUserDefaults standardUserDefaults]
+        integerForKey:kShuangpinHelpcodeSchemaPreferenceKey];
+    return metasequoia::mac::NormalizeHelpcodeSchemaPreference(static_cast<int>(schema));
+}
+
++ (void)setShuangpinHelpcodeSchema:(NSInteger)schema
+{
+    const NSInteger normalizedSchema =
+        metasequoia::mac::NormalizeHelpcodeSchemaPreference(static_cast<int>(schema));
+    [[NSUserDefaults standardUserDefaults] setInteger:normalizedSchema
+                                               forKey:kShuangpinHelpcodeSchemaPreferenceKey];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaHelpcodeDidChangeNotification"
+                                                        object:@(normalizedSchema)];
 }
 
 + (BOOL)storedChinesePunctuationEnabled
@@ -861,6 +900,18 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     appearancePage.accessibilityLabel = @"外观设置页";
 
     _helpcodeButton = [NSButton checkboxWithTitle:@"启用辅助码" target:self action:@selector(helpcodeChanged:)];
+    NSArray<NSString *> *helpcodeSchemeTitles =
+        @[ @"蓝天小雨点", @"自然码", @"首右2.0", @"首右plus", @"小鹤" ];
+    _quanpinHelpcodeSchemaButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_quanpinHelpcodeSchemaButton addItemsWithTitles:helpcodeSchemeTitles];
+    _quanpinHelpcodeSchemaButton.target = self;
+    _quanpinHelpcodeSchemaButton.action = @selector(quanpinHelpcodeSchemaChanged:);
+    _quanpinHelpcodeSchemaButton.accessibilityLabel = @"全拼辅助码方案";
+    _shuangpinHelpcodeSchemaButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
+    [_shuangpinHelpcodeSchemaButton addItemsWithTitles:helpcodeSchemeTitles];
+    _shuangpinHelpcodeSchemaButton.target = self;
+    _shuangpinHelpcodeSchemaButton.action = @selector(shuangpinHelpcodeSchemaChanged:);
+    _shuangpinHelpcodeSchemaButton.accessibilityLabel = @"双拼辅助码方案";
     _candidateLearningButton =
         [NSButton checkboxWithTitle:@"记住候选词频" target:self action:@selector(candidateLearningChanged:)];
 
@@ -876,10 +927,16 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     _resetLearningButton.contentTintColor = [NSColor systemRedColor];
     _resetLearningButton.accessibilityLabel = @"清除学习数据";
 
-    NSBox *learningCard = CardWithViews(@[ _helpcodeButton, _candidateLearningButton ], 9.0);
+    NSBox *learningCard =
+        CardWithViews(@[
+            _helpcodeButton, PreferenceRow(@"全拼辅助码方案", _quanpinHelpcodeSchemaButton),
+            PreferenceRow(@"双拼辅助码方案", _shuangpinHelpcodeSchemaButton), _candidateLearningButton
+        ],
+                      9.0);
     NSBox *dictionaryCard = CardWithViews(@[ _statusLabel ], 0.0);
     NSBox *resetCard = CardWithViews(@[ PreferenceRow(@"候选词频、用户词典与拼音学习记录", _resetLearningButton) ], 0.0);
     learningCard.accessibilityLabel = @"候选与学习卡片";
+    resetCard.accessibilityLabel = @"数据与隐私卡片";
     NSView *dataPage =
         PreferencesPage(@"词库与数据", @"管理候选学习、辅助码与本机词库状态。",
                         @[ SectionLabel(@"候选与学习"), learningCard, SectionLabel(@"词库状态"), dictionaryCard,
@@ -1119,6 +1176,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     _wubiSettingsRow.hidden = storedScheme != 2;
     _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
+    [_quanpinHelpcodeSchemaButton
+        selectItemAtIndex:[MetasequoiaPreferencesWindowController storedQuanpinHelpcodeSchema]];
+    [_shuangpinHelpcodeSchemaButton
+        selectItemAtIndex:[MetasequoiaPreferencesWindowController storedShuangpinHelpcodeSchema]];
+    _quanpinHelpcodeSchemaButton.enabled = _helpcodeButton.state == NSControlStateValueOn;
+    _shuangpinHelpcodeSchemaButton.enabled = _helpcodeButton.state == NSControlStateValueOn;
     _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     [_candidatePanelStyleButton selectItemAtIndex:[MetasequoiaPreferencesWindowController storedCandidatePanelStyle]];
     [_candidatePageSizeButton selectItemAtIndex:static_cast<NSInteger>(metasequoia::mac::CandidatePageSizeOptionIndex(
@@ -1218,6 +1281,19 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     NSButton *button = (NSButton *)sender;
     [MetasequoiaPreferencesWindowController setHelpcodeEnabled:button.state == NSControlStateValueOn];
+    [self refreshControls];
+}
+
+- (void)quanpinHelpcodeSchemaChanged:(id)sender
+{
+    NSPopUpButton *schemaButton = (NSPopUpButton *)sender;
+    [MetasequoiaPreferencesWindowController setQuanpinHelpcodeSchema:schemaButton.indexOfSelectedItem];
+}
+
+- (void)shuangpinHelpcodeSchemaChanged:(id)sender
+{
+    NSPopUpButton *schemaButton = (NSPopUpButton *)sender;
+    [MetasequoiaPreferencesWindowController setShuangpinHelpcodeSchema:schemaButton.indexOfSelectedItem];
 }
 
 - (void)chinesePunctuationChanged:(id)sender
@@ -1352,6 +1428,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
              kSchemePreferenceKey,
              kAutocorrectPreferenceKey,
              kHelpcodePreferenceKey,
+             kQuanpinHelpcodeSchemaPreferenceKey,
+             kShuangpinHelpcodeSchemaPreferenceKey,
              kChinesePunctuationPreferenceKey,
              kCandidatePanelStylePreferenceKey,
              kCandidatePageSizePreferenceKey,
