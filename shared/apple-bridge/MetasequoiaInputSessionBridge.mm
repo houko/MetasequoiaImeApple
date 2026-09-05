@@ -1,6 +1,7 @@
 #import "MetasequoiaInputSessionBridge.h"
 
 #include "InputSessionAdapter.h"
+#include "ShuangpinKeymap.h"
 
 #include <cstdlib>
 #include <memory>
@@ -195,6 +196,17 @@ void ConfigureDataDirectory() {
 
 - (MetasequoiaInputSnapshot *)switchToShuangpin:(BOOL)usesShuangpin {
   return [self snapshotFrom:_adapter->switch_to_shuangpin(usesShuangpin)];
+}
+
+- (NSDictionary<NSString *, NSString *> *)shuangpinKeyHints {
+  const auto hints =
+      metasequoia::apple::shuangpin_key_hints(_adapter->uses_shuangpin());
+  NSMutableDictionary<NSString *, NSString *> *result =
+      [NSMutableDictionary dictionaryWithCapacity:hints.size()];
+  for (const auto &[key, hint] : hints) {
+    result[StringFromUTF8(key)] = StringFromUTF8(hint);
+  }
+  return result;
 }
 
 - (MetasequoiaInputSnapshot *)snapshotFrom:

@@ -30,7 +30,8 @@ if(BUILD_TESTING)
     add_test(NAME candidate_selection_state COMMAND MetasequoiaCandidateSelectionStateTests)
     add_executable(MetasequoiaAppleInputSessionAdapterTests
         platforms/ios/Tests/InputSessionAdapterTests.cpp
-        shared/apple-bridge/InputSessionAdapter.cpp)
+        shared/apple-bridge/InputSessionAdapter.cpp
+        shared/apple-bridge/ShuangpinKeymap.cpp)
     target_include_directories(MetasequoiaAppleInputSessionAdapterTests PRIVATE shared/apple-bridge)
     target_link_libraries(MetasequoiaAppleInputSessionAdapterTests PRIVATE MetasequoiaIme::Engine)
     target_compile_options(MetasequoiaAppleInputSessionAdapterTests PRIVATE -Wall -Wextra -Wpedantic -Werror)

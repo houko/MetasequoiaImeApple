@@ -29,6 +29,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private var visibleCandidates: [String] = []
   private var visibleDiagnostic: String?
   private var diagnosticDismissTimer: Timer?
+  private var shuangpinKeyHints: [String: String] = [:]
   private var showsSymbols = false
   private var letterCaseState = LetterCaseState.lowercase
   private var isAutomaticShift = false
@@ -57,6 +58,9 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     view.backgroundColor = MetasequoiaTheme.keyboardBackground
     installKeyboard()
     updateReturnKey()
+    // installKeyboard builds the candidate strip before the letter rows exist, so the hints the
+    // scheme button gathered there have not reached any key yet.
+    updateLetterCaseControls()
     updateCandidateStrip(preedit: "", candidates: [])
   }
 
@@ -399,13 +403,18 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private func updateLetterCaseControls() {
     let usesUppercase = !isChineseMode && letterCaseState != .lowercase
     for (button, lowercase) in letterButtons {
+      // A hint only means something while the key feeds a double-pinyin composition, so English
+      // mode drops it even though the scheme underneath is unchanged.
+      let hint = isChineseMode ? shuangpinKeyHints[lowercase.uppercased()] : nil
       if var configuration = button.configuration {
         configuration.title = usesUppercase ? lowercase.uppercased() : lowercase
+        configuration.subtitle = hint
         button.configuration = configuration
       }
       button.accessibilityLabel =
         usesUppercase
         ? "大写 \(lowercase.uppercased())" : "字母 \(lowercase.uppercased())"
+      button.accessibilityValue = hint
     }
 
     shiftButton?.isHidden = isChineseMode
@@ -517,6 +526,11 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   }
 
   private func updateSchemeButton() {
+    // The hints come from the engine's own profile for the scheme the session is running, so they
+    // are refreshed wherever the scheme is, and cannot drift from what the keys actually produce.
+    shuangpinKeyHints = session.shuangpinKeyHints()
+    updateLetterCaseControls()
+
     var configuration = UIButton.Configuration.plain()
     configuration.title = usesShuangpin ? "小鹤" : "全拼"
     configuration.baseForegroundColor = MetasequoiaTheme.forestUIColor
@@ -725,6 +739,16 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       attributes.font = .preferredFont(forTextStyle: .title3)
       return attributes
     }
+    // Only the letter keys carry a subtitle, and only in double pinyin. It has to read as a hint
+    // rather than compete with the letter, so it is small and dimmed.
+    configuration.titlePadding = 0
+    configuration.subtitleTextAttributesTransformer =
+      UIConfigurationTextAttributesTransformer { attributes in
+        var attributes = attributes
+        attributes.font = .systemFont(ofSize: 9, weight: .regular)
+        attributes.foregroundColor = MetasequoiaTheme.forestUIColor.withAlphaComponent(0.75)
+        return attributes
+      }
     let button = UIButton(configuration: configuration, primaryAction: UIAction { _ in action() })
     button.accessibilityLabel = accessibilityLabel
     return button
