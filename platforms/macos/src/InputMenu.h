@@ -25,6 +25,14 @@ inline NSMenu *CreateMetasequoiaInputMenu(id target, BOOL englishMode, BOOL trad
                                      traditionalOutput)];
     [menu addItem:[NSMenuItem separatorItem]];
 
+    // The IMK menu is the only entry point left once the floating toolbar is hidden, so it carries the character palette too.
+    NSMenuItem *characterPaletteItem = [[NSMenuItem alloc] initWithTitle:@"表情与符号…"
+                                                                  action:@selector(openCharacterPalette:)
+                                                           keyEquivalent:@""];
+    characterPaletteItem.target = target;
+    characterPaletteItem.enabled = YES;
+    [menu addItem:characterPaletteItem];
+
     NSMenuItem *updateItem = [[NSMenuItem alloc] initWithTitle:@"检查更新…"
                                                         action:@selector(checkForUpdates:)
                                                  keyEquivalent:@""];

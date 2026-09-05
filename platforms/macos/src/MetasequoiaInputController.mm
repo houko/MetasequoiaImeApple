@@ -10,6 +10,7 @@
 #import "InputMenu.h"
 #include "InputModeRouting.h"
 #include "FullWidthInput.h"
+#include "HelpcodeSchemaPreference.h"
 #include "InputSchemePreference.h"
 #include "WubiCommitPolicy.h"
 #import "PreferencesWindowController.h"
@@ -19,11 +20,13 @@
 #include "CandidateSelectionState.h"
 #include "InputControllerKeyRouting.h"
 #include "core/input_session.h"
+#include "common/helpcode_utils.h"
 
 #import <Carbon/Carbon.h>
 
 #include <memory>
 #include <cmath>
+#include <string>
 
 namespace
 {
@@ -34,6 +37,7 @@ struct SessionPreferences
     SchemeType scheme;
     bool autocorrectEnabled;
     bool helpcodeEnabled;
+    std::string helpcodeSchema;
     bool chinesePunctuationEnabled;
     metasequoia::mac::CandidatePanelStyle candidatePanelStyle;
     size_t candidatePageSize;
@@ -44,11 +48,16 @@ struct SessionPreferences
 
 SessionPreferences ReadSessionPreferences()
 {
+    const SchemeType scheme = metasequoia::mac::EngineSchemeForStoredPreference(
+        static_cast<int>([MetasequoiaPreferencesWindowController storedScheme]));
+    const NSInteger helpcodeSchema = scheme == SchemeType::Shuangpin
+                                         ? [MetasequoiaPreferencesWindowController storedShuangpinHelpcodeSchema]
+                                         : [MetasequoiaPreferencesWindowController storedQuanpinHelpcodeSchema];
     return {
-        metasequoia::mac::EngineSchemeForStoredPreference(
-            static_cast<int>([MetasequoiaPreferencesWindowController storedScheme])),
+        scheme,
         [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] == YES,
         [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] == YES,
+        metasequoia::mac::HelpcodeSchemaIdentifier(static_cast<int>(helpcodeSchema)),
         [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] == YES,
         metasequoia::mac::NormalizeCandidatePanelStyle(
             [MetasequoiaPreferencesWindowController storedCandidatePanelStyle]),
@@ -77,6 +86,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 @implementation MetasequoiaInputController
 {
     std::unique_ptr<metasequoia::InputSession> _session;
+    std::string _activeHelpcodeSchema;
     metasequoia::mac::CandidateSelectionState _candidateSelection;
     IMKCandidates *_candidatePanel;
     MetasequoiaFloatingToolbarPanel *_floatingToolbarPanel;
@@ -187,6 +197,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     }
     if (_session != nullptr && _session->has_composition())
     {
+        HelpcodeUtils::select_helpcode_schema(_activeHelpcodeSchema);
         return;
     }
 
@@ -195,7 +206,10 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [_candidatePanel setSelectionKeys:metasequoia::mac::CandidateSelectionKeys(preferences.candidatePageSize)];
     [_candidatePanel setAttributes:metasequoia::mac::CandidatePanelAttributes(preferences.candidateFontSize)];
     _wubiAutoCommitUniqueEnabled = preferences.wubiAutoCommitUniqueEnabled;
-    if (_session != nullptr && SessionMatchesPreferences(*_session, preferences))
+    const bool helpcodeSchemaMatches = _activeHelpcodeSchema == preferences.helpcodeSchema;
+    HelpcodeUtils::select_helpcode_schema(preferences.helpcodeSchema);
+    _activeHelpcodeSchema = preferences.helpcodeSchema;
+    if (_session != nullptr && helpcodeSchemaMatches && SessionMatchesPreferences(*_session, preferences))
     {
         return;
     }
@@ -826,6 +840,14 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [[MetasequoiaUpdateController sharedController] checkForUpdates:sender];
 }
 
+- (void)openCharacterPalette:(id)sender
+{
+    (void)sender;
+    // The Character Viewer inserts straight into the client, so settle any marked text first; otherwise the session would resend the pending composition after the inserted symbol.
+    [self commitLeadingCandidate:self.client];
+    [NSApp orderFrontCharacterPalette:nil];
+}
+
 - (void)setEnglishInputMode:(BOOL)enabled client:(id)sender
 {
     if (enabled)
@@ -869,6 +891,12 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     (void)toolbar;
     [MetasequoiaPreferencesWindowController setTraditionalChineseOutputEnabled:
         ![MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled]];
+}
+
+- (void)floatingToolbarDidRequestOpenCharacterPalette:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [self openCharacterPalette:nil];
 }
 
 - (void)floatingToolbarDidRequestOpenSettings:(MetasequoiaFloatingToolbarPanel *)toolbar

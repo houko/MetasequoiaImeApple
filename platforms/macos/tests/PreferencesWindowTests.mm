@@ -191,6 +191,11 @@ int main()
         [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:NO];
         [[NSUserDefaults standardUserDefaults] setBool:YES
                                                 forKey:@"MetasequoiaImeShuangpinKeymapEnabled"];
+        [MetasequoiaPreferencesWindowController setHelpcodeEnabled:YES];
+        [[NSUserDefaults standardUserDefaults] setInteger:1
+                                                   forKey:@"MetasequoiaImeQuanpinHelpcodeSchema"];
+        [[NSUserDefaults standardUserDefaults] setInteger:3
+                                                   forKey:@"MetasequoiaImeShuangpinHelpcodeSchema"];
         [MetasequoiaPreferencesWindowController setStoredScheme:2];
         require([MetasequoiaPreferencesWindowController storedScheme] == 2,
                 "The Wubi input scheme preference was not stored.");
@@ -401,6 +406,8 @@ int main()
         NSView *candidatePageShortcutCard =
             FindViewWithAccessibilityLabel(controller.window.contentView, @"候选翻页快捷键卡片");
         NSView *learningCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"候选与学习卡片");
+        NSView *dataPrivacyCard =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"数据与隐私卡片");
         NSView *softwareUpdateCard =
             FindViewWithAccessibilityLabel(controller.window.contentView, @"软件更新卡片");
         NSView *feedbackCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"反馈与帮助卡片");
@@ -434,6 +441,11 @@ int main()
         NSRect feedbackCardRect = [updatesPage convertRect:feedbackCard.bounds fromView:feedbackCard];
         require(NSMaxY(feedbackCardRect) <= NSMaxY(updatesPage.bounds),
                 "The feedback card overflowed the updates page.");
+        require(dataPrivacyCard != nil, "The data page did not expose its final preference card.");
+        NSRect dataPrivacyRectInWindow =
+            [controller.window.contentView convertRect:dataPrivacyCard.bounds fromView:dataPrivacyCard];
+        require(NSMinY(dataPrivacyRectInWindow) >= NSMaxY(footerRestoreRectInWindow) + 8.0,
+                "The data-page controls overlapped the settings footer.");
 
         NSView *view = FindViewWithAccessibilityLabel(controller.window.contentView, @"候选排列");
         require([view isKindOfClass:[NSPopUpButton class]],
@@ -521,6 +533,28 @@ int main()
         NSButton *learningButton = (NSButton *)learningView;
         require(learningButton.state == NSControlStateValueOff,
                 "The candidate-learning control did not reflect the stored disabled value.");
+        NSView *helpcodeView = FindViewWithAccessibilityLabel(controller.window.contentView, @"启用辅助码");
+        require([helpcodeView isKindOfClass:[NSButton class]],
+                "The settings window did not expose the helpcode control.");
+        NSButton *helpcodeButton = (NSButton *)helpcodeView;
+        NSView *quanpinHelpcodeSchemaView =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"全拼辅助码方案");
+        NSView *shuangpinHelpcodeSchemaView =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"双拼辅助码方案");
+        require([quanpinHelpcodeSchemaView isKindOfClass:[NSPopUpButton class]] &&
+                    [shuangpinHelpcodeSchemaView isKindOfClass:[NSPopUpButton class]],
+                "The settings window did not expose both helpcode scheme controls.");
+        NSPopUpButton *quanpinHelpcodeSchemaButton = (NSPopUpButton *)quanpinHelpcodeSchemaView;
+        NSPopUpButton *shuangpinHelpcodeSchemaButton = (NSPopUpButton *)shuangpinHelpcodeSchemaView;
+        NSArray<NSString *> *helpcodeSchemaTitles =
+            @[ @"蓝天小雨点", @"自然码", @"首右2.0", @"首右plus", @"小鹤" ];
+        require([quanpinHelpcodeSchemaButton.itemTitles isEqualToArray:helpcodeSchemaTitles] &&
+                    [shuangpinHelpcodeSchemaButton.itemTitles isEqualToArray:helpcodeSchemaTitles],
+                "The helpcode controls did not contain all five Windows-compatible schemes.");
+        require(quanpinHelpcodeSchemaButton.indexOfSelectedItem == 1 &&
+                    shuangpinHelpcodeSchemaButton.indexOfSelectedItem == 3 &&
+                    quanpinHelpcodeSchemaButton.enabled && shuangpinHelpcodeSchemaButton.enabled,
+                "The helpcode controls did not reflect the stored schemes and enabled state.");
 
         NSView *shortcutView = FindViewWithAccessibilityLabel(controller.window.contentView,
                                                                @"Shift+Space 切换中英文");
@@ -664,6 +698,24 @@ int main()
         require([MetasequoiaPreferencesWindowController storedCandidateLearningEnabled],
                 "The candidate-learning control did not store the selected value.");
 
+        [quanpinHelpcodeSchemaButton selectItemAtIndex:4];
+        [shuangpinHelpcodeSchemaButton selectItemAtIndex:2];
+        require([NSApp sendAction:quanpinHelpcodeSchemaButton.action
+                               to:quanpinHelpcodeSchemaButton.target
+                             from:quanpinHelpcodeSchemaButton] &&
+                    [NSApp sendAction:shuangpinHelpcodeSchemaButton.action
+                                   to:shuangpinHelpcodeSchemaButton.target
+                                 from:shuangpinHelpcodeSchemaButton] &&
+                    [[NSUserDefaults standardUserDefaults]
+                            integerForKey:@"MetasequoiaImeQuanpinHelpcodeSchema"] == 4 &&
+                    [[NSUserDefaults standardUserDefaults]
+                            integerForKey:@"MetasequoiaImeShuangpinHelpcodeSchema"] == 2,
+                "The helpcode scheme controls did not persist independent selections.");
+        helpcodeButton.state = NSControlStateValueOff;
+        require([NSApp sendAction:helpcodeButton.action to:helpcodeButton.target from:helpcodeButton] &&
+                    !quanpinHelpcodeSchemaButton.enabled && !shuangpinHelpcodeSchemaButton.enabled,
+                "Disabling helpcodes left the scheme controls active.");
+
         shortcutButton.state = NSControlStateValueOn;
         require([NSApp sendAction:shortcutButton.action to:shortcutButton.target from:shortcutButton],
                 "The input-mode shortcut control did not dispatch its action.");
@@ -720,6 +772,8 @@ int main()
             @"MetasequoiaImeInputScheme",
             @"MetasequoiaImeQuanpinAutocorrect",
             @"MetasequoiaImeHelpcodeEnabled",
+            @"MetasequoiaImeQuanpinHelpcodeSchema",
+            @"MetasequoiaImeShuangpinHelpcodeSchema",
             @"MetasequoiaImeChinesePunctuation",
             @"MetasequoiaImeCandidatePanelStyle",
             @"MetasequoiaImeCandidatePageSize",
