@@ -100,6 +100,39 @@ void run_tests() {
       stale.handled && stale.commit == stale_fallback,
       "A stale native highlight did not fall back to the leading candidate.");
 
+  // Every automatic commit — losing focus, a modifier, a key the session does not take — finishes
+  // the composition, and it has to finish it from the candidate the user arrowed onto rather than
+  // from the engine's own first one.
+  metasequoia::InputSession flush_session;
+  type(flush_session, "nihao");
+  const std::string flush_highlighted = flush_session.candidates()[1].word;
+  candidate_selection.begin_navigation();
+  candidate_selection.update(1, flush_highlighted);
+  require(candidate_selection.live_selected_index(flush_session) == 1,
+          "A live highlight was not offered to the automatic commit.");
+  const auto flushed = flush_session.finish_composition(
+      candidate_selection.live_selected_index(flush_session).value_or(0));
+  require(flushed.handled && flushed.commit == flush_highlighted,
+          "An automatic commit discarded the highlighted candidate.");
+
+  // With nothing highlighted, and with a highlight that no longer names the same word, the index
+  // has to come back empty so the automatic commit keeps its previous behaviour.
+  metasequoia::InputSession flush_default_session;
+  type(flush_default_session, "nihao");
+  const std::string flush_default_leading =
+      flush_default_session.candidates().front().word;
+  candidate_selection.reset();
+  require(!candidate_selection.live_selected_index(flush_default_session).has_value(),
+          "A cleared highlight still offered an index to the automatic commit.");
+  candidate_selection.begin_navigation();
+  candidate_selection.update(1, "candidate-from-an-old-composition");
+  require(!candidate_selection.live_selected_index(flush_default_session).has_value(),
+          "A stale highlight still offered an index to the automatic commit.");
+  const auto flushed_default = flush_default_session.finish_composition(
+      candidate_selection.live_selected_index(flush_default_session).value_or(0));
+  require(flushed_default.handled && flushed_default.commit == flush_default_leading,
+          "An automatic commit without a highlight did not take the leading candidate.");
+
   metasequoia::InputSession paged_session;
   type(paged_session, "nihao");
   require(paged_session.candidates().size() >= 11,

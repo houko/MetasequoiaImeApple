@@ -613,7 +613,14 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     {
         return;
     }
-    const auto result = _session->finish_composition();
+    // Every automatic commit runs through here: losing focus, pressing a modifier, typing a key the
+    // session does not take, resetting learned data. finish_composition defaults to the engine's
+    // own first candidate for the leading segment, which threw away a candidate the user had
+    // arrowed onto — type shi, press Down to highlight 时, click into another application, and 是
+    // was committed. The rest of the composition still finishes from the engine's first candidate,
+    // which is what the default argument means and what this path already did.
+    const auto result =
+        _session->finish_composition(_candidateSelection.live_selected_index(*_session).value_or(0));
     if (result.handled)
     {
         [self applyResult:result client:sender];

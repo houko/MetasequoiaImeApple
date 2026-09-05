@@ -40,19 +40,32 @@ class CandidateSelectionState
         return selected_candidate_.has_value() ? std::optional<size_t>(selected_candidate_->index) : std::nullopt;
     }
 
+    // A tracked index only means something while the candidate list still holds the same word at
+    // it. The list is rebuilt on every keystroke, so an index kept across one is not the candidate
+    // the user was looking at.
+    std::optional<size_t> live_selected_index(const InputSession &session) const
+    {
+        if (!selected_candidate_.has_value())
+        {
+            return std::nullopt;
+        }
+        const auto &candidates = session.candidates();
+        if (selected_candidate_->index < candidates.size()
+            && candidates[selected_candidate_->index].word == selected_candidate_->word)
+        {
+            return selected_candidate_->index;
+        }
+        return std::nullopt;
+    }
+
     KeyResult commit(InputSession &session) const
     {
-        if (selected_candidate_.has_value())
+        if (const auto index = live_selected_index(session))
         {
-            const auto &candidates = session.candidates();
-            if (selected_candidate_->index < candidates.size()
-                && candidates[selected_candidate_->index].word == selected_candidate_->word)
+            const KeyResult selected = session.select_candidate(*index);
+            if (selected.handled)
             {
-                const KeyResult selected = session.select_candidate(selected_candidate_->index);
-                if (selected.handled)
-                {
-                    return selected;
-                }
+                return selected;
             }
         }
         return session.handle_command(Command::CommitCandidate);
