@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.39.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.38.0...v0.39.0) (2026-09-05)
+
+
+### Features
+
+* **mac:** add native character palette entry ([#209](https://github.com/metasequoiaime/MSIME-Apple/issues/209)) ([7968146](https://github.com/metasequoiaime/MSIME-Apple/commit/796814640375f1e765254d625dcaccdd4ce51e2f))
+
+
+### Bug Fixes
+
+* **mac:** restore native settings navigation ([#208](https://github.com/metasequoiaime/MSIME-Apple/issues/208)) ([13e821c](https://github.com/metasequoiaime/MSIME-Apple/commit/13e821c01c4b9caaf4e3a00de2ad2a0f77405b4b))
+
 ## [0.38.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.37.0...v0.38.0) (2026-09-05)
 
 
