@@ -131,6 +131,26 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertNotIn("character <= 'Z'", character_branch)
         self.assertIn("HandleCharacterWithWubiAutoCommit", character_branch)
 
+    def test_engine_english_learning_stays_unreachable_from_macos(self):
+        controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
+        installer = (MACOS_ROOT / "src/DictionaryInstaller.mm").read_text()
+
+        # The engine writes learned English words to data_file_path("english.db"), while this installer
+        # replays the English journal into msime_english.db and only backs that name up when learned data
+        # is reset. The two never meet today because macOS never turns the engine's English paths on, so
+        # the divergence is latent. Wiring any of these up without first reconciling the filename would
+        # orphan learned English words in a file no macOS code reads, migrates or clears.
+        self.assertIn("msime_english.db", installer)
+        for switch in (
+            "set_dedicated_english_mode",
+            "set_english_input_options",
+            "set_frequency_adjustment",
+            "set_mixed_expressive_options",
+        ):
+            self.assertNotIn(switch, controller, f"{switch} reaches the engine's english.db path; reconcile the filename with msime_english.db first")
+        # handle_character's second parameter is what routes Shift+letter into the English and local modes.
+        self.assertIn("_session->handle_character(static_cast<char>(character))", controller)
+
     def test_input_controller_owns_a_native_floating_status_toolbar(self):
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
         controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()

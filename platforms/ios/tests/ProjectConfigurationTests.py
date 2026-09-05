@@ -334,5 +334,22 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertEqual(missing, [], f"engine directories missing from the bridge target: {missing}")
 
 
+    def test_chinese_mode_never_sends_uppercase_to_the_session(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        # The engine consumes A-Z during a composition as helpcode input. The bridge rejects uppercase,
+        # but this keyboard is the other half of that contract: in Chinese mode the shift key is hidden,
+        # shift handling returns early, and key titles stay lowercase, so an uppercase letter never
+        # reaches handleCharacter in the first place. Losing any one of the three would send capitals
+        # into the session and swallow them instead of inserting them.
+        self.assertIn("button.isHidden = isChineseMode", controller)
+        shift_handler = controller.split("private func toggleLetterCase", 1)[1].split("\n  }", 1)[0]
+        self.assertIn("guard !isChineseMode else { return }", shift_handler)
+        self.assertIn("let usesUppercase = !isChineseMode && letterCaseState != .lowercase", controller)
+        character_handler = controller.split("private func handleCharacter", 1)[1].split("\n  }", 1)[0]
+        self.assertIn("render(session.handleCharacter(character))", character_handler)
+        self.assertNotIn("uppercased()", character_handler.split("} else {", 1)[0])
+
+
 if __name__ == "__main__":
     unittest.main()
