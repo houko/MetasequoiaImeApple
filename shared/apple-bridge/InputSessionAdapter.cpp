@@ -8,7 +8,24 @@ namespace metasequoia::apple {
 class InputSessionAdapter::Impl {
 public:
   explicit Impl(SchemeType scheme = SchemeType::Quanpin)
-      : session{scheme, true, true, true, false} {}
+      : session{scheme, true, true, true, false} {
+    // The engine enables every local input mode by default and opens each one on a capital passed
+    // with shift_only. This adapter never passes it, and the iOS keyboard has no shift key in
+    // Chinese mode to pass it from, so all eight are unreachable here. Two of them could not work
+    // anyway: the compact dictionary this frontend packages keeps only the pinyin tables, so quick
+    // phrases and the Japanese lexicon are not in it. Saying so is better than shipping a session
+    // that reports modes it can neither enter nor answer.
+    LocalModeOptions options;
+    options.unicode = false;
+    options.date_time = false;
+    options.quick_phrase = false;
+    options.emoji = false;
+    options.kaomoji = false;
+    options.super_jianpin = false;
+    options.temporary_english = false;
+    options.temporary_japanese = false;
+    session.set_local_mode_options(options);
+  }
 
   InputSession session;
 };
