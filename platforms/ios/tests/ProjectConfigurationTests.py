@@ -186,13 +186,47 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("private var candidatePageStart = 0", controller)
         self.assertIn("makeCandidateButton(candidate: String, number: Int, index: Int)", controller)
         self.assertIn("self.render(self.session.selectCandidate(at: UInt(index)))", controller)
-        self.assertIn("render(session.selectCandidate(at: UInt(candidatePageStart + digit - 1)))", controller)
+        self.assertIn("let index = candidatePageStart + digit - 1", controller)
+        self.assertIn("render(session.selectCandidate(at: UInt(index)))", controller)
         self.assertIn('"previousCandidatePage" : "nextCandidatePage"', controller)
 
         # A new candidate list is a different composition, so a retained page would number chips
         # against candidates that no longer exist.
         strip = controller.split("private func updateCandidateStrip", 1)[1].split("\n  }", 1)[0]
         self.assertIn("candidatePageStart = 0", strip)
+
+        # A digit with no chip on the current page must be swallowed, not fall through. The
+        # fall-through reached handleCandidateKey, which numbers from the engine's first candidate,
+        # so pressing 7 on a last page of six chips committed the seventh candidate overall — one
+        # the user could not see and had not asked for.
+        digits = controller.split('symbol >= "1", symbol <= "9"', 1)[1].split("\n    }", 1)[0]
+        self.assertIn("if candidatePageStart > 0, let digit = Int(symbol) {", digits)
+        paged = digits.split("if candidatePageStart > 0", 1)[1].split("\n      }", 1)[0]
+        self.assertIn("return", paged)
+        self.assertNotIn("handleCandidateKey", paged)
+
+    def test_committing_the_leading_candidate_follows_the_visible_page(self):
+        # commitCandidate always takes the engine's first candidate, which is off screen once the
+        # strip has paged. Space, return and the language switch all mean "take what is showing".
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("private func commitVisibleCandidate() -> MetasequoiaInputSnapshot {", controller)
+        helper = controller.split("private func commitVisibleCandidate", 1)[1].split("\n  }", 1)[0]
+        self.assertIn("candidatePageStart > 0, candidatePageStart < visibleCandidates.count", helper)
+        self.assertIn("session.selectCandidate(at: UInt(candidatePageStart))", helper)
+        # The unhandled report is what tells space and return to insert their own character, and
+        # only commitCandidate produces it, so the first-page path has to keep using it.
+        self.assertIn("return session.commitCandidate()", helper)
+
+        space = controller.split("private func handleSpace", 1)[1].split("\n  }", 1)[0]
+        self.assertIn("commitVisibleCandidate()", space)
+        self.assertNotIn("session.commitCandidate()", space)
+
+        # Return and the language switch flush the whole pending composition rather than pick one
+        # candidate, so they stay on finishComposition and are not part of this rule.
+        for caller in ("private func handleReturn", "private func toggleInputMode"):
+            body = controller.split(caller, 1)[1].split("\n  }", 1)[0]
+            self.assertIn("finishComposition()", body)
 
     def test_double_pinyin_key_hints_come_from_the_engine_profile(self):
         # A hardcoded keymap in Swift would drift from whatever profile the session actually runs.
