@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.42.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.41.1...v0.42.0) (2026-09-05)
+
+
+### Features
+
+* **ios:** page through candidates past the ninth ([9205bdb](https://github.com/metasequoiaime/MSIME-Apple/commit/9205bdb29a3d12876702ef0772a6f712124b0665))
+* **ios:** report engine diagnostics in the keyboard ([7b8be3b](https://github.com/metasequoiaime/MSIME-Apple/commit/7b8be3b0efda09c3b104f319050c2358ae29161b))
+* **ios:** show double-pinyin hints on the keys ([c4f052d](https://github.com/metasequoiaime/MSIME-Apple/commit/c4f052d86863139319c3874f14974f46cc76ec11))
+
+
+### Bug Fixes
+
+* **ios:** keep the key hints on one line ([7ea9081](https://github.com/metasequoiaime/MSIME-Apple/commit/7ea9081520ff4c9cf763f20a4d8c1a052651cbb6))
+
 ## [0.41.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.41.0...v0.41.1) (2026-09-05)
 
 
