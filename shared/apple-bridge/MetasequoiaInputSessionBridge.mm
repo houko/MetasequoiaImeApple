@@ -110,7 +110,8 @@ void ConfigureDataDirectory() {
 - (instancetype)initWithHandled:(BOOL)handled
                      commitText:(nullable NSString *)commitText
                         preedit:(NSString *)preedit
-                     candidates:(NSArray<NSString *> *)candidates;
+                     candidates:(NSArray<NSString *> *)candidates
+                 diagnosticText:(nullable NSString *)diagnosticText;
 
 @end
 
@@ -119,13 +120,15 @@ void ConfigureDataDirectory() {
 - (instancetype)initWithHandled:(BOOL)handled
                      commitText:(nullable NSString *)commitText
                         preedit:(NSString *)preedit
-                     candidates:(NSArray<NSString *> *)candidates {
+                     candidates:(NSArray<NSString *> *)candidates
+                 diagnosticText:(nullable NSString *)diagnosticText {
   self = [super init];
   if (self != nil) {
     _handled = handled;
     _commitText = [commitText copy];
     _preedit = [preedit copy];
     _candidates = [candidates copy];
+    _diagnosticText = [diagnosticText copy];
   }
   return self;
 }
@@ -204,11 +207,15 @@ void ConfigureDataDirectory() {
 
   NSString *commitText =
       snapshot.commit.has_value() ? StringFromUTF8(*snapshot.commit) : nil;
+  NSString *diagnosticText = snapshot.diagnostic.has_value()
+                                 ? StringFromUTF8(*snapshot.diagnostic)
+                                 : nil;
   return [[MetasequoiaInputSnapshot alloc]
       initWithHandled:snapshot.handled
            commitText:commitText
               preedit:StringFromUTF8(snapshot.preedit)
-           candidates:candidates];
+           candidates:candidates
+       diagnosticText:diagnosticText];
 }
 
 @end

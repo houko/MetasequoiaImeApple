@@ -12,6 +12,10 @@ struct InputSnapshot {
   std::optional<std::string> commit;
   std::string preedit;
   std::vector<std::string> candidates;
+  // Set when the engine could answer the key but something behind it failed, such as a local input
+  // mode whose table is missing or a word that could not be learned. Input stays usable, so a
+  // frontend reports it rather than treating it as an error.
+  std::optional<std::string> diagnostic;
 };
 
 class InputSessionAdapter {

@@ -18,6 +18,7 @@ InputSnapshot MakeSnapshot(const InputSession &session, KeyResult result) {
   InputSnapshot snapshot;
   snapshot.handled = result.handled;
   snapshot.commit = std::move(result.commit);
+  snapshot.diagnostic = std::move(result.diagnostic);
   snapshot.preedit = session.preedit();
   snapshot.candidates.reserve(session.candidates().size());
   for (const auto &candidate : session.candidates()) {

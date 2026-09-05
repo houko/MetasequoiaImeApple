@@ -9,6 +9,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private let session = MetasequoiaInputSessionBridge()
   private let preeditLabel = UILabel()
   private let candidateScrollView = UIScrollView()
+  private let diagnosticLabel = UILabel()
   private let candidateStack = UIStackView()
   private let languageModeButton = UIButton()
   private let schemeButton = UIButton()
@@ -26,6 +27,8 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private var usesTraditionalOutput = false
   private var visiblePreedit = ""
   private var visibleCandidates: [String] = []
+  private var visibleDiagnostic: String?
+  private var diagnosticDismissTimer: Timer?
   private var showsSymbols = false
   private var letterCaseState = LetterCaseState.lowercase
   private var isAutomaticShift = false
@@ -77,6 +80,8 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
     cancelBackspacePress()
+    diagnosticDismissTimer?.invalidate()
+    diagnosticDismissTimer = nil
   }
 
   private func installKeyboard() {
@@ -134,8 +139,17 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     candidateScrollView.showsHorizontalScrollIndicator = false
     candidateScrollView.addSubview(candidateStack)
 
-    let content = UIStackView(
-      arrangedSubviews: [languageModeButton, schemeButton, preeditLabel, candidateScrollView])
+    diagnosticLabel.font = .preferredFont(forTextStyle: .footnote)
+    diagnosticLabel.textColor = MetasequoiaTheme.coneUIColor
+    diagnosticLabel.adjustsFontForContentSizeCategory = true
+    diagnosticLabel.adjustsFontSizeToFitWidth = true
+    diagnosticLabel.minimumScaleFactor = 0.7
+    diagnosticLabel.isHidden = true
+    diagnosticLabel.accessibilityIdentifier = "diagnosticLabel"
+
+    let content = UIStackView(arrangedSubviews: [
+      languageModeButton, schemeButton, preeditLabel, candidateScrollView, diagnosticLabel,
+    ])
     content.axis = .horizontal
     content.alignment = .center
     content.spacing = 12
@@ -600,7 +614,29 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       textDocumentProxy.insertText(chineseOutput(commitText))
     }
     hasComposition = !snapshot.preedit.isEmpty
+    showDiagnostic(snapshot.diagnosticText)
     updateCandidateStrip(preedit: snapshot.preedit, candidates: snapshot.candidates)
+  }
+
+  // A diagnostic means the key was handled but something behind it failed, so input keeps working
+  // and the message is transient. It replaces the candidate strip, which is empty in exactly the
+  // cases that produce one, and clears itself on the next key or after a few seconds.
+  private func showDiagnostic(_ diagnostic: String?) {
+    diagnosticDismissTimer?.invalidate()
+    diagnosticDismissTimer = nil
+    visibleDiagnostic = diagnostic
+    guard diagnostic != nil else { return }
+
+    let timer = Timer(timeInterval: 4, repeats: false) { [weak self] _ in
+      MainActor.assumeIsolated {
+        guard let self else { return }
+        self.visibleDiagnostic = nil
+        self.diagnosticDismissTimer = nil
+        self.renderCandidateStrip()
+      }
+    }
+    RunLoop.main.add(timer, forMode: .common)
+    diagnosticDismissTimer = timer
   }
 
   private func updateCandidateStrip(preedit: String, candidates: [String]) {
@@ -621,7 +657,11 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       candidateStack.addArrangedSubview(
         makeCandidateButton(candidate: candidate, number: index + 1))
     }
-    candidateScrollView.isHidden = visibleCandidates.isEmpty
+
+    diagnosticLabel.text = visibleDiagnostic
+    diagnosticLabel.accessibilityLabel = visibleDiagnostic.map { "提示：\($0)" }
+    diagnosticLabel.isHidden = visibleDiagnostic == nil
+    candidateScrollView.isHidden = visibleCandidates.isEmpty || visibleDiagnostic != nil
   }
 
   // Selection stays on the engine index, so only the shown text is converted.

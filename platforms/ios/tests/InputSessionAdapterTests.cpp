@@ -34,6 +34,9 @@ int RunTest() {
     Require(first.handled && first.preedit == "n",
             "The first letter did not start an engine composition.");
 
+    Require(!first.diagnostic.has_value(),
+            "An ordinary keystroke produced a diagnostic.");
+
     const auto second = adapter.handle_character('i');
     Require(second.handled && second.preedit == "ni",
             "The second letter did not update the engine preedit.");
