@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the canonical dictionary and package its compact iOS variant."""
+"""Fetch the canonical dictionary and package its compact iOS variant."""
 
 import subprocess
 from pathlib import Path
@@ -14,7 +14,7 @@ IOS_DICTIONARY = (
 
 def main():
     subprocess.run(
-        ["python3", "platforms/macos/scripts/build_dictionary.py"],
+        ["python3", "platforms/macos/scripts/fetch_dictionary.py"],
         cwd=REPOSITORY_ROOT,
         check=True,
     )

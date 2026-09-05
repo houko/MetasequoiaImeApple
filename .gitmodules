@@ -2,9 +2,6 @@
 	path = vendor/MetasequoiaImeEngine
 	url = https://github.com/metasequoiaime/MSIME-Engine.git
 	branch = main
-[submodule "vendor/MetasequoiaImeDict"]
-	path = vendor/MetasequoiaImeDict
-	url = https://github.com/metasequoiaime/MSIME-Dict.git
 [submodule "vendor/MetasequoiaImeHelpCode"]
 	path = vendor/MetasequoiaImeHelpCode
 	url = https://github.com/metasequoiaime/MSIME-HelpCode.git
