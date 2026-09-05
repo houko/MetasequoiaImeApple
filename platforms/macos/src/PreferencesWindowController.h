@@ -48,6 +48,8 @@ bool MetasequoiaShouldShowPreferences(int argc, const char *argv[]);
 + (void)setWubiAutoCommitUniqueEnabled:(BOOL)enabled;
 + (BOOL)storedShuangpinKeymapEnabled;
 + (void)setShuangpinKeymapEnabled:(BOOL)enabled;
++ (BOOL)storedLocalInputModesEnabled;
++ (void)setLocalInputModesEnabled:(BOOL)enabled;
 - (void)showAndActivate;
 - (void)showAndActivateForStandaloneLaunch;
 @end
