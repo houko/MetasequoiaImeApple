@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Build the canonical dictionary and package its compact iOS variant."""
+"""Fetch the canonical dictionary and package its compact iOS variant.
+
+This used to build the database from the vendored sources. It now takes the same released, digest-verified msime.db the macOS bundle ships, so the compact iOS variant is derived from exactly the data the other platforms use rather than from a locally rebuilt approximation of it.
+"""
 
 import subprocess
 from pathlib import Path
@@ -14,7 +17,7 @@ IOS_DICTIONARY = (
 
 def main():
     subprocess.run(
-        ["python3", "platforms/macos/scripts/build_dictionary.py"],
+        ["python3", "scripts/fetch_dictionary.py"],
         cwd=REPOSITORY_ROOT,
         check=True,
     )

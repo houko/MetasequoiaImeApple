@@ -74,7 +74,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         message(FATAL_ERROR "The InputMethodKit bundle can only be built on macOS.")
     endif()
     if(NOT EXISTS "${METASEQUOIA_IME_DICTIONARY}")
-        message(FATAL_ERROR "Dictionary not found at ${METASEQUOIA_IME_DICTIONARY}. Run platforms/macos/scripts/build_dictionary.py first.")
+        message(FATAL_ERROR "Dictionary not found at ${METASEQUOIA_IME_DICTIONARY}. Run scripts/fetch_dictionary.py first.")
     endif()
 
     file(SHA256 "${METASEQUOIA_IME_DICTIONARY}" METASEQUOIA_IME_DICTIONARY_SHA256)
