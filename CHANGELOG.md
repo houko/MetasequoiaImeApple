@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.39.2](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.1...v0.39.2) (2026-09-05)
+
+
+### Bug Fixes
+
+* **mac:** repair two engine-bump regressions and restore Sparkle updates ([#223](https://github.com/metasequoiaime/MSIME-Apple/issues/223)) ([30ce66f](https://github.com/metasequoiaime/MSIME-Apple/commit/30ce66f6bb3b753b2c9e180fd1608a4029138c4f))
+* **release:** stop referencing secrets from a step condition ([#224](https://github.com/metasequoiaime/MSIME-Apple/issues/224)) ([b450962](https://github.com/metasequoiaime/MSIME-Apple/commit/b450962c274bae8a29c17614134bb4e33da82a04))
+
 ## [0.39.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.0...v0.39.1) (2026-09-05)
 
 
