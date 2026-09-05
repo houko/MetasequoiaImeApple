@@ -208,8 +208,8 @@ jobs:
           security list-keychains -d user -s "$keychain"
           security default-keychain -s "$keychain"
           xcrun notarytool store-credentials metasequoia-notary --keychain "$keychain" --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" --password "$NOTARY_PASSWORD"
-      - name: Fetch dictionary
-        run: python3 platforms/macos/scripts/fetch_dictionary.py
+      - name: Fetch the locked dictionary
+        run: python3 scripts/fetch_dictionary.py
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix)"
       - name: Build

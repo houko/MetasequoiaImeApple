@@ -10,7 +10,7 @@ https://github.com/metasequoiaime/MSIME-Engine
 The application also incorporates the following components:
 
 - googlepinyinime-rev — Apache License 2.0
-  https://github.com/metasequoiaime/googlepinyinime-rev
+  https://github.com/metasequoiaime/Google-PinyinIME-Rev
 - utfcpp — Boost Software License 1.0
   https://github.com/nemtrif/utfcpp
 - Boost C++ Libraries — Boost Software License 1.0
@@ -26,3 +26,37 @@ The application also incorporates the following components:
 
 Complete license texts for these components are included alongside this
 notice in the application's Resources/Licenses directory.
+
+
+Dictionary and helpcode data
+============================
+
+The application installs data built from these repositories:
+
+  MSIME-Dict       https://github.com/metasequoiaime/MSIME-Dict
+  MSIME-HelpCode   https://github.com/metasequoiaime/MSIME-HelpCode
+
+Installed as msime.db and helpcodes/*.txt in the application's Resources directory. The database is the one MSIME-Dict publishes as a release asset; product-lock.json in this repository names the release and records the SHA256 of every file taken from it.
+
+Neither repository declares a license of its own, because most of their content is not their own work. They aggregate word lists and code tables from upstream projects. The upstream terms, which travel with the data, are as follows.
+
+Sources of msime.db, via MSIME-Dict:
+
+  rime-ice                GPL-3.0    https://github.com/iDvel/rime-ice
+  CustomPinyinDictionary  none       https://github.com/wuhgit/CustomPinyinDictionary
+  pinyin-data             MIT        https://github.com/mozillazg/pinyin-data
+  rime-wubi86-jidian      Apache-2.0 https://github.com/KyleBing/rime-wubi86-jidian
+  rime-jp_sela            none       https://github.com/Selaube/rime-jp_sela
+
+The Chinese tables that msime.db is built from (cn/BaseDictAllV1Part1.txt and cn/BaseDictAllV1Part2.txt) merge rime-ice with CustomPinyinDictionary. rime-ice is licensed under the GNU General Public License version 3, which is the same license this application is distributed under, so its terms are satisfied by the distribution as a whole; this notice serves as its attribution, and its source remains available at the URL above. The quick phrase table is written by the Metasequoia IME maintainers and is covered by that same license.
+
+Sources of helpcodes/*.txt, via MSIME-HelpCode:
+
+  helpcode.txt                    lantian      蓝天小雨点 helpcode scheme
+  zrm_helpcode_big_unique.txt     ziranma      自然码, derived from
+                                               https://github.com/copperay/ZRM_Aux-code
+  shouyou2_0_helpcode.txt         shouyou2_0   首右 2.0 helpcode scheme
+  shouyouplus_helpcode.txt        shouyouplus  首右 plus helpcode scheme
+  xiaohe_helpcode.txt             xiaohe       小鹤 shape-code scheme
+
+Unresolved: CustomPinyinDictionary, rime-jp_sela and ZRM_Aux-code publish no license, and the helpcode tables reproduce input schemes whose rights belong to their respective authors. Redistributors who need an explicit grant for those parts should raise it with the Metasequoia IME maintainers rather than assume one. This notice will be updated as those terms are clarified.
