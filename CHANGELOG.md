@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.43.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.43.0...v0.43.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **mac:** stop annotating and converting local-mode candidates ([628009b](https://github.com/metasequoiaime/MSIME-Apple/commit/628009b1481225e716bb07c45b4bd7e5efd5045a))
+
 ## [0.43.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.42.0...v0.43.0) (2026-09-05)
 
 
