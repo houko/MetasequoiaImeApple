@@ -348,7 +348,7 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("render(session.handleCharacter(character))", controller)
         self.assertIn("textDocumentProxy.insertText(output)", controller)
         self.assertIn("if !isChineseMode {\n      textDocumentProxy.insertText(symbol)", controller)
-        self.assertIn("isChineseMode ? session.commitCandidate() : session.cancel()", controller)
+        self.assertIn("isChineseMode ? session.finishComposition() : session.cancel()", controller)
         self.assertIn("isChineseMode ? \"中\" : \"英\"", controller)
         self.assertIn('languageModeButton.accessibilityIdentifier = "languageModeButton"', controller)
 

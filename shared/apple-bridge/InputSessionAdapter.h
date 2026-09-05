@@ -31,6 +31,7 @@ public:
   InputSnapshot handle_punctuation(char character);
   InputSnapshot handle_backspace();
   InputSnapshot commit_candidate();
+  InputSnapshot finish_composition();
   InputSnapshot commit_raw();
   InputSnapshot cancel();
   InputSnapshot select_candidate(std::size_t index);

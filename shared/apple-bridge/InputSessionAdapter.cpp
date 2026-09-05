@@ -63,6 +63,10 @@ InputSnapshot InputSessionAdapter::commit_candidate() {
                       impl_->session.handle_command(Command::CommitCandidate));
 }
 
+InputSnapshot InputSessionAdapter::finish_composition() {
+  return MakeSnapshot(impl_->session, impl_->session.finish_composition());
+}
+
 InputSnapshot InputSessionAdapter::commit_raw() {
   return MakeSnapshot(impl_->session,
                       impl_->session.handle_command(Command::CommitRaw));

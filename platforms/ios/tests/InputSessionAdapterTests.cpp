@@ -155,6 +155,10 @@ int RunTest() {
     const auto suffix = adapter.commit_candidate();
     Require(suffix.commit == "林" && suffix.preedit.empty(), "The keyboard repeated the committed prefix.");
     for (char c : std::string("shui'lin")) adapter.handle_character(c);
+    const auto finished = adapter.finish_composition();
+    Require(finished.commit == "水林" && finished.preedit.empty() && finished.candidates.empty(),
+            "Return or direct-mode switching left a hidden keyboard composition.");
+    for (char c : std::string("shui'lin")) adapter.handle_character(c);
     const auto switched = adapter.switch_to_shuangpin(true);
     Require(switched.commit == "水林" && switched.preedit.empty(),
             "Switching keyboard schemes lost the pending suffix.");
