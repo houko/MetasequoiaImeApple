@@ -532,7 +532,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
             submodule_value("vendor/MetasequoiaImeEngine", "url"),
             "https://github.com/metasequoiaime/MSIME-Engine.git",
         )
-        self.assertEqual(submodule_value("vendor/MetasequoiaImeEngine", "branch"), "master")
+        self.assertEqual(submodule_value("vendor/MetasequoiaImeEngine", "branch"), "main")
         self.assertEqual(submodule_value("vendor/MetasequoiaImeDict", "path"), "vendor/MetasequoiaImeDict")
         self.assertEqual(
             submodule_value("vendor/MetasequoiaImeDict", "url"),
