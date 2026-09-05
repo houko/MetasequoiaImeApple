@@ -14,7 +14,8 @@ on:
         default: false
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  # Keyed by event as well as branch: the release scripts dispatch this workflow and wait on that exact run, so a pull_request run on the same branch must not cancel it. Feature branches only ever get the pull_request run (push is restricted to main), so this still collapses superseded runs of the same kind.
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 permissions:
