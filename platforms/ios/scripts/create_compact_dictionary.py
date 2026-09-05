@@ -30,7 +30,10 @@ def compact_dictionary(source_path, output_path, minimum_weight):
     temporary_path.unlink(missing_ok=True)
 
     source = sqlite3.connect(f"file:{source_path}?mode=ro", uri=True)
-    output = sqlite3.connect(temporary_path)
+    # ATTACH only interprets a file: URI when the connection was itself opened with URI handling.
+    # Some sqlite builds enable it globally and some do not, so ask for it here instead of relying
+    # on the interpreter's sqlite compile options.
+    output = sqlite3.connect(temporary_path.resolve().as_uri(), uri=True)
     try:
         output.execute("PRAGMA journal_mode=OFF")
         output.execute("PRAGMA synchronous=OFF")
