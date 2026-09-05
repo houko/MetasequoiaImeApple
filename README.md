@@ -32,7 +32,7 @@ brew install cmake boost fmt spdlog
 ./platforms/macos/scripts/build.sh
 ```
 
-词库构建会从官方源数据生成 `vendor/MetasequoiaImeDict/out/msime.db`。该数据库文件有意不纳入版本库。
+构建会从 MSIME-Dict 的 release 下载 `vendor/MetasequoiaImeDict/out/msime.db` 并校验 SHA256，版本固定在 `platforms/macos/scripts/fetch_dictionary.py` 的 `DICTIONARY_RELEASE`。该数据库文件有意不纳入版本库，Windows 与 Linux 取的是同一个 release，三端词库逐字节一致。
 
 ## 为当前用户安装
 

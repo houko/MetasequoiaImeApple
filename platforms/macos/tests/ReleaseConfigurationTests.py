@@ -604,10 +604,10 @@ class ReleaseConfigurationTests(unittest.TestCase):
         dependabot = (PROJECT_ROOT / ".github/dependabot.yml").read_text()
         gitmodules = PROJECT_ROOT / ".gitmodules"
 
-        def submodule_value(name, key):
+        def read_submodule_value(name, key):
             result = subprocess.run(
                 ["git", "config", "-f", str(gitmodules), "--get", f"submodule.{name}.{key}"],
-                check=True,
+                check=False,
                 capture_output=True,
                 text=True,
                 # A worktree checkout may expose a placeholder .git file whose
@@ -615,7 +615,14 @@ class ReleaseConfigurationTests(unittest.TestCase):
                 # Run outside the repository so git only parses .gitmodules.
                 cwd=gitmodules.parent.parent,
             )
-            return result.stdout.strip()
+            # git config exits 1 for a key that is absent, which is a real answer here rather than a
+            # failure: it is how the dictionary assertion below states that there is no submodule.
+            return result.stdout.strip() if result.returncode == 0 else None
+
+        def submodule_value(name, key):
+            value = read_submodule_value(name, key)
+            self.assertIsNotNone(value, f"submodule.{name}.{key} is missing from .gitmodules")
+            return value
 
         self.assertEqual(dependabot.count('package-ecosystem: "github-actions"'), 1)
         self.assertEqual(dependabot.count('package-ecosystem: "gitsubmodule"'), 1)
@@ -634,11 +641,12 @@ class ReleaseConfigurationTests(unittest.TestCase):
             "https://github.com/metasequoiaime/MSIME-Engine.git",
         )
         self.assertEqual(submodule_value("vendor/MetasequoiaImeEngine", "branch"), "main")
-        self.assertEqual(submodule_value("vendor/MetasequoiaImeDict", "path"), "vendor/MetasequoiaImeDict")
-        self.assertEqual(
-            submodule_value("vendor/MetasequoiaImeDict", "url"),
-            "https://github.com/metasequoiaime/MSIME-Dict.git",
-        )
+        # The dictionary is deliberately not a submodule. Vendoring the sources meant rebuilding
+        # MSIME-Dict's pipeline here and shipping whatever revision the pin happened to hold, which
+        # is how the personal data in quick_phrases.txt stayed in shipped builds for two days after
+        # it was replaced upstream (MSIME-Windows#74). It is downloaded from a pinned, checksummed
+        # release instead; re-adding it as a submodule would reintroduce that drift.
+        self.assertIsNone(read_submodule_value("vendor/MetasequoiaImeDict", "path"))
         self.assertEqual(
             submodule_value("vendor/MetasequoiaImeHelpCode", "path"),
             "vendor/MetasequoiaImeHelpCode",
@@ -646,6 +654,35 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertEqual(
             submodule_value("vendor/MetasequoiaImeHelpCode", "url"),
             "https://github.com/metasequoiaime/MSIME-HelpCode.git",
+        )
+
+    def test_dictionary_is_fetched_from_a_pinned_verified_release(self):
+        script = MACOS_ROOT / "scripts/fetch_dictionary.py"
+        source = script.read_text()
+
+        self.assertFalse((MACOS_ROOT / "scripts/build_dictionary.py").exists())
+        # A branch or a bare "latest" would make two builds of the same commit ship different data.
+        self.assertRegex(source, r'DICTIONARY_RELEASE = "dict-\d{4}\.\d{2}\.\d{2}"')
+        self.assertIn('DICTIONARY_REPOSITORY = "metasequoiaime/MSIME-Dict"', source)
+        # A truncated download otherwise surfaces as an empty candidate list at runtime rather than
+        # as a build failure, so the checksum and the probes are the whole point of the script.
+        self.assertIn("hashlib.sha256", source)
+        self.assertIn("SHA256SUMS.txt", source)
+        self.assertIn("PRAGMA integrity_check", source)
+
+        # Every path that produces a build has to go through it, including the iOS variant, which
+        # slices the same database rather than generating its own.
+        self.assertIn(
+            "python3 \"$project_root/platforms/macos/scripts/fetch_dictionary.py\"",
+            (MACOS_ROOT / "scripts/build.sh").read_text(),
+        )
+        self.assertIn(
+            '["python3", "platforms/macos/scripts/fetch_dictionary.py"]',
+            (PROJECT_ROOT / "platforms/ios/scripts/prepare_dictionary.py").read_text(),
+        )
+        self.assertIn(
+            "run: python3 platforms/macos/scripts/fetch_dictionary.py",
+            (PROJECT_ROOT / ".github/workflows/release.yml").read_text(),
         )
 
     def test_macos_bundle_packages_helpcode_assets(self):
