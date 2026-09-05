@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.37.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.36.0...v0.37.0) (2026-09-05)
+
+
+### Features
+
+* **mac:** add Shuangpin keymap hints ([#203](https://github.com/metasequoiaime/MSIME-Apple/issues/203)) ([c2d0141](https://github.com/metasequoiaime/MSIME-Apple/commit/c2d01411147d85be4302e823e05304688daccacf))
+
 ## [0.36.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.35.1...v0.36.0) (2026-09-05)
 
 
