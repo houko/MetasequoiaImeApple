@@ -656,34 +656,44 @@ class ReleaseConfigurationTests(unittest.TestCase):
             "https://github.com/metasequoiaime/MSIME-HelpCode.git",
         )
 
-    def test_dictionary_is_fetched_from_a_pinned_verified_release(self):
-        script = MACOS_ROOT / "scripts/fetch_dictionary.py"
-        source = script.read_text()
+    def test_dictionary_is_fetched_from_a_locked_verified_release(self):
+        source = (PROJECT_ROOT / "scripts/fetch_dictionary.py").read_text()
+        lock = json.loads((PROJECT_ROOT / "product-lock.json").read_text())["dictionary"]
 
         self.assertFalse((MACOS_ROOT / "scripts/build_dictionary.py").exists())
         # A branch or a bare "latest" would make two builds of the same commit ship different data.
-        self.assertRegex(source, r'DICTIONARY_RELEASE = "dict-\d{4}\.\d{2}\.\d{2}"')
-        self.assertIn('DICTIONARY_REPOSITORY = "metasequoiaime/MSIME-Dict"', source)
-        # A truncated download otherwise surfaces as an empty candidate list at runtime rather than
-        # as a build failure, so the checksum and the probes are the whole point of the script.
-        self.assertIn("hashlib.sha256", source)
-        self.assertIn("SHA256SUMS.txt", source)
+        self.assertRegex(lock["tag"], r"\Adict-\d{4}\.\d{2}\.\d{2}\Z")
+        self.assertEqual(lock["repository"], "metasequoiaime/MSIME-Dict")
+        # Not read from a gitlink: MSIME-Linux#47 found its dict pin attesting to 55bd649 while the
+        # shipped bytes came from 0c7368c, because nothing moves that pin when the tag does.
+        self.assertRegex(lock["source_commit"], r"\A[0-9a-f]{40}\Z")
+        # The digests are committed rather than taken from the SHA256SUMS.txt that travels with the
+        # data, so a retagged release fails the build instead of shipping.
+        for name in ("msime.db", "SHA256SUMS.txt"):
+            self.assertRegex(lock["assets"][name], r"\A[0-9a-f]{64}\Z")
+        self.assertIn("product_lock.verify_assets", source)
+        # The probe that would have caught the old build: quick_parases comes from a stage the
+        # removed build_dictionary.py never ran, so a database missing it looked perfectly valid.
+        self.assertIn("quick_parases", source)
         self.assertIn("PRAGMA integrity_check", source)
 
         # Every path that produces a build has to go through it, including the iOS variant, which
         # slices the same database rather than generating its own.
         self.assertIn(
-            "python3 \"$project_root/platforms/macos/scripts/fetch_dictionary.py\"",
+            "python3 \"$project_root/scripts/fetch_dictionary.py\"",
             (MACOS_ROOT / "scripts/build.sh").read_text(),
         )
         self.assertIn(
-            '["python3", "platforms/macos/scripts/fetch_dictionary.py"]',
+            '["python3", "scripts/fetch_dictionary.py"]',
             (PROJECT_ROOT / "platforms/ios/scripts/prepare_dictionary.py").read_text(),
         )
         self.assertIn(
-            "run: python3 platforms/macos/scripts/fetch_dictionary.py",
+            "run: python3 scripts/fetch_dictionary.py",
             (PROJECT_ROOT / ".github/workflows/release.yml").read_text(),
         )
+        ci = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text()
+        self.assertIn("python3 scripts/product_lock.py validate", ci)
+        self.assertIn("python3 platforms/macos/tests/ProductLockTests.py", ci)
 
     def test_macos_bundle_packages_helpcode_assets(self):
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()

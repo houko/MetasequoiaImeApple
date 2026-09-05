@@ -42,6 +42,13 @@ jobs:
         run: if brew tap | grep -Fxq aws/tap; then brew untap aws/tap; fi
       - name: Install dependencies
         run: brew install boost fmt spdlog
+      - name: Validate the product lock
+        run: |
+          python3 scripts/product_lock.py validate
+          python3 platforms/macos/tests/ProductLockTests.py
+      # The unit tests run against a fixture rather than the released database: they assert behaviour
+      # around composition, not dictionary content, and downloading 100 MB per run to do it would buy
+      # nothing. The release build is what verifies the real data, against the digests in the lock.
       - name: Create test dictionary
         run: python3 platforms/macos/tests/create_fixture_dictionary.py "$RUNNER_TEMP/msime.db"
       - name: Type-check registration helper
