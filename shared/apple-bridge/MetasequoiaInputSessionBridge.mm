@@ -1,6 +1,7 @@
 #import "MetasequoiaInputSessionBridge.h"
 
 #include "InputSessionAdapter.h"
+#include "ShuangpinKeymap.h"
 
 #include <cstdlib>
 #include <memory>
@@ -110,7 +111,8 @@ void ConfigureDataDirectory() {
 - (instancetype)initWithHandled:(BOOL)handled
                      commitText:(nullable NSString *)commitText
                         preedit:(NSString *)preedit
-                     candidates:(NSArray<NSString *> *)candidates;
+                     candidates:(NSArray<NSString *> *)candidates
+                 diagnosticText:(nullable NSString *)diagnosticText;
 
 @end
 
@@ -119,13 +121,15 @@ void ConfigureDataDirectory() {
 - (instancetype)initWithHandled:(BOOL)handled
                      commitText:(nullable NSString *)commitText
                         preedit:(NSString *)preedit
-                     candidates:(NSArray<NSString *> *)candidates {
+                     candidates:(NSArray<NSString *> *)candidates
+                 diagnosticText:(nullable NSString *)diagnosticText {
   self = [super init];
   if (self != nil) {
     _handled = handled;
     _commitText = [commitText copy];
     _preedit = [preedit copy];
     _candidates = [candidates copy];
+    _diagnosticText = [diagnosticText copy];
   }
   return self;
 }
@@ -194,6 +198,17 @@ void ConfigureDataDirectory() {
   return [self snapshotFrom:_adapter->switch_to_shuangpin(usesShuangpin)];
 }
 
+- (NSDictionary<NSString *, NSString *> *)shuangpinKeyHints {
+  const auto hints =
+      metasequoia::apple::shuangpin_key_hints(_adapter->uses_shuangpin());
+  NSMutableDictionary<NSString *, NSString *> *result =
+      [NSMutableDictionary dictionaryWithCapacity:hints.size()];
+  for (const auto &[key, hint] : hints) {
+    result[StringFromUTF8(key)] = StringFromUTF8(hint);
+  }
+  return result;
+}
+
 - (MetasequoiaInputSnapshot *)snapshotFrom:
     (metasequoia::apple::InputSnapshot)snapshot {
   NSMutableArray<NSString *> *candidates =
@@ -204,11 +219,15 @@ void ConfigureDataDirectory() {
 
   NSString *commitText =
       snapshot.commit.has_value() ? StringFromUTF8(*snapshot.commit) : nil;
+  NSString *diagnosticText = snapshot.diagnostic.has_value()
+                                 ? StringFromUTF8(*snapshot.diagnostic)
+                                 : nil;
   return [[MetasequoiaInputSnapshot alloc]
       initWithHandled:snapshot.handled
            commitText:commitText
               preedit:StringFromUTF8(snapshot.preedit)
-           candidates:candidates];
+           candidates:candidates
+       diagnosticText:diagnosticText];
 }
 
 @end

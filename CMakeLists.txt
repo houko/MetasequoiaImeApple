@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum supported macOS version")
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS target architectures")
 
-project(MetasequoiaImeApple VERSION 2026.9.1 LANGUAGES CXX OBJCXX) # x-release-please-version
+project(MetasequoiaImeApple VERSION 0.42.0 LANGUAGES CXX OBJCXX) # x-release-please-version
 
 include(CTest)
 
@@ -30,7 +30,8 @@ if(BUILD_TESTING)
     add_test(NAME candidate_selection_state COMMAND MetasequoiaCandidateSelectionStateTests)
     add_executable(MetasequoiaAppleInputSessionAdapterTests
         platforms/ios/Tests/InputSessionAdapterTests.cpp
-        shared/apple-bridge/InputSessionAdapter.cpp)
+        shared/apple-bridge/InputSessionAdapter.cpp
+        shared/apple-bridge/ShuangpinKeymap.cpp)
     target_include_directories(MetasequoiaAppleInputSessionAdapterTests PRIVATE shared/apple-bridge)
     target_link_libraries(MetasequoiaAppleInputSessionAdapterTests PRIVATE MetasequoiaIme::Engine)
     target_compile_options(MetasequoiaAppleInputSessionAdapterTests PRIVATE -Wall -Wextra -Wpedantic -Werror)

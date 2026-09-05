@@ -108,7 +108,7 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("textDocumentProxy.insertText(chineseOutput(commitText))", controller)
         self.assertIn("let display = chineseOutput(candidate)", controller)
         self.assertIn('configuration.title = "\\(number)  \\(display)"', controller)
-        self.assertIn("self.render(self.session.selectCandidate(at: UInt(number - 1)))", controller)
+        self.assertIn("self.render(self.session.selectCandidate(at: UInt(index)))", controller)
 
         strip = controller.split("private func renderCandidateStrip", 1)[1].split("\n  }", 1)[0]
         self.assertIn("visiblePreedit", strip)
@@ -174,6 +174,76 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("textDocumentProxy.deleteBackward", controller)
         self.assertIn("handleInputModeList(from:", controller)
         self.assertNotIn("URLSession", controller)
+
+    def test_candidate_paging_keeps_the_digit_keys_pointing_at_the_visible_page(self):
+        # The chips are numbered 1-9 to match the digits on the symbol layer. handleCandidateKey
+        # numbers from the engine's first candidate, so once the strip shows a later page the digit
+        # and the chip with that number stop meaning the same thing. Off the first page the digit
+        # has to go through the absolute index instead.
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("private static let candidatePageSize = 9", controller)
+        self.assertIn("private var candidatePageStart = 0", controller)
+        self.assertIn("makeCandidateButton(candidate: String, number: Int, index: Int)", controller)
+        self.assertIn("self.render(self.session.selectCandidate(at: UInt(index)))", controller)
+        self.assertIn("render(session.selectCandidate(at: UInt(candidatePageStart + digit - 1)))", controller)
+        self.assertIn('"previousCandidatePage" : "nextCandidatePage"', controller)
+
+        # A new candidate list is a different composition, so a retained page would number chips
+        # against candidates that no longer exist.
+        strip = controller.split("private func updateCandidateStrip", 1)[1].split("\n  }", 1)[0]
+        self.assertIn("candidatePageStart = 0", strip)
+
+    def test_double_pinyin_key_hints_come_from_the_engine_profile(self):
+        # A hardcoded keymap in Swift would drift from whatever profile the session actually runs.
+        # The hints are derived from the engine's own ShuangpinProfile and refreshed wherever the
+        # scheme is, so the two cannot disagree.
+        keymap = (IOS_ROOT.parents[1] / "shared/apple-bridge/ShuangpinKeymap.cpp").read_text()
+        bridge_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.h").read_text()
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+        cmake = (IOS_ROOT.parents[1] / "CMakeLists.txt").read_text()
+
+        self.assertIn("GetXiaoheShuangpinProfile()", keymap)
+        self.assertIn("shuangpinKeyHints", bridge_header)
+        self.assertIn("shared/apple-bridge/ShuangpinKeymap.cpp", cmake)
+
+        self.assertIn("private var shuangpinKeyHints: [String: String] = [:]", controller)
+        self.assertIn("shuangpinKeyHints = session.shuangpinKeyHints()", controller)
+        self.assertIn("hintLabel.text = hint", controller)
+        self.assertIn("label.numberOfLines = 1", controller)
+        self.assertIn("label.adjustsFontSizeToFitWidth = true", controller)
+        self.assertIn("button.accessibilityValue = hint", controller)
+        # English mode feeds the client directly rather than a composition, so a double-pinyin hint
+        # there would describe something the key does not do.
+        self.assertIn("let hint = isChineseMode ? shuangpinKeyHints[lowercase.uppercased()] : nil", controller)
+
+    def test_engine_diagnostics_reach_the_keyboard(self):
+        # KeyResult carries a diagnostic when the key was handled but something behind it failed,
+        # such as a candidate the user dictionary could not learn. The bridge used to drop it on the
+        # floor, so the keyboard could not report anything and the failure was silent.
+        adapter_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/InputSessionAdapter.h").read_text()
+        adapter = (IOS_ROOT.parents[1] / "shared/apple-bridge/InputSessionAdapter.cpp").read_text()
+        bridge_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.h").read_text()
+        bridge = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.mm").read_text()
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn("std::optional<std::string> diagnostic;", adapter_header)
+        self.assertIn("snapshot.diagnostic = std::move(result.diagnostic);", adapter)
+        self.assertIn("NSString *diagnosticText;", bridge_header)
+        self.assertIn("diagnosticText:diagnosticText", bridge)
+
+        self.assertIn("showDiagnostic(snapshot.diagnosticText)", controller)
+        self.assertIn("private var diagnosticDismissTimer: Timer?", controller)
+        self.assertIn('diagnosticLabel.accessibilityIdentifier = "diagnosticLabel"', controller)
+        # The strip is the empty slot a diagnostic can occupy, and the message clears itself so it
+        # never becomes permanent furniture in a 38pt bar.
+        self.assertIn(
+            "candidateScrollView.isHidden = visibleCandidates.isEmpty || visibleDiagnostic != nil",
+            controller,
+        )
+        self.assertIn("override func viewWillDisappear", controller)
+        disappear = controller.split("override func viewWillDisappear", 1)[1].split("\n  }", 1)[0]
+        self.assertIn("diagnosticDismissTimer?.invalidate()", disappear)
 
     def test_setting_row_icons_stay_out_of_the_accessibility_tree(self):
         # Both icons sit next to a title and a subtitle that already carry the row's meaning. Left
@@ -255,7 +325,7 @@ class ProjectConfigurationTests(unittest.TestCase):
     def test_candidate_surface_exposes_numbered_native_chips(self):
         controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
 
-        self.assertIn("makeCandidateButton(candidate: candidate, number: index + 1)", controller)
+        self.assertIn("candidate: candidate, number: offset + 1, index: candidatePageStart + offset", controller)
         self.assertIn('configuration.title = "\\(number)  \\(display)"', controller)
         self.assertIn("configuration.background.cornerRadius", controller)
         self.assertIn('button.accessibilityLabel = "候选词 \\(number)：\\(display)"', controller)
@@ -287,7 +357,10 @@ class ProjectConfigurationTests(unittest.TestCase):
 
         self.assertIn("private enum LetterCaseState", controller)
         self.assertIn("case lowercase, shifted, capsLock", controller)
-        self.assertIn("private var letterButtons: [(button: UIButton, lowercase: String)]", controller)
+        self.assertIn(
+            "private var letterButtons: [(button: UIButton, lowercase: String, hint: UILabel)]",
+            controller,
+        )
         self.assertIn("private weak var shiftButton: UIButton?", controller)
         self.assertIn("toggleLetterCase", controller)
         self.assertIn("letterCaseState = .capsLock", controller)

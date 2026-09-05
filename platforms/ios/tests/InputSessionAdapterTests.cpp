@@ -1,4 +1,5 @@
 #include "InputSessionAdapter.h"
+#include "ShuangpinKeymap.h"
 
 #include "user_dictionary/user_dictionary_journal.h"
 
@@ -35,6 +36,9 @@ int RunTest() {
     const auto first = adapter.handle_character('n');
     Require(first.handled && first.preedit == "n",
             "The first letter did not start an engine composition.");
+
+    Require(!first.diagnostic.has_value(),
+            "An ordinary keystroke produced a diagnostic.");
 
     const auto second = adapter.handle_character('i');
     Require(second.handled && second.preedit == "ni",
@@ -154,6 +158,30 @@ int RunTest() {
     const auto switched = adapter.switch_to_shuangpin(true);
     Require(switched.commit == "水林" && switched.preedit.empty(),
             "Switching keyboard schemes lost the pending suffix.");
+  }
+
+  Require(metasequoia::apple::shuangpin_key_hints(false).empty(),
+          "Full pinyin produced double-pinyin key hints.");
+  {
+    const auto hints = metasequoia::apple::shuangpin_key_hints(true);
+    Require(!hints.empty(), "Double pinyin produced no key hints.");
+    // Xiaohe puts zh on v and ing on ; — the second is unreachable on the letter grid, so a hint
+    // map that leaked it would be describing keys the keyboard does not have.
+    Require(hints.count("V") == 1 && hints.at("V").find("zh") != std::string::npos,
+            "The V hint did not describe the zh initial.");
+    Require(hints.count(";") == 0, "A hint was produced for a key outside the letter grid.");
+    // The engine spells the ü finals with a leading v because that is the key sequence. A person
+    // reads the hint, so it has to show the vowel.
+    bool showsUmlaut = false;
+    for (const auto &[key, hint] : hints) {
+      (void)key;
+      if (hint.find("ü") != std::string::npos) {
+        showsUmlaut = true;
+      }
+      Require(hint.find(" v") == std::string::npos && hint.rfind("v", 0) != 0,
+              "A hint exposed the engine's v spelling of a ü final.");
+    }
+    Require(showsUmlaut, "No hint showed a ü final.");
   }
 
   user_dictionary::close_default_user_database();
