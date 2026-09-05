@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.41.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.41.0...v0.41.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **dictionary:** hold the fetched database to committed digests ([7a92195](https://github.com/metasequoiaime/MSIME-Apple/commit/7a921952875b9aca29d5c42aee38bf8496e1f32f))
+* **dictionary:** 按提交的摘要校验词库,并补上 [#234](https://github.com/metasequoiaime/MSIME-Apple/issues/234) 漏掉的归属声明 ([fbba79a](https://github.com/metasequoiaime/MSIME-Apple/commit/fbba79a357d836a25f3691838fe40a6d79342358))
+* **ios:** stop announcing the settings row icons ([e1bca55](https://github.com/metasequoiaime/MSIME-Apple/commit/e1bca55a6e6a96d10c06695d1fd234225c01dcad))
+* **mac:** 遵循每页候选数量设置，并让窗口尺寸适应内容 ([309bec1](https://github.com/metasequoiaime/MSIME-Apple/commit/309bec1314eb7621faf3a913703580f3e6decad4))
+
+
+### Reverts
+
+* move back off calendar versioning ([df803f9](https://github.com/metasequoiaime/MSIME-Apple/commit/df803f95e5a4aaa2327e02fb98c09ddf984de628))
+* move back off calendar versioning ([dd59d10](https://github.com/metasequoiaime/MSIME-Apple/commit/dd59d10ab0847b0390cbc82c7cebc863f8542c83))
+
 ## [0.41.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.40.0...v0.41.0) (2026-09-05)
 
 
