@@ -41,7 +41,7 @@ jobs:
       - name: Remove unused runner taps
         run: if brew tap | grep -Fxq aws/tap; then brew untap aws/tap; fi
       - name: Install dependencies
-        run: brew install boost fmt spdlog
+        run: brew install boost fmt spdlog nlohmann-json
       - name: Validate the product lock
         run: |
           python3 scripts/check-dictionary-contract.py
@@ -79,7 +79,7 @@ jobs:
         with:
           submodules: recursive
       - name: Install project generator
-        run: brew install boost fmt spdlog xcodegen
+        run: brew install boost fmt spdlog nlohmann-json xcodegen
       - name: Validate keyboard configuration
         run: |
           python3 platforms/ios/tests/ProjectConfigurationTests.py

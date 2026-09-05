@@ -20,7 +20,7 @@ iOS 版本不会移植 Windows 的 TSF 或 WebView2 宿主，而是复用 `Metas
 - macOS 12 或更高版本
 - Xcode 命令行工具
 - CMake 3.25 或更高版本
-- Homebrew 包：`boost`、`fmt` 和 `spdlog`
+- Homebrew 包：`boost`、`fmt`、`spdlog` 和 `nlohmann-json`
 - Python 3
 
 ## 构建
@@ -28,7 +28,7 @@ iOS 版本不会移植 Windows 的 TSF 或 WebView2 宿主，而是复用 `Metas
 ```sh
 git clone --recursive https://github.com/metasequoiaime/MSIME-Apple.git
 cd MSIME-Apple
-brew install cmake boost fmt spdlog
+brew install cmake boost fmt spdlog nlohmann-json
 ./platforms/macos/scripts/build.sh
 ```
 
@@ -36,7 +36,7 @@ brew install cmake boost fmt spdlog
 
 换用新的词库版本：`python3 scripts/product_lock.py refresh --dictionary-tag dict-YYYY.MM.DD`，然后 review 产生的 diff。
 
-本仓不再从源数据构建词库，也不再把 MSIME-Dict 挂成 submodule：要改词库源数据请在 [MSIME-Dict](https://github.com/metasequoiaime/MSIME-Dict) 里改并发一个新的 `dict-*` release，那里的 `build_all.py` 是唯一的编排。
+公共词库源数据、构建器、辅助码与语音模块现在统一来自固定的 [MSIME-Engine](https://github.com/metasequoiaime/MSIME-Engine) submodule。桌面端继续下载锁定的已发布词库；iOS 打包通过同一 Engine 中的 `build_profile.py` 构建移动词库。现有 MSIME-Dict release 的来源和摘要保持不变，不能用新的构建器提交替代它们。
 
 ## 为当前用户安装
 
@@ -57,6 +57,14 @@ brew install cmake boost fmt spdlog
 文本输入菜单还会显示水杉当前处于「中文输入」还是「英文输入」模式，以及中文候选使用「简体输出」还是「繁体输出」，并提供 macOS「表情与符号」查看器入口，因此关闭悬浮状态栏后仍然可用。可以直接选择对应输入模式，也可以按 Shift+Space；切换到英文时会先把正在进行的中文组词上屏，之后的按键原样透传。Shift+Space 快捷键默认启用，与其他工作流冲突时可在设置中关闭。
 
 紧凑的原生悬浮状态栏会反映当前的中英文、标点、全角和简繁状态。其齿轮按钮会打开原生工具菜单，提供 macOS「表情与符号」查看器、设置、检查更新、msime.app 和「隐藏悬浮状态栏」；隐藏后可在原有的设置项中重新启用。
+
+## macOS 语音接入
+
+输入法菜单中的「语音输入设置…」可配置兼容 OpenAI multipart 转写接口的 HTTPS 服务与模型，或选择本地 Whisper 模型文件。密钥按服务来源分别保存在系统钥匙串中；更换服务地址后需重新填写密钥。文本整理单独启用并配置，会将转写文本发送给指定的整理服务。
+
+切换到水杉后，按 Control+Option+V 开始录音，再按一次结束并识别，也可使用输入法菜单的「语音输入」入口。首次使用会请求麦克风权限，录音最长 60 秒。Esc、继续键盘输入、移动光标或切换输入窗口会取消当前请求，取消后的结果不会上屏。本地模型推理已开始时可能继续计算，但结果仍会被丢弃。音频只在本次请求的内存中保存；云端识别会上传本次录音。详见 [隐私说明](PRIVACY.md)。
+
+macOS 产品直接链接 Engine 的 `Voice`、`VoiceCapture` 和 `VoiceWhisper` 目标。平台层负责权限、钥匙串、录音提示和 IMK 上屏。iOS 目前只接入公共输入引擎与词库构建器，尚未提供语音入口。
 
 ## 开发测试
 
@@ -145,4 +153,4 @@ shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256
 
 ### 词库产品边界
 
-macOS 使用固定发布词库；iOS 从同一已校验的数据库调用 `tools/MetasequoiaImeDict/build_profile.py --profile mobile --source ...`。初始化工具：`git submodule update --init --recursive`。工具 gitlink 与数据发布源 commit 分别记录，移动产物同时带格式、压缩规则、来源摘要和文件摘要清单。现代发布必须携带清单；已锁定的 `dict-2026.09.05` 是明确的无清单兼容入口。
+macOS 使用固定发布词库；iOS 从同一已校验的数据库调用 `vendor/MetasequoiaImeEngine/build_profile.py --profile mobile --source ...`。初始化工具：`git submodule update --init --recursive`。工具 gitlink 与数据发布源 commit 分别记录，移动产物同时带格式、压缩规则、来源摘要和文件摘要清单。现代发布必须携带清单；已锁定的 `dict-2026.09.05` 是明确的无清单兼容入口。

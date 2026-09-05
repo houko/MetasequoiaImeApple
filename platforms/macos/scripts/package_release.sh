@@ -1,6 +1,7 @@
 #!/bin/zsh
 set -euo pipefail
 
+voice_entitlements=${0:A:h:h}/resources/VoiceInput.entitlements
 project_root=${METASEQUOIA_PROJECT_ROOT:-${0:A:h:h:h:h}}
 project_root=${project_root:A}
 install_script=${METASEQUOIA_RELEASE_INSTALL_SCRIPT:-$project_root/platforms/macos/scripts/install-release.sh}
@@ -165,7 +166,7 @@ if [[ "$require_release_signing" != true ]]; then
         "$packaged_bundle/Contents/Info.plist"
 fi
 if [[ -n "$application_identity" ]]; then
-    codesign --force --deep --options runtime --timestamp --sign "$application_identity" "$packaged_bundle"
+    codesign --force --deep --options runtime --timestamp --entitlements "$voice_entitlements" --sign "$application_identity" "$packaged_bundle"
 else
     codesign --force --deep --sign - "$packaged_bundle"
 fi

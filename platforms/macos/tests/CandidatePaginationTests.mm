@@ -222,6 +222,107 @@ static void RunTests()
     }
 }
 
+@interface DeferredVoiceService : NSObject <MetasequoiaVoiceService>
+@property(nonatomic) BOOL active;
+@property(nonatomic) BOOL recording;
+@property(nonatomic, copy) MetasequoiaVoiceCompletion pending;
+@end
+@implementation DeferredVoiceService
+- (void)startWithCompletion:(MetasequoiaVoiceCompletion)completion { self.active=YES; self.recording=YES; self.pending=completion; }
+- (void)stop { self.recording=NO; }
+- (void)cancel { self.active=NO; self.recording=NO; } // Deliberately retain stale callback to exercise host defenses.
+@end
+@interface VoiceInputClient : RecordingInputClient
+@property(nonatomic) NSRange range;
+@end
+@implementation VoiceInputClient
+- (NSRange)selectedRange { return self.range; }
+@end
+@interface MetasequoiaInputController (VoiceTestFixture)
+- (void)prepareVoiceFixture:(id<MetasequoiaVoiceService>)service;
+@end
+@implementation MetasequoiaInputController (VoiceTestFixture)
+- (void)prepareVoiceFixture:(id<MetasequoiaVoiceService>)service {
+    [self cancelVoiceInput]; _voiceService=service; _serverActive=YES; _session.reset();
+}
+@end
+@interface VoiceTestController : PaginationTestController
+@property(nonatomic, strong) NSError *voiceError;
+@end
+@implementation VoiceTestController
+- (void)showVoiceError:(NSError *)error { self.voiceError=error; }
+@end
+static void RunVoiceTests() {
+    VoiceTestController *controller = [VoiceTestController new];
+    VoiceInputClient *first = [VoiceInputClient new]; first.range=NSMakeRange(10,0);
+    VoiceInputClient *second = [VoiceInputClient new]; second.range=NSMakeRange(10,0);
+    DeferredVoiceService *voice = [DeferredVoiceService new];
+    controller.testClient=first;
+    [controller prepareVoiceFixture:voice];
+    [controller toggleVoiceInput:nil];
+    Require(voice.active && voice.recording, "Voice entry did not start the service.");
+    [controller toggleVoiceInput:nil];
+    Require(voice.active && !voice.recording, "Voice entry did not finish recording.");
+    voice.pending(@"水杉 voice", nil);
+    Require([first.committed isEqualToString:@"水杉 voice"], "Voice output was not committed through the input client.");
+    first.committed=nil;
+
+    [controller toggleVoiceInput:nil];
+    MetasequoiaVoiceCompletion stale=voice.pending;
+    [controller cancelVoiceInput];
+    stale(@"取消后的文本", nil);
+    Require(first.committed == nil, "Cancelled voice committed stale text.");
+
+    [controller toggleVoiceInput:nil]; stale=voice.pending;
+    [controller cancelVoiceInput]; [controller toggleVoiceInput:nil];
+    stale(@"旧请求", nil);
+    Require(first.committed == nil && voice.active, "An old callback affected a newer request.");
+    voice.pending(@"新请求", nil);
+    Require([first.committed isEqualToString:@"新请求"], "The active request did not commit.");
+    first.committed=nil;
+
+    [controller toggleVoiceInput:nil];
+    first.range=NSMakeRange(11,0);
+    voice.pending(@"位置已变化", nil);
+    Require(first.committed == nil, "Voice output ignored a moved insertion point.");
+
+    [controller toggleVoiceInput:nil]; stale=voice.pending;
+    controller.testClient=second;
+    stale(@"错误窗口", nil);
+    Require(first.committed == nil && second.committed == nil, "Voice output crossed input clients.");
+    [controller cancelVoiceInput]; controller.testClient=first;
+
+    [controller toggleVoiceInput:nil]; stale=voice.pending;
+    // The IMK superclass requires a registered server. Exercise our real
+    // deactivation work without invoking that external framework boundary.
+    [controller prepareForDeactivation:first];
+    stale(@"失去焦点", nil);
+    Require(first.committed == nil && !voice.active, "Deactivation did not cancel voice output.");
+    [controller prepareVoiceFixture:voice];
+
+    NSEvent *toggle = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint
+        modifierFlags:NSEventModifierFlagControl | NSEventModifierFlagOption timestamp:0 windowNumber:0 context:nil
+        characters:@"v" charactersIgnoringModifiers:@"v" isARepeat:NO keyCode:9];
+    Require([controller handleEvent:toggle client:first] && voice.recording, "Voice shortcut did not start recording.");
+    stale=voice.pending;
+    NSEvent *escape = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
+        windowNumber:0 context:nil characters:@"" charactersIgnoringModifiers:@"" isARepeat:NO keyCode:53];
+    Require([controller handleEvent:escape client:first] && !voice.active, "Escape did not cancel voice.");
+    stale(@"Esc 后的文本", nil);
+    Require(first.committed == nil, "Escape allowed a late result.");
+
+    [controller toggleVoiceInput:nil]; stale=voice.pending;
+    NSEvent *navigation = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0
+        windowNumber:0 context:nil characters:@"" charactersIgnoringModifiers:@"" isARepeat:NO keyCode:kVK_LeftArrow];
+    [controller handleEvent:navigation client:first]; stale(@"键盘移动后", nil);
+    Require(first.committed == nil && !voice.active, "Keyboard navigation did not invalidate voice.");
+
+    [controller toggleVoiceInput:nil];
+    voice.pending(nil, [NSError errorWithDomain:@"fixture" code:1 userInfo:nil]);
+    Require(controller.voiceError != nil && first.committed == nil, "Voice failure inserted text or lost its error.");
+    [controller cancelVoiceInput]; voice.pending=nil;
+}
+
 int main()
 {
     @autoreleasepool
@@ -246,7 +347,7 @@ int main()
             "CREATE TABLE tbl_2_s(key TEXT,jp TEXT,value TEXT,weight INTEGER)",
             nullptr, nullptr, nullptr) == SQLITE_OK, "Cannot create partial-selection fixture.");
         sqlite3_close(database);
-        try { RunTests(); }
+        try { RunTests(); RunVoiceTests(); }
         catch (const std::exception &error)
         {
             fprintf(stderr, "%s\n", error.what());

@@ -428,7 +428,13 @@ class ReleasePackageTests(unittest.TestCase):
                 "  *' --force '*)\n"
                 "    target=\n"
                 "    for argument in \"$@\"; do target=$argument; done\n"
-                "    exec /usr/bin/codesign --force --deep --sign - \"$target\"\n"
+                "    entitlement=\n"
+                "    previous=\n"
+                "    for argument in \"$@\"; do\n"
+                "      if [[ $previous == --entitlements ]]; then entitlement=$argument; fi\n"
+                "      previous=$argument\n"
+                "    done\n"
+                "    exec /usr/bin/codesign --force --deep --entitlements \"$entitlement\" --sign - \"$target\"\n"
                 "    ;;\n"
                 "esac\n"
                 "exec /usr/bin/codesign \"$@\"\n"
@@ -518,6 +524,7 @@ class ReleasePackageTests(unittest.TestCase):
 
             signing_calls = signing_log.read_text()
             self.assertIn("--sign Developer ID Application: Test", signing_calls)
+            self.assertIn(f"--entitlements {MACOS_ROOT}/resources/VoiceInput.entitlements", signing_calls)
             self.assertIn("productsign --sign Developer ID Installer: Test", signing_calls)
             notary_calls = [line for line in signing_calls.splitlines() if line.startswith("xcrun notarytool submit ")]
             self.assertEqual(len(notary_calls), 2)
@@ -545,6 +552,11 @@ class ReleasePackageTests(unittest.TestCase):
                 ["/usr/bin/codesign", "--verify", "--deep", "--strict", package_root / "MetasequoiaIME.app"],
                 check=True,
             )
+            entitlements = subprocess.run(
+                ["/usr/bin/codesign", "-d", "--entitlements", ":-", package_root / "MetasequoiaIME.app"],
+                check=True, capture_output=True,
+            ).stdout
+            self.assertTrue(plistlib.loads(entitlements)["com.apple.security.device.audio-input"])
             install_command = (package_root / "Install.command").read_text()
             self.assertIn("spctl --assess --type execute", install_command)
             settings_command = package_root / "Open Settings.command"

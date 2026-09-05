@@ -597,7 +597,9 @@ class ReleaseConfigurationTests(unittest.TestCase):
         security = (PROJECT_ROOT / "SECURITY.md").read_text()
         self.assertIn("~/Library/Application Support/metasequoiaime/", privacy)
         self.assertIn("does not send typed text", privacy)
-        self.assertIn("does not sell or share personal data", privacy)
+        self.assertIn("does not sell personal data", privacy)
+        self.assertIn("current recording is sent to the HTTPS endpoint configured by the user", privacy)
+        self.assertIn("API tokens are stored in the system Keychain", privacy)
         self.assertIn("GitHub's public Releases API", privacy)
         self.assertIn("IP address and standard network request metadata", privacy)
         self.assertIn(
@@ -659,14 +661,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         # it was replaced upstream (MSIME-Windows#74). It is downloaded from a pinned, checksummed
         # release instead; re-adding it as a submodule would reintroduce that drift.
         self.assertIsNone(read_submodule_value("vendor/MetasequoiaImeDict", "path"))
-        self.assertEqual(
-            submodule_value("vendor/MetasequoiaImeHelpCode", "path"),
-            "vendor/MetasequoiaImeHelpCode",
-        )
-        self.assertEqual(
-            submodule_value("vendor/MetasequoiaImeHelpCode", "url"),
-            "https://github.com/metasequoiaime/MSIME-HelpCode.git",
-        )
+        self.assertIsNone(read_submodule_value("vendor/MetasequoiaImeHelpCode", "path"))
+        self.assertIsNone(read_submodule_value("tools/MetasequoiaImeDict", "path"))
 
     def test_dictionary_is_fetched_from_a_locked_verified_release(self):
         source = (PROJECT_ROOT / "scripts/fetch_dictionary.py").read_text()
@@ -709,7 +705,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
 
     def test_macos_bundle_packages_helpcode_assets(self):
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
-        self.assertIn("vendor/MetasequoiaImeHelpCode/helpcodes", cmake)
+        self.assertIn("vendor/MetasequoiaImeEngine/helpcode/helpcodes", cmake)
         self.assertIn("Resources/helpcodes", cmake)
 
     def test_release_scripts_have_valid_zsh_syntax(self):
