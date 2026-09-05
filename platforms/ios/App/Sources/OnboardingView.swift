@@ -4,6 +4,7 @@ import UIKit
 struct OnboardingView: View {
   @State private var sampleText = ""
   @State private var usesShuangpin = InputSchemePreference.usesShuangpin
+  @State private var usesTraditionalOutput = ChineseOutputPreference.usesTraditional
 
   private let steps = [
     ("1", "打开键盘设置", "前往“设置 → 通用 → 键盘 → 键盘”。"),
@@ -66,6 +67,35 @@ struct OnboardingView: View {
           .onChange(of: usesShuangpin) { newValue in
             InputSchemePreference.usesShuangpin = newValue
           }
+
+          Divider()
+
+          HStack(spacing: 12) {
+            Image(systemName: "character.book.closed")
+              .font(.system(size: 17, weight: .semibold))
+              .foregroundStyle(MetasequoiaTheme.forest)
+              .frame(width: 38, height: 38)
+              .background(MetasequoiaTheme.mist, in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+              Text("输出字形")
+                .font(.headline)
+                .foregroundStyle(MetasequoiaTheme.ink)
+              Text("词库保持简体，仅转换候选和上屏文字")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            }
+          }
+
+          Picker("输出字形", selection: $usesTraditionalOutput) {
+            Text("简体").tag(false)
+            Text("繁体").tag(true)
+          }
+          .pickerStyle(.segmented)
+          .accessibilityIdentifier("chineseOutputPicker")
+          .onChange(of: usesTraditionalOutput) { newValue in
+            ChineseOutputPreference.usesTraditional = newValue
+          }
         }
         .padding(18)
         .background(.background, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -75,6 +105,7 @@ struct OnboardingView: View {
         }
         .onAppear {
           usesShuangpin = InputSchemePreference.usesShuangpin
+          usesTraditionalOutput = ChineseOutputPreference.usesTraditional
         }
 
         VStack(alignment: .leading, spacing: 10) {

@@ -25,4 +25,6 @@ The keyboard routes letter input, composition editing, raw/candidate commit, can
 
 The host app exposes the same input-scheme setting as a native segmented control. A changed setting is picked up when the keyboard appears or before the next composition begins; an active composition keeps its original scheme until it is committed or cancelled.
 
+The host app also exposes a simplified/traditional output setting, shared through the same App Group and defaulting to simplified. The engine and the packaged dictionary keep their original simplified strings; only the candidates shown in the keyboard and the text it commits are converted, through Core Foundation's `Simplified-Traditional` transform. Candidate selection continues to use engine indexes, and the preedit is left alone because it carries pinyin rather than Chinese output.
+
 `prepare_dictionary.py` first builds the canonical database, then retains all single-syllable entries and common multi-syllable entries with weight 2000 or greater. The generated database and its SHA-256 sidecar are ignored build artifacts. At runtime the extension atomically installs a changed bundled database into its private writable Application Support directory, keeping dictionary access local without requesting Open Access.

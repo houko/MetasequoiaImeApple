@@ -66,6 +66,54 @@ class ProjectConfigurationTests(unittest.TestCase):
             )
             subprocess.run([str(executable)], check=True)
 
+    def test_chinese_output_conversion(self):
+        conversion = IOS_ROOT / "SharedUI/ChineseTextConversion.swift"
+        tests = IOS_ROOT / "tests/ChineseTextConversionTests.swift"
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            executable = Path(temporary_directory) / "ChineseTextConversionTests"
+            subprocess.run(
+                ["swiftc", str(conversion), str(tests), "-o", str(executable)],
+                check=True,
+            )
+            subprocess.run([str(executable)], check=True)
+
+    def test_host_and_keyboard_share_the_chinese_output_script(self):
+        preference = (IOS_ROOT / "SharedUI/ChineseOutputPreference.swift").read_text()
+        onboarding = (IOS_ROOT / "App/Sources/OnboardingView.swift").read_text()
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        self.assertIn('private static let key = "chineseOutputUsesTraditional"', preference)
+        self.assertIn("UserDefaults(suiteName: InputSchemePreference.appGroupIdentifier)", preference)
+
+        self.assertIn(
+            "@State private var usesTraditionalOutput = ChineseOutputPreference.usesTraditional",
+            onboarding,
+        )
+        self.assertIn('Picker("输出字形", selection: $usesTraditionalOutput)', onboarding)
+        self.assertIn('Text("简体").tag(false)', onboarding)
+        self.assertIn('Text("繁体").tag(true)', onboarding)
+        self.assertIn('.accessibilityIdentifier("chineseOutputPicker")', onboarding)
+        self.assertIn("ChineseOutputPreference.usesTraditional = newValue", onboarding)
+
+        self.assertIn("usesTraditionalOutput = ChineseOutputPreference.usesTraditional", controller)
+        self.assertIn("synchronizeChineseOutputPreference()", controller)
+
+    def test_only_visible_candidates_and_commits_change_script(self):
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+
+        # The engine and the packaged dictionary stay simplified, so conversion belongs at the
+        # render and commit boundary only. Converting the preedit would rewrite pinyin, and
+        # converting before selection would break the engine index the candidate chips carry.
+        self.assertIn("textDocumentProxy.insertText(chineseOutput(commitText))", controller)
+        self.assertIn("let display = chineseOutput(candidate)", controller)
+        self.assertIn('configuration.title = "\\(number)  \\(display)"', controller)
+        self.assertIn("self.render(self.session.selectCandidate(at: UInt(number - 1)))", controller)
+
+        strip = controller.split("private func renderCandidateStrip", 1)[1].split("\n  }", 1)[0]
+        self.assertIn("visiblePreedit", strip)
+        self.assertNotIn("chineseOutput(visiblePreedit)", strip)
+
     def test_backspace_repeats_only_while_the_delete_key_is_held(self):
         controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
 
@@ -87,6 +135,19 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("UIDevice.current.playInputClick()", controller)
         self.assertIn("private func playInputClick()", controller)
         self.assertGreaterEqual(controller.count("playInputClick()"), 9)
+
+    def test_every_target_resolves_a_product_name(self):
+        # Xcode 26 stopped defaulting PRODUCT_NAME to the target name. Without the project-level
+        # fallback the bridge library links as a bare `-l` that swallows the next linker flag, and
+        # the UI-test target builds `.xctest` inside `-Runner.app`, which collide in the products
+        # directory. Both failures only appear at link and test time, so pin the setting here.
+        project = (IOS_ROOT / "project.yml").read_text()
+
+        self.assertIn("PRODUCT_NAME: $(TARGET_NAME)", project)
+        self.assertLess(
+            project.index("PRODUCT_NAME: $(TARGET_NAME)"),
+            project.index("targets:"),
+        )
 
     def test_project_defines_distinct_host_and_keyboard_identifiers(self):
         project = (IOS_ROOT / "project.yml").read_text()
@@ -185,9 +246,9 @@ class ProjectConfigurationTests(unittest.TestCase):
         controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
 
         self.assertIn("makeCandidateButton(candidate: candidate, number: index + 1)", controller)
-        self.assertIn('configuration.title = "\\(number)  \\(candidate)"', controller)
+        self.assertIn('configuration.title = "\\(number)  \\(display)"', controller)
         self.assertIn("configuration.background.cornerRadius", controller)
-        self.assertIn('button.accessibilityLabel = "候选词 \\(number)：\\(candidate)"', controller)
+        self.assertIn('button.accessibilityLabel = "候选词 \\(number)：\\(display)"', controller)
 
     def test_apostrophe_reaches_the_engine_before_punctuation_conversion(self):
         controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()

@@ -18,6 +18,11 @@ final class OnboardingUITests: XCTestCase {
     XCTAssertTrue(schemePicker.buttons["全拼"].exists)
     XCTAssertTrue(schemePicker.buttons["小鹤双拼"].exists)
 
+    let outputPicker = app.segmentedControls["chineseOutputPicker"]
+    XCTAssertTrue(outputPicker.exists)
+    XCTAssertTrue(outputPicker.buttons["简体"].exists)
+    XCTAssertTrue(outputPicker.buttons["繁体"].exists)
+
     let tryoutField = app.textFields["keyboardTryoutField"]
     XCTAssertTrue(tryoutField.exists)
     tryoutField.tap()

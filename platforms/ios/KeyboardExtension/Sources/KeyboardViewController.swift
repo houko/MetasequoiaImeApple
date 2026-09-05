@@ -23,6 +23,9 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private var hasComposition = false
   private var isChineseMode = true
   private var usesShuangpin = false
+  private var usesTraditionalOutput = false
+  private var visiblePreedit = ""
+  private var visibleCandidates: [String] = []
   private var showsSymbols = false
   private var letterCaseState = LetterCaseState.lowercase
   private var isAutomaticShift = false
@@ -44,6 +47,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   override func viewDidLoad() {
     super.viewDidLoad()
     usesShuangpin = InputSchemePreference.usesShuangpin
+    usesTraditionalOutput = ChineseOutputPreference.usesTraditional
     if usesShuangpin {
       _ = session.switch(toShuangpin: true)
     }
@@ -56,6 +60,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
     synchronizeInputSchemePreference()
+    synchronizeChineseOutputPreference()
   }
 
   override func textWillChange(_ textInput: UITextInput?) {
@@ -482,6 +487,21 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     render(snapshot)
   }
 
+  // The output script may change in the host app while the keyboard is loaded, so it is re-read on
+  // every appearance. Unlike the input scheme it never touches the session, so an active composition
+  // only needs its visible candidates redrawn.
+  private func synchronizeChineseOutputPreference() {
+    let sharedValue = ChineseOutputPreference.usesTraditional
+    guard sharedValue != usesTraditionalOutput else { return }
+
+    usesTraditionalOutput = sharedValue
+    renderCandidateStrip()
+  }
+
+  private func chineseOutput(_ text: String) -> String {
+    ChineseTextConversion.outputString(text, traditional: usesTraditionalOutput)
+  }
+
   private func updateSchemeButton() {
     var configuration = UIButton.Configuration.plain()
     configuration.title = usesShuangpin ? "小鹤" : "全拼"
@@ -577,30 +597,38 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
 
   private func render(_ snapshot: MetasequoiaInputSnapshot) {
     if let commitText = snapshot.commitText {
-      textDocumentProxy.insertText(commitText)
+      textDocumentProxy.insertText(chineseOutput(commitText))
     }
     hasComposition = !snapshot.preedit.isEmpty
     updateCandidateStrip(preedit: snapshot.preedit, candidates: snapshot.candidates)
   }
 
   private func updateCandidateStrip(preedit: String, candidates: [String]) {
+    visiblePreedit = preedit
+    visibleCandidates = candidates
+    renderCandidateStrip()
+  }
+
+  private func renderCandidateStrip() {
     preeditLabel.text =
-      preedit.isEmpty ? (isChineseMode ? "水杉输入法" : "英文输入") : preedit
+      visiblePreedit.isEmpty ? (isChineseMode ? "水杉输入法" : "英文输入") : visiblePreedit
     for view in candidateStack.arrangedSubviews {
       candidateStack.removeArrangedSubview(view)
       view.removeFromSuperview()
     }
 
-    for (index, candidate) in candidates.prefix(9).enumerated() {
+    for (index, candidate) in visibleCandidates.prefix(9).enumerated() {
       candidateStack.addArrangedSubview(
         makeCandidateButton(candidate: candidate, number: index + 1))
     }
-    candidateScrollView.isHidden = candidates.isEmpty
+    candidateScrollView.isHidden = visibleCandidates.isEmpty
   }
 
+  // Selection stays on the engine index, so only the shown text is converted.
   private func makeCandidateButton(candidate: String, number: Int) -> UIButton {
+    let display = chineseOutput(candidate)
     var configuration = UIButton.Configuration.plain()
-    configuration.title = "\(number)  \(candidate)"
+    configuration.title = "\(number)  \(display)"
     configuration.baseForegroundColor = .label
     configuration.contentInsets = NSDirectionalEdgeInsets(
       top: 4, leading: 9, bottom: 4, trailing: 9)
@@ -616,7 +644,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
         self.playInputClick()
         self.render(self.session.selectCandidate(at: UInt(number - 1)))
       })
-    button.accessibilityLabel = "候选词 \(number)：\(candidate)"
+    button.accessibilityLabel = "候选词 \(number)：\(display)"
     button.accessibilityIdentifier = "candidate-\(number)"
     return button
   }
