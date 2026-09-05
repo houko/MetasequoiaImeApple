@@ -796,6 +796,24 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [self showPreferences:nil];
 }
 
+- (void)floatingToolbarDidRequestCheckForUpdates:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [self checkForUpdates:nil];
+}
+
+- (void)floatingToolbarDidRequestOpenWebsite:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://msime.app/"]];
+}
+
+- (void)floatingToolbarDidRequestHide:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [MetasequoiaPreferencesWindowController setFloatingToolbarEnabled:NO];
+}
+
 - (void)selectChineseMode:(id)sender
 {
     (void)sender;

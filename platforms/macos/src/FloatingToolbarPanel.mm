@@ -73,6 +73,32 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
     return proposedFrame;
 }
 
+NSMenu *CreateMetasequoiaFloatingToolbarUtilityMenu(id target)
+{
+    NSMenu *menu = [[NSMenu alloc] initWithTitle:@"水杉输入法"];
+    for (NSMenuItem *item in @[
+             [[NSMenuItem alloc] initWithTitle:@"打开设置…" action:@selector(openSettings:) keyEquivalent:@""],
+             [[NSMenuItem alloc] initWithTitle:@"检查更新…" action:@selector(checkForUpdates:) keyEquivalent:@""],
+         ])
+    {
+        item.target = target;
+        [menu addItem:item];
+    }
+    [menu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *website = [[NSMenuItem alloc] initWithTitle:@"访问 msime.app"
+                                                    action:@selector(openWebsite:)
+                                             keyEquivalent:@""];
+    website.target = target;
+    [menu addItem:website];
+    [menu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *hide = [[NSMenuItem alloc] initWithTitle:@"隐藏悬浮状态栏"
+                                                 action:@selector(hideToolbar:)
+                                          keyEquivalent:@""];
+    hide.target = target;
+    [menu addItem:hide];
+    return menu;
+}
+
 @implementation MetasequoiaFloatingToolbarPanel
 {
     NSButton *_inputModeButton;
@@ -132,9 +158,9 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
     _traditionalOutputButton = ToolbarButton(@"简", @"MetasequoiaFloatingToolbarTraditionalOutput", self,
                                              @selector(toggleTraditionalOutput:));
     NSButton *settingsButton = ToolbarButton(@"", @"MetasequoiaFloatingToolbarSettings", self,
-                                             @selector(openSettings:));
+                                             @selector(showUtilityMenu:));
     settingsButton.image = [NSImage imageWithSystemSymbolName:@"gearshape" accessibilityDescription:@"设置"];
-    settingsButton.accessibilityLabel = @"打开水杉输入法设置";
+    settingsButton.accessibilityLabel = @"打开水杉输入法工具菜单";
 
     NSStackView *actions = [NSStackView stackViewWithViews:@[
         _inputModeButton, _punctuationButton, _fullWidthButton, _traditionalOutputButton, settingsButton
@@ -250,5 +276,31 @@ traditionalChineseOutputEnabled:(BOOL)traditionalChineseOutputEnabled
 {
     (void)sender;
     [self.toolbarDelegate floatingToolbarDidRequestOpenSettings:self];
+}
+
+- (void)checkForUpdates:(id)sender
+{
+    (void)sender;
+    [self.toolbarDelegate floatingToolbarDidRequestCheckForUpdates:self];
+}
+
+- (void)openWebsite:(id)sender
+{
+    (void)sender;
+    [self.toolbarDelegate floatingToolbarDidRequestOpenWebsite:self];
+}
+
+- (void)hideToolbar:(id)sender
+{
+    (void)sender;
+    [self.toolbarDelegate floatingToolbarDidRequestHide:self];
+}
+
+- (void)showUtilityMenu:(NSButton *)sender
+{
+    NSMenu *menu = CreateMetasequoiaFloatingToolbarUtilityMenu(self);
+    [menu popUpMenuPositioningItem:nil
+                       atLocation:NSMakePoint(NSMinX(sender.bounds), NSMaxY(sender.bounds) + 4.0)
+                           inView:sender];
 }
 @end
