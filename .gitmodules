@@ -7,5 +7,5 @@
 	url = https://github.com/metasequoiaime/MSIME-Dict.git
 [submodule "vendor/MetasequoiaImeHelpCode"]
 	path = vendor/MetasequoiaImeHelpCode
-	url = https://github.com/metasequoiaime/MetasequoiaImeHelpCode.git
+	url = https://github.com/metasequoiaime/MSIME-HelpCode.git
 	branch = main
