@@ -18,12 +18,29 @@ set(METASEQUOIA_SPARKLE_SHA256 "52bf9e88cdd972fc0c81501377a880e90d47031bd8ca5462
 set(METASEQUOIA_SPARKLE_URL
     "https://github.com/sparkle-project/Sparkle/releases/download/${METASEQUOIA_SPARKLE_VERSION}/Sparkle-${METASEQUOIA_SPARKLE_VERSION}.tar.xz")
 
+set(METASEQUOIA_IME_BUILD_VOICE ON CACHE BOOL "" FORCE)
+set(MSIME_VOICE_WHISPER ON CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+# The pinned BLAS backend requires macOS 13.3; keep the supported macOS 12 floor.
+# Metal and the CPU backend remain available for local Whisper.
+set(GGML_BLAS OFF CACHE BOOL "" FORCE)
 add_subdirectory(vendor/MetasequoiaImeEngine engine)
+add_library(MetasequoiaAppleVoice STATIC
+    ${METASEQUOIA_MACOS_ROOT}/src/VoiceInputService.mm
+    ${METASEQUOIA_MACOS_ROOT}/src/VoiceSettings.mm)
+target_compile_options(MetasequoiaAppleVoice PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
+target_link_libraries(MetasequoiaAppleVoice PUBLIC MetasequoiaIme::Voice MetasequoiaIme::VoiceCapture MetasequoiaIme::VoiceWhisper
+    "-framework AppKit" "-framework AVFoundation" "-framework Security")
 
 if(BUILD_TESTING)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(INPUT_METHOD_KIT_FRAMEWORK InputMethodKit REQUIRED)
+    add_executable(MetasequoiaVoiceSettingsTests ${METASEQUOIA_MACOS_ROOT}/tests/VoiceSettingsTests.mm)
+    target_compile_options(MetasequoiaVoiceSettingsTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
+    target_link_libraries(MetasequoiaVoiceSettingsTests PRIVATE "-framework AppKit" "-framework Security")
+    add_test(NAME voice_settings COMMAND MetasequoiaVoiceSettingsTests)
     add_executable(MetasequoiaCandidateSelectionStateTests ${METASEQUOIA_MACOS_ROOT}/tests/CandidateSelectionStateTests.cpp)
     target_link_libraries(MetasequoiaCandidateSelectionStateTests PRIVATE MetasequoiaIme::Engine)
     target_compile_options(MetasequoiaCandidateSelectionStateTests PRIVATE -Wall -Wextra -Wpedantic -Werror)
@@ -141,16 +158,21 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
     configure_file(licenses/spdlog-LICENSE ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt COPYONLY)
     configure_file(${METASEQUOIA_SPARKLE_ROOT}/LICENSE
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Sparkle-LICENSE.txt COPYONLY)
+    configure_file(licenses/nlohmann-json-LICENSE ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-nlohmann-json.txt COPYONLY)
+    configure_file(vendor/MetasequoiaImeEngine/voice/third_party/miniaudio/LICENSE
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/miniaudio-LICENSE.txt COPYONLY)
+    configure_file(vendor/MetasequoiaImeEngine/voice/third_party/whisper.cpp/LICENSE
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-whisper.txt COPYONLY)
     set(METASEQUOIA_IME_UNINSTALLER ${CMAKE_CURRENT_BINARY_DIR}/Uninstall.command)
     configure_file(${METASEQUOIA_MACOS_ROOT}/scripts/uninstall.sh ${METASEQUOIA_IME_UNINSTALLER} COPYONLY)
 
     set(METASEQUOIA_IME_ICONS ${METASEQUOIA_MACOS_ROOT}/resources/MetasequoiaIME.icns ${METASEQUOIA_MACOS_ROOT}/resources/MetasequoiaIMEMenuIcon.tiff)
     set(METASEQUOIA_IME_HELPCODES
-        vendor/MetasequoiaImeHelpCode/helpcodes/helpcode.txt
-        vendor/MetasequoiaImeHelpCode/helpcodes/zrm_helpcode_big_unique.txt
-        vendor/MetasequoiaImeHelpCode/helpcodes/shouyou2_0_helpcode.txt
-        vendor/MetasequoiaImeHelpCode/helpcodes/shouyouplus_helpcode.txt
-        vendor/MetasequoiaImeHelpCode/helpcodes/xiaohe_helpcode.txt)
+        vendor/MetasequoiaImeEngine/helpcode/helpcodes/helpcode.txt
+        vendor/MetasequoiaImeEngine/helpcode/helpcodes/zrm_helpcode_big_unique.txt
+        vendor/MetasequoiaImeEngine/helpcode/helpcodes/shouyou2_0_helpcode.txt
+        vendor/MetasequoiaImeEngine/helpcode/helpcodes/shouyouplus_helpcode.txt
+        vendor/MetasequoiaImeEngine/helpcode/helpcodes/xiaohe_helpcode.txt)
     set(METASEQUOIA_IME_LOCALIZATIONS ${METASEQUOIA_MACOS_ROOT}/resources/en.lproj/InfoPlist.strings ${METASEQUOIA_MACOS_ROOT}/resources/zh-Hans.lproj/InfoPlist.strings)
     set(METASEQUOIA_IME_LEGAL_RESOURCES
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/GPL-3.0.txt
@@ -159,7 +181,10 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Boost-1.0.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt
-        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Sparkle-LICENSE.txt)
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Sparkle-LICENSE.txt
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-nlohmann-json.txt
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/miniaudio-LICENSE.txt
+        ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-whisper.txt)
     add_executable(MetasequoiaIME MACOSX_BUNDLE ${METASEQUOIA_MACOS_ROOT}/src/main.mm ${METASEQUOIA_MACOS_ROOT}/src/CandidatePanel.mm ${METASEQUOIA_MACOS_ROOT}/src/ChineseTextConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm ${METASEQUOIA_MACOS_ROOT}/src/FloatingToolbarPanel.mm ${METASEQUOIA_MACOS_ROOT}/src/InputSourceRegistration.mm ${METASEQUOIA_MACOS_ROOT}/src/MetasequoiaInputController.mm ${METASEQUOIA_MACOS_ROOT}/src/PreferencesWindowController.mm ${METASEQUOIA_MACOS_ROOT}/src/ShuangpinKeymapPanel.mm ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/UpdateController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICONS} ${METASEQUOIA_IME_HELPCODES} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
     get_filename_component(dictionary_directory "${METASEQUOIA_IME_DICTIONARY}" DIRECTORY)
     if(EXISTS "${dictionary_directory}/dictionary-manifest.json")
@@ -179,7 +204,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources HEADER_FILE_ONLY TRUE)
     set_target_properties(MetasequoiaIME PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/MetasequoiaIME-Info.plist MACOSX_BUNDLE_BUNDLE_NAME "Metasequoia IME" MACOSX_BUNDLE_GUI_IDENTIFIER "com.houko.inputmethod.MetasequoiaIME" MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION} MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION} OUTPUT_NAME MetasequoiaIME BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "@executable_path/../Frameworks")
     target_compile_options(MetasequoiaIME PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
-    target_link_libraries(MetasequoiaIME PRIVATE MetasequoiaIme::Engine MetasequoiaSparkle ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
+    target_link_libraries(MetasequoiaIME PRIVATE MetasequoiaAppleVoice MetasequoiaIme::Engine MetasequoiaSparkle ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
     add_custom_command(TARGET MetasequoiaIME POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_DIR:MetasequoiaIME>/Contents/Frameworks"
         COMMAND /usr/bin/ditto "${METASEQUOIA_SPARKLE_FRAMEWORK}"
@@ -198,7 +223,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
             ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm
             ${METASEQUOIA_MACOS_ROOT}/src/UpdateController.mm)
         target_compile_options(MetasequoiaCandidatePaginationTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
-        target_link_libraries(MetasequoiaCandidatePaginationTests PRIVATE MetasequoiaIme::Engine MetasequoiaSparkle ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
+        target_link_libraries(MetasequoiaCandidatePaginationTests PRIVATE MetasequoiaAppleVoice MetasequoiaIme::Engine MetasequoiaSparkle ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
         set_target_properties(MetasequoiaCandidatePaginationTests PROPERTIES BUILD_RPATH "${METASEQUOIA_SPARKLE_ROOT}")
         add_test(NAME candidate_pagination COMMAND MetasequoiaCandidatePaginationTests)
         add_executable(MetasequoiaDictionaryInstallerTests ${METASEQUOIA_MACOS_ROOT}/tests/DictionaryInstallerTests.mm ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm)

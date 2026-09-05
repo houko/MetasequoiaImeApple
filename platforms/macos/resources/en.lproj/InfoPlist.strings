@@ -2,3 +2,4 @@
 "CFBundleName" = "Metasequoia IME";
 "com.houko.inputmethod.MetasequoiaIME" = "Metasequoia IME";
 "com.houko.inputmethod.MetasequoiaIME.Hans" = "Metasequoia IME";
+"NSMicrophoneUsageDescription" = "Record speech only when voice input is started, to transcribe and insert your words.";

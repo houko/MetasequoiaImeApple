@@ -23,9 +23,13 @@ void require(bool condition, const char *message)
 @property(nonatomic) BOOL englishSelected;
 @property(nonatomic) BOOL simplifiedSelected;
 @property(nonatomic) BOOL traditionalSelected;
+@property(nonatomic) BOOL voiceToggled;
+@property(nonatomic) BOOL voiceSettingsShown;
 @end
 
 @implementation PreferencesTarget
+- (void)toggleVoiceInput:(id)sender { (void)sender; self.voiceToggled = YES; }
+- (void)showVoiceSettings:(id)sender { (void)sender; self.voiceSettingsShown = YES; }
 - (void)showPreferences:(id)sender
 {
     (void)sender;
@@ -77,7 +81,7 @@ int main()
         PreferencesTarget *target = [[PreferencesTarget alloc] init];
         NSMenu *menu = CreateMetasequoiaInputMenu(target, NO, NO);
 
-        require(menu.numberOfItems == 9,
+        require(menu.numberOfItems == 12,
                 "The input menu did not contain input modes, output character sets, character palette, update, and "
                 "settings actions.");
         NSMenuItem *chineseItem = [menu itemAtIndex:0];
@@ -124,6 +128,9 @@ int main()
         require(settingsItem.target == target, "The settings action did not target the input controller.");
         require(settingsItem.enabled, "The settings action was unexpectedly disabled.");
 
+        [menu performActionForItemAtIndex:10];
+        [menu performActionForItemAtIndex:11];
+        require(target.voiceToggled && target.voiceSettingsShown, "Voice menu actions were not dispatched.");
         [menu performActionForItemAtIndex:1];
         require(target.englishSelected, "The English input mode action was not dispatched.");
         NSMenu *englishMenu = CreateMetasequoiaInputMenu(target, YES, YES);

@@ -15,6 +15,8 @@
 #include "InputSchemePreference.h"
 #include "WubiCommitPolicy.h"
 #import "PreferencesWindowController.h"
+#import "VoiceInputService.h"
+#import "VoiceSettings.h"
 #import "ShuangpinKeymapPanel.h"
 #import "UpdateController.h"
 #include "StringConversion.h"
@@ -111,6 +113,9 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     BOOL _shuangpinKeymapEnabled;
     BOOL _localInputModesEnabled;
     NSTimeInterval _dictionaryRetryAfter;
+    id<MetasequoiaVoiceService> _voiceService;
+    NSUInteger _voiceGeneration;
+    id _voiceMouseMonitor;
 }
 
 - (instancetype)initWithServer:(IMKServer *)server delegate:(id)delegate client:(id)inputClient
@@ -153,6 +158,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 
 - (void)dealloc
 {
+    [_voiceService cancel];
+    if (_voiceMouseMonitor) [NSEvent removeMonitor:_voiceMouseMonitor];
     [_floatingToolbarPanel deactivateForDelegate:self];
     [_shuangpinKeymapPanel orderOut:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
@@ -416,6 +423,18 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     {
         return NO;
     }
+    const NSEventModifierFlags voiceModifiers = event.modifierFlags &
+        (NSEventModifierFlagControl | NSEventModifierFlagOption | NSEventModifierFlagCommand | NSEventModifierFlagShift);
+    if (event.keyCode == 9 && voiceModifiers == (NSEventModifierFlagControl | NSEventModifierFlagOption))
+    {
+        if (!event.isARepeat) [self toggleVoiceInput:sender];
+        return YES;
+    }
+    if (_voiceService.active)
+    {
+        [self cancelVoiceInput];
+        if (event.keyCode == 53) return YES;
+    }
     const NSEventModifierFlags inputModeModifiers =
         event.modifierFlags & NSEventModifierFlagDeviceIndependentFlagsMask;
     if (metasequoia::mac::ShouldToggleInputMode(
@@ -612,6 +631,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 
 - (void)commitLeadingCandidate:(id)sender
 {
+    [self cancelVoiceInput];
     if (_session == nullptr || !_session->has_composition())
     {
         return;
@@ -871,14 +891,79 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [self commitLeadingCandidate:sender];
 }
 
-- (void)deactivateServer:(id)sender
+- (void)prepareForDeactivation:(id)sender
 {
     _serverActive = NO;
     [_floatingToolbarPanel deactivateForDelegate:self];
     [self commitComposition:sender];
     [_candidatePanel hide];
     [_shuangpinKeymapPanel orderOut:nil];
+}
+
+- (void)deactivateServer:(id)sender
+{
+    [self prepareForDeactivation:sender];
     [super deactivateServer:sender];
+}
+
+- (id<MetasequoiaVoiceService>)voiceService
+{
+    if (!_voiceService) _voiceService = [MetasequoiaVoiceInputService new];
+    return _voiceService;
+}
+
+- (void)cancelVoiceInput
+{
+    ++_voiceGeneration;
+    [_voiceService cancel];
+    if (_voiceMouseMonitor) [NSEvent removeMonitor:_voiceMouseMonitor];
+    _voiceMouseMonitor = nil;
+}
+
+- (void)showVoiceError:(NSError *)error
+{
+    NSAlert *alert = [NSAlert new];
+    alert.messageText = @"语音输入未完成";
+    alert.informativeText = error.localizedDescription;
+    [alert addButtonWithTitle:@"好"];
+    [alert runModal];
+}
+
+- (void)toggleVoiceInput:(id)sender
+{
+    (void)sender;
+    if (!_serverActive) return;
+    id<MetasequoiaVoiceService> service = [self voiceService];
+    if (service.recording) { [service stop]; return; }
+    if (service.active) { [self cancelVoiceInput]; return; }
+    id client = self.client;
+    if (!client) return;
+    [self commitLeadingCandidate:client];
+    const NSUInteger generation = ++_voiceGeneration;
+    const NSRange selection = [client respondsToSelector:@selector(selectedRange)] ? [client selectedRange] : NSMakeRange(NSNotFound, 0);
+    __weak MetasequoiaInputController *weakSelf = self;
+    _voiceMouseMonitor = [NSEvent addGlobalMonitorForEventsMatchingMask:NSEventMaskLeftMouseDown | NSEventMaskRightMouseDown
+        handler:^(NSEvent *event) { (void)event; [weakSelf cancelVoiceInput]; }];
+    [service startWithCompletion:^(NSString *text, NSError *error) {
+        MetasequoiaInputController *owner = weakSelf;
+        if (!owner || !owner->_serverActive || owner->_voiceGeneration != generation || owner.client != client) return;
+        const NSRange currentSelection = [client respondsToSelector:@selector(selectedRange)] ? [client selectedRange] : NSMakeRange(NSNotFound, 0);
+        [owner cancelVoiceInput];
+        if (!NSEqualRanges(currentSelection, selection)) return;
+        if (error) { [owner showVoiceError:error]; return; }
+        if (text.length > 0)
+        {
+            NSString *output = MetasequoiaChineseOutputString(text, [owner traditionalChineseOutputActive]);
+            [client insertText:output replacementRange:NSMakeRange(NSNotFound, NSNotFound)];
+        }
+    }];
+}
+
+- (void)showVoiceSettings:(id)sender
+{
+    (void)sender;
+    [self cancelVoiceInput];
+    [[MetasequoiaVoiceSettingsWindow sharedController] showAndActivate];
 }
 
 - (void)showPreferences:(id)sender

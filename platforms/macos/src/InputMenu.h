@@ -46,5 +46,10 @@ inline NSMenu *CreateMetasequoiaInputMenu(id target, BOOL englishMode, BOOL trad
     settingsItem.target = target;
     settingsItem.enabled = YES;
     [menu addItem:settingsItem];
+    [menu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *voice = [[NSMenuItem alloc] initWithTitle:@"开始/结束语音输入（⌃⌥V）" action:@selector(toggleVoiceInput:) keyEquivalent:@""];
+    voice.target = target; voice.enabled = YES; [menu addItem:voice];
+    NSMenuItem *voiceSettings = [[NSMenuItem alloc] initWithTitle:@"语音输入设置…" action:@selector(showVoiceSettings:) keyEquivalent:@""];
+    voiceSettings.target = target; voiceSettings.enabled = YES; [menu addItem:voiceSettings];
     return menu;
 }

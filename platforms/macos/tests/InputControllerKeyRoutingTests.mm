@@ -100,7 +100,7 @@ int main()
             "The four-code unique Wubi policy auto-committed outside its exact conditions.");
 
     const std::filesystem::path helpcodeDataDirectory =
-        std::filesystem::path(__FILE__).parent_path() / "../../../vendor/MetasequoiaImeHelpCode";
+        std::filesystem::path(__FILE__).parent_path() / "../../../vendor/MetasequoiaImeEngine/helpcode";
     require(setenv("METASEQUOIA_IME_DATA_DIR", helpcodeDataDirectory.lexically_normal().c_str(), 1) == 0,
             "The candidate display test could not select its helpcode data.");
     require(HelpcodeUtils::select_helpcode_schema(metasequoia::mac::HelpcodeSchemaIdentifier(1)) &&

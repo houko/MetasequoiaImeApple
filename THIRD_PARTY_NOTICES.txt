@@ -21,6 +21,12 @@ The application also incorporates the following components:
 - spdlog — MIT License
   Copyright (c) 2016-present, Gabi Melman and spdlog contributors
   https://github.com/gabime/spdlog
+- miniaudio — MIT or public domain (upstream dual-license text included)
+  https://github.com/mackron/miniaudio
+- whisper.cpp / ggml — MIT License
+  https://github.com/ggml-org/whisper.cpp
+- nlohmann/json — MIT License
+  https://github.com/nlohmann/json
 - Sparkle — MIT License and bundled third-party licenses
   https://github.com/sparkle-project/Sparkle
 
@@ -50,7 +56,7 @@ Sources of msime.db, via MSIME-Dict:
 
 The Chinese tables that msime.db is built from (cn/BaseDictAllV1Part1.txt and cn/BaseDictAllV1Part2.txt) merge rime-ice with CustomPinyinDictionary. rime-ice is licensed under the GNU General Public License version 3, which is the same license this application is distributed under, so its terms are satisfied by the distribution as a whole; this notice serves as its attribution, and its source remains available at the URL above. The quick phrase table is written by the Metasequoia IME maintainers and is covered by that same license.
 
-Sources of helpcodes/*.txt, via MSIME-HelpCode:
+Sources of helpcodes/*.txt, now packaged from MSIME-Engine/helpcode (history imported from MSIME-HelpCode):
 
   helpcode.txt                    lantian      蓝天小雨点 helpcode scheme
   zrm_helpcode_big_unique.txt     ziranma      自然码, derived from
