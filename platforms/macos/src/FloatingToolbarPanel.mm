@@ -132,6 +132,7 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
                                              @selector(openSettings:));
     settingsButton.image = [NSImage imageWithSystemSymbolName:@"gearshape" accessibilityDescription:@"设置"];
     settingsButton.accessibilityLabel = @"打开水杉输入法设置";
+    settingsButton.toolTip = settingsButton.accessibilityLabel;
 
     NSStackView *actions = [NSStackView stackViewWithViews:@[
         _inputModeButton, _punctuationButton, _fullWidthButton, settingsButton
@@ -168,6 +169,9 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
         chinesePunctuationEnabled ? @"切换到西文标点" : @"切换到中文标点";
     _fullWidthButton.title = fullWidthEnabled ? @"全" : @"半";
     _fullWidthButton.accessibilityLabel = fullWidthEnabled ? @"切换到半角输入" : @"切换到全角输入";
+    _inputModeButton.toolTip = _inputModeButton.accessibilityLabel;
+    _punctuationButton.toolTip = _punctuationButton.accessibilityLabel;
+    _fullWidthButton.toolTip = _fullWidthButton.accessibilityLabel;
 }
 
 - (void)activateForDelegate:(id<MetasequoiaFloatingToolbarDelegate>)delegate visible:(BOOL)visible
@@ -187,6 +191,12 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
         [self orderOut:nil];
         return;
     }
+    if (self.visible)
+    {
+        // Only clamp the frame when the panel comes on screen; re-showing a visible panel must not move it away from where the user dragged it.
+        [self orderFrontRegardless];
+        return;
+    }
 
     BOOL hasSavedFrame = [[NSUserDefaults standardUserDefaults]
         objectForKey:[@"NSWindow Frame " stringByAppendingString:kToolbarFrameAutosaveName]] != nil;
@@ -204,7 +214,9 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
 
 - (void)deactivateForDelegate:(id<MetasequoiaFloatingToolbarDelegate>)delegate
 {
-    if (self.toolbarDelegate != delegate)
+    // A deallocating owner reads back as nil through the weak property, so a nil owner is treated as released by the caller rather than as a mismatch.
+    id<MetasequoiaFloatingToolbarDelegate> owner = self.toolbarDelegate;
+    if (owner != nil && owner != delegate)
     {
         return;
     }

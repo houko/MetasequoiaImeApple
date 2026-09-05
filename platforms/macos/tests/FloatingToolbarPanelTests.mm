@@ -10,6 +10,7 @@
 @property(nonatomic) BOOL toggledPunctuation;
 @property(nonatomic) BOOL toggledFullWidth;
 @property(nonatomic) BOOL openedSettings;
+@property(nonatomic, strong) MetasequoiaFloatingToolbarPanel *ownedPanel;
 @end
 
 @implementation FloatingToolbarTestDelegate
@@ -35,6 +36,12 @@
 {
     (void)toolbar;
     self.openedSettings = YES;
+}
+
+- (void)dealloc
+{
+    // Mirrors MetasequoiaInputController, which releases the toolbar while it is being deallocated.
+    [self.ownedPanel deactivateForDelegate:self];
 }
 @end
 
@@ -144,9 +151,29 @@ int main()
         [panel setVisible:YES forDelegate:secondDelegate];
         require(panel.visible && panel.toolbarDelegate == secondDelegate,
                 "The active input controller could not show its toolbar again.");
+        NSRect screenFrame = (panel.screen != nil ? panel.screen : NSScreen.mainScreen).visibleFrame;
+        NSRect draggedFrame = panel.frame;
+        draggedFrame.origin = NSMakePoint(NSMinX(screenFrame) + 2.0, NSMinY(screenFrame) + 2.0);
+        [panel setFrame:draggedFrame display:NO];
+        [panel setVisible:YES forDelegate:secondDelegate];
+        require(NSEqualRects(panel.frame, draggedFrame),
+                "Refreshing a visible floating toolbar moved it away from where the user placed it.");
+        require([inputModeButton.toolTip isEqualToString:inputModeButton.accessibilityLabel] &&
+                    [settingsButton.toolTip isEqualToString:settingsButton.accessibilityLabel],
+                "The floating toolbar buttons did not expose their action as a tooltip.");
         [panel deactivateForDelegate:secondDelegate];
         require(!panel.visible && panel.toolbarDelegate == nil,
                 "The active input controller did not release and hide the floating toolbar.");
+        @autoreleasepool
+        {
+            FloatingToolbarTestDelegate *dyingDelegate = [[FloatingToolbarTestDelegate alloc] init];
+            dyingDelegate.ownedPanel = panel;
+            [panel activateForDelegate:dyingDelegate visible:YES];
+            require(panel.visible && panel.toolbarDelegate == dyingDelegate,
+                    "The floating toolbar did not accept a new input controller.");
+        }
+        require(!panel.visible && panel.toolbarDelegate == nil,
+                "A deallocated input controller left the floating toolbar on screen.");
     }
     return 0;
 }
