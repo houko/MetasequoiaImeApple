@@ -10,6 +10,8 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private let preeditLabel = UILabel()
   private let candidateScrollView = UIScrollView()
   private let diagnosticLabel = UILabel()
+  private let previousPageButton = UIButton()
+  private let nextPageButton = UIButton()
   private let candidateStack = UIStackView()
   private let languageModeButton = UIButton()
   private let schemeButton = UIButton()
@@ -30,10 +32,14 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private var visibleDiagnostic: String?
   private var diagnosticDismissTimer: Timer?
   private var shuangpinKeyHints: [String: String] = [:]
+  private var candidatePageStart = 0
   private var showsSymbols = false
   private var letterCaseState = LetterCaseState.lowercase
   private var isAutomaticShift = false
   private var lastShiftTapTime: TimeInterval?
+
+  // The strip numbers its chips 1-9 to match the digits on the symbol layer, so a page is nine.
+  private static let candidatePageSize = 9
 
   var enableInputClicksWhenVisible: Bool { true }
 
@@ -151,8 +157,18 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     diagnosticLabel.isHidden = true
     diagnosticLabel.accessibilityIdentifier = "diagnosticLabel"
 
+    configurePageButton(previousPageButton, symbol: "chevron.left", label: "上一页候选")
+    previousPageButton.addAction(
+      UIAction { [weak self] _ in self?.showCandidatePage(offset: -1) },
+      for: .primaryActionTriggered)
+    configurePageButton(nextPageButton, symbol: "chevron.right", label: "下一页候选")
+    nextPageButton.addAction(
+      UIAction { [weak self] _ in self?.showCandidatePage(offset: 1) },
+      for: .primaryActionTriggered)
+
     let content = UIStackView(arrangedSubviews: [
       languageModeButton, schemeButton, preeditLabel, candidateScrollView, diagnosticLabel,
+      previousPageButton, nextPageButton,
     ])
     content.axis = .horizontal
     content.alignment = .center
@@ -311,6 +327,16 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     }
 
     if symbol.count == 1, symbol >= "1", symbol <= "9" {
+      // handleCandidateKey numbers from the engine's first candidate, which stops matching the
+      // strip as soon as it is showing a later page. Off the first page the digit has to select the
+      // absolute index the chip with that number is actually displaying.
+      if candidatePageStart > 0, let digit = Int(symbol),
+        candidatePageStart + digit - 1 < visibleCandidates.count
+      {
+        render(session.selectCandidate(at: UInt(candidatePageStart + digit - 1)))
+        return
+      }
+
       let snapshot = session.handleCandidateKey(symbol)
       if !snapshot.isHandled && snapshot.preedit.isEmpty {
         textDocumentProxy.insertText(symbol)
@@ -521,6 +547,38 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     renderCandidateStrip()
   }
 
+  private func configurePageButton(_ button: UIButton, symbol: String, label: String) {
+    var configuration = UIButton.Configuration.plain()
+    configuration.image = UIImage(systemName: symbol)
+    configuration.baseForegroundColor = MetasequoiaTheme.forestUIColor
+    configuration.contentInsets = NSDirectionalEdgeInsets(
+      top: 2, leading: 2, bottom: 2, trailing: 2)
+    button.configuration = configuration
+    button.accessibilityLabel = label
+    button.accessibilityIdentifier =
+      symbol == "chevron.left" ? "previousCandidatePage" : "nextCandidatePage"
+    button.isHidden = true
+    button.widthAnchor.constraint(equalToConstant: 26).isActive = true
+  }
+
+  private func showCandidatePage(offset: Int) {
+    let target = candidatePageStart + offset * Self.candidatePageSize
+    guard target >= 0, target < visibleCandidates.count else { return }
+
+    playInputClick()
+    candidatePageStart = target
+    renderCandidateStrip()
+  }
+
+  private func updatePageControls() {
+    // The strip scrolls, so paging is what makes the numbered keys reach past the ninth candidate
+    // rather than a way to see them. It is only offered when there is somewhere to go.
+    let pageable = visibleCandidates.count > Self.candidatePageSize && visibleDiagnostic == nil
+    previousPageButton.isHidden = !pageable || candidatePageStart == 0
+    nextPageButton.isHidden =
+      !pageable || candidatePageStart + Self.candidatePageSize >= visibleCandidates.count
+  }
+
   private func chineseOutput(_ text: String) -> String {
     ChineseTextConversion.outputString(text, traditional: usesTraditionalOutput)
   }
@@ -656,6 +714,9 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private func updateCandidateStrip(preedit: String, candidates: [String]) {
     visiblePreedit = preedit
     visibleCandidates = candidates
+    // Any new candidate list is a different composition or a different set of matches, so the page
+    // it was showing no longer describes anything.
+    candidatePageStart = 0
     renderCandidateStrip()
   }
 
@@ -667,10 +728,13 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       view.removeFromSuperview()
     }
 
-    for (index, candidate) in visibleCandidates.prefix(9).enumerated() {
+    let page = visibleCandidates.dropFirst(candidatePageStart).prefix(Self.candidatePageSize)
+    for (offset, candidate) in page.enumerated() {
       candidateStack.addArrangedSubview(
-        makeCandidateButton(candidate: candidate, number: index + 1))
+        makeCandidateButton(
+          candidate: candidate, number: offset + 1, index: candidatePageStart + offset))
     }
+    updatePageControls()
 
     diagnosticLabel.text = visibleDiagnostic
     diagnosticLabel.accessibilityLabel = visibleDiagnostic.map { "提示：\($0)" }
@@ -678,8 +742,9 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     candidateScrollView.isHidden = visibleCandidates.isEmpty || visibleDiagnostic != nil
   }
 
-  // Selection stays on the engine index, so only the shown text is converted.
-  private func makeCandidateButton(candidate: String, number: Int) -> UIButton {
+  // The number is the key the chip answers to on the visible page; the index is the engine position
+  // it selects. They only coincide on the first page.
+  private func makeCandidateButton(candidate: String, number: Int, index: Int) -> UIButton {
     let display = chineseOutput(candidate)
     var configuration = UIButton.Configuration.plain()
     configuration.title = "\(number)  \(display)"
@@ -696,7 +761,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       primaryAction: UIAction { [weak self] _ in
         guard let self else { return }
         self.playInputClick()
-        self.render(self.session.selectCandidate(at: UInt(number - 1)))
+        self.render(self.session.selectCandidate(at: UInt(index)))
       })
     button.accessibilityLabel = "候选词 \(number)：\(display)"
     button.accessibilityIdentifier = "candidate-\(number)"
