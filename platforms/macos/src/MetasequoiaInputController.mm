@@ -844,6 +844,14 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [[MetasequoiaUpdateController sharedController] checkForUpdates:sender];
 }
 
+- (void)openCharacterPalette:(id)sender
+{
+    (void)sender;
+    // The Character Viewer inserts straight into the client, so settle any marked text first; otherwise the session would resend the pending composition after the inserted symbol.
+    [self commitLeadingCandidate:self.client];
+    [NSApp orderFrontCharacterPalette:nil];
+}
+
 - (void)setEnglishInputMode:(BOOL)enabled client:(id)sender
 {
     if (enabled)
@@ -892,9 +900,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 - (void)floatingToolbarDidRequestOpenCharacterPalette:(MetasequoiaFloatingToolbarPanel *)toolbar
 {
     (void)toolbar;
-    // The Character Viewer inserts straight into the client, so settle any marked text first; otherwise the session would resend the pending composition after the inserted symbol.
-    [self commitLeadingCandidate:self.client];
-    [NSApp orderFrontCharacterPalette:nil];
+    [self openCharacterPalette:nil];
 }
 
 - (void)floatingToolbarDidRequestOpenSettings:(MetasequoiaFloatingToolbarPanel *)toolbar

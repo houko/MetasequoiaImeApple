@@ -18,6 +18,7 @@ void require(bool condition, const char *message)
 @interface PreferencesTarget : NSObject
 @property(nonatomic) BOOL preferencesShown;
 @property(nonatomic) BOOL updateCheckStarted;
+@property(nonatomic) BOOL characterPaletteOpened;
 @property(nonatomic) BOOL chineseSelected;
 @property(nonatomic) BOOL englishSelected;
 @property(nonatomic) BOOL simplifiedSelected;
@@ -35,6 +36,12 @@ void require(bool condition, const char *message)
 {
     (void)sender;
     self.updateCheckStarted = YES;
+}
+
+- (void)openCharacterPalette:(id)sender
+{
+    (void)sender;
+    self.characterPaletteOpened = YES;
 }
 
 - (void)selectChineseMode:(id)sender
@@ -70,8 +77,9 @@ int main()
         PreferencesTarget *target = [[PreferencesTarget alloc] init];
         NSMenu *menu = CreateMetasequoiaInputMenu(target, NO, NO);
 
-        require(menu.numberOfItems == 8,
-                "The input menu did not contain input modes, output character sets, update, and settings actions.");
+        require(menu.numberOfItems == 9,
+                "The input menu did not contain input modes, output character sets, character palette, update, and "
+                "settings actions.");
         NSMenuItem *chineseItem = [menu itemAtIndex:0];
         NSMenuItem *englishItem = [menu itemAtIndex:1];
         require([chineseItem.title isEqualToString:@"中文输入"] &&
@@ -97,12 +105,20 @@ int main()
         require([menu itemAtIndex:5].separatorItem,
                 "The output character-set actions were not separated from utilities.");
 
-        NSMenuItem *updateItem = [menu itemAtIndex:6];
+        NSMenuItem *characterPaletteItem = [menu itemAtIndex:6];
+        require([characterPaletteItem.title isEqualToString:@"表情与符号…"],
+                "The character palette action title was incorrect.");
+        require(characterPaletteItem.action == @selector(openCharacterPalette:),
+                "The character palette action used the wrong selector.");
+        require(characterPaletteItem.target == target && characterPaletteItem.enabled,
+                "The character palette action was not enabled for its target.");
+
+        NSMenuItem *updateItem = [menu itemAtIndex:7];
         require([updateItem.title isEqualToString:@"检查更新…"], "The update action title was incorrect.");
         require(updateItem.action == @selector(checkForUpdates:), "The update action used the wrong selector.");
         require(updateItem.target == target && updateItem.enabled, "The update action was not enabled for its target.");
 
-        NSMenuItem *settingsItem = [menu itemAtIndex:7];
+        NSMenuItem *settingsItem = [menu itemAtIndex:8];
         require([settingsItem.title isEqualToString:@"水杉输入法设置…"], "The settings action title was incorrect.");
         require(settingsItem.action == @selector(showPreferences:), "The settings action used the wrong selector.");
         require(settingsItem.target == target, "The settings action did not target the input controller.");
@@ -125,8 +141,11 @@ int main()
         [englishMenu performActionForItemAtIndex:3];
         require(target.simplifiedSelected, "The simplified output action was not dispatched.");
         [menu performActionForItemAtIndex:6];
-        require(target.updateCheckStarted, "The update action did not invoke checkForUpdates:.");
+        require(target.characterPaletteOpened,
+                "The character palette action did not invoke openCharacterPalette:.");
         [menu performActionForItemAtIndex:7];
+        require(target.updateCheckStarted, "The update action did not invoke checkForUpdates:.");
+        [menu performActionForItemAtIndex:8];
         require(target.preferencesShown, "The settings action did not invoke showPreferences:.");
     }
     return 0;
