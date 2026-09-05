@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.43.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.42.0...v0.43.0) (2026-09-05)
+
+
+### Features
+
+* **ios:** reach the engine's local input modes ([741d523](https://github.com/metasequoiaime/MSIME-Apple/commit/741d5234ba1f4bb335bd967dd5e9def63ed3013b))
+* **mac:** reach the engine's local input modes ([1d74932](https://github.com/metasequoiaime/MSIME-Apple/commit/1d74932a3bbdabd8174d02ee35a4a1b3b885ee93))
+
+
+### Bug Fixes
+
+* **input:** render shared partial composition and flush host transitions ([b11cf96](https://github.com/metasequoiaime/MSIME-Apple/commit/b11cf96e11c13de39689fd33b3b23b1f15ca4200))
+* **ios:** finish pending composition before return and direct-mode input ([3699a0b](https://github.com/metasequoiaime/MSIME-Apple/commit/3699a0bea79ba85617875672b1c2d560c613afce))
+* **ios:** keep every candidate commit on the visible page ([1d96158](https://github.com/metasequoiaime/MSIME-Apple/commit/1d96158e0f270a22b7c13d402841ada8f718f859))
+* **ios:** stop the keyboard reporting local modes it cannot enter ([ee912d0](https://github.com/metasequoiaime/MSIME-Apple/commit/ee912d0cdf0b088e5afbac9fca54b9586e0d7027))
+* **mac:** keep the highlighted candidate when a commit happens automatically ([7840d3f](https://github.com/metasequoiaime/MSIME-Apple/commit/7840d3f1b841cf2443ad6bb246ce024fdc98b449))
+
 ## [0.42.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.41.1...v0.42.0) (2026-09-05)
 
 
