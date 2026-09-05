@@ -353,11 +353,14 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     if symbol.count == 1, symbol >= "1", symbol <= "9" {
       // handleCandidateKey numbers from the engine's first candidate, which stops matching the
       // strip as soon as it is showing a later page. Off the first page the digit has to select the
-      // absolute index the chip with that number is actually displaying.
-      if candidatePageStart > 0, let digit = Int(symbol),
-        candidatePageStart + digit - 1 < visibleCandidates.count
-      {
-        render(session.selectCandidate(at: UInt(candidatePageStart + digit - 1)))
+      // absolute index the chip with that number is actually displaying, and a digit with no chip
+      // on this page has to do nothing: falling through would hand it to handleCandidateKey and
+      // commit a first-page candidate the user cannot see.
+      if candidatePageStart > 0, let digit = Int(symbol) {
+        let index = candidatePageStart + digit - 1
+        if index < visibleCandidates.count {
+          render(session.selectCandidate(at: UInt(index)))
+        }
         return
       }
 
@@ -688,9 +691,22 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     handleBackspace()
   }
 
+  // Space means "commit the leading candidate", and that has to be the leading candidate the strip
+  // is showing. commitCandidate always takes the engine's first, which on a later page is off
+  // screen, so the page's own first chip is selected by index instead. On the first page the two
+  // are the same candidate, and only commitCandidate reports itself unhandled when there is
+  // nothing to commit, which is what tells the caller to insert its space. Return and the
+  // language switch flush the whole composition through finishComposition instead.
+  private func commitVisibleCandidate() -> MetasequoiaInputSnapshot {
+    if candidatePageStart > 0, candidatePageStart < visibleCandidates.count {
+      return session.selectCandidate(at: UInt(candidatePageStart))
+    }
+    return session.commitCandidate()
+  }
+
   private func handleSpace() {
     playInputClick()
-    let snapshot = session.commitCandidate()
+    let snapshot = commitVisibleCandidate()
     if !snapshot.isHandled {
       textDocumentProxy.insertText(" ")
     }
