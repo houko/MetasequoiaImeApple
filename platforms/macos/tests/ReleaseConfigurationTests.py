@@ -135,6 +135,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
     def test_traditional_output_converts_visible_candidates_and_commits(self):
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
         controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
+        readme = (PROJECT_ROOT / "README.md").read_text()
         app_target = cmake.split("add_executable(MetasequoiaIME MACOSX_BUNDLE", 1)[1].split("\n", 1)[0]
 
         self.assertIn("src/ChineseTextConversion.mm", app_target)
@@ -164,6 +165,10 @@ class ReleaseConfigurationTests(unittest.TestCase):
             candidate_panel.index("MetasequoiaChineseOutputString"),
             candidate_panel.index("MetasequoiaIndexedCandidateString"),
         )
+
+        self.assertIn("默认输出简体", readme)
+        self.assertIn("切换为繁体字，不改变词库键值和学习数据", readme)
+        self.assertIn("「简体输出」还是「繁体输出」", readme)
 
         preference_refresh = controller.split("- (void)floatingToolbarPreferenceDidChange:", 1)[1].split(
             "\n}", 1
