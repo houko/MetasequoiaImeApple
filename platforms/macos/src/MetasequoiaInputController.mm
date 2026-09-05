@@ -1,6 +1,7 @@
 #import "MetasequoiaInputController.h"
 
 #import "DictionaryInstaller.h"
+#import "FloatingToolbarPanel.h"
 #include "CandidateFontSize.h"
 #include "CandidateDisplay.h"
 #include "CandidatePageSize.h"
@@ -67,16 +68,21 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 }
 } // namespace
 
+@interface MetasequoiaInputController () <MetasequoiaFloatingToolbarDelegate>
+@end
+
 @implementation MetasequoiaInputController
 {
     std::unique_ptr<metasequoia::InputSession> _session;
     metasequoia::mac::CandidateSelectionState _candidateSelection;
     IMKCandidates *_candidatePanel;
+    MetasequoiaFloatingToolbarPanel *_floatingToolbarPanel;
     NSArray *_candidateData;
     NSUInteger _candidateHighlightedIndex;
     NSUInteger _candidatePageStart;
     BOOL _candidateLineIdentifiersCollapsed;
     BOOL _wubiAutoCommitUniqueEnabled;
+    BOOL _serverActive;
     NSTimeInterval _dictionaryRetryAfter;
 }
 
@@ -86,6 +92,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     if (self != nil)
     {
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
+        _floatingToolbarPanel = [MetasequoiaFloatingToolbarPanel sharedPanel];
         [_candidatePanel setAttributes:metasequoia::mac::CandidatePanelAttributes(
                                            static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidateFontSize]))];
 
@@ -98,13 +105,47 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
                                                  selector:@selector(prepareForLearnedDataReset:)
                                                      name:MetasequoiaWillResetLearnedDataNotification
                                                    object:nil];
+        for (NSNotificationName notificationName in @[
+                 MetasequoiaFloatingToolbarDidChangeNotification,
+                 @"MetasequoiaChinesePunctuationDidChangeNotification",
+                 @"MetasequoiaEnglishInputModeDidChangeNotification",
+                 @"MetasequoiaFullWidthInputDidChangeNotification",
+             ])
+        {
+            [[NSNotificationCenter defaultCenter] addObserver:self
+                                                     selector:@selector(floatingToolbarPreferenceDidChange:)
+                                                         name:notificationName
+                                                       object:nil];
+        }
     }
     return self;
 }
 
 - (void)dealloc
 {
+    [_floatingToolbarPanel deactivateForDelegate:self];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)refreshFloatingToolbar
+{
+    [_floatingToolbarPanel
+              updateEnglishInputMode:[MetasequoiaPreferencesWindowController storedEnglishInputMode]
+        chinesePunctuationEnabled:[MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled]
+                 fullWidthEnabled:[MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]];
+    if (!_serverActive || _floatingToolbarPanel.toolbarDelegate != self)
+    {
+        return;
+    }
+    [_floatingToolbarPanel
+        setVisible:[MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled]
+       forDelegate:self];
+}
+
+- (void)floatingToolbarPreferenceDidChange:(NSNotification *)notification
+{
+    (void)notification;
+    [self refreshFloatingToolbar];
 }
 
 - (void)prepareForLearnedDataReset:(NSNotification *)notification
@@ -179,6 +220,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 - (void)activateServer:(id)sender
 {
     [super activateServer:sender];
+    _serverActive = YES;
     _dictionaryRetryAfter = 0.0;
     if (metasequoia::mac::ShouldPrepareInputSession(
             [MetasequoiaPreferencesWindowController storedEnglishInputMode]) &&
@@ -186,6 +228,10 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     {
         [self reloadSessionFromPreferences];
     }
+    [self refreshFloatingToolbar];
+    [_floatingToolbarPanel
+        activateForDelegate:self
+                    visible:[MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled]];
 }
 
 - (void)trackCandidateAtIndex:(NSUInteger)index
@@ -590,6 +636,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 
 - (void)deactivateServer:(id)sender
 {
+    _serverActive = NO;
+    [_floatingToolbarPanel deactivateForDelegate:self];
     [self commitComposition:sender];
     [_candidatePanel hide];
     [super deactivateServer:sender];
@@ -615,6 +663,38 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     _candidateSelection.reset();
     [_candidatePanel hide];
     [MetasequoiaPreferencesWindowController setEnglishInputMode:enabled];
+}
+
+- (void)floatingToolbarDidRequestToggleInputMode:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [self setEnglishInputMode:![MetasequoiaPreferencesWindowController storedEnglishInputMode]
+                       client:self.client];
+}
+
+- (void)floatingToolbarDidRequestTogglePunctuation:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [self commitLeadingCandidate:self.client];
+    [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:
+        ![MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled]];
+    if (_session != nullptr)
+    {
+        [self reloadSessionFromPreferences];
+    }
+}
+
+- (void)floatingToolbarDidRequestToggleFullWidth:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:
+        ![MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]];
+}
+
+- (void)floatingToolbarDidRequestOpenSettings:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [self showPreferences:nil];
 }
 
 - (void)selectChineseMode:(id)sender

@@ -142,6 +142,10 @@ int main()
                 "Standalone settings accepted unexpected arguments.");
         require(!MetasequoiaShouldShowPreferences(1, serverArguments),
                 "A normal input-method launch was treated as standalone settings.");
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"MetasequoiaImeFloatingToolbarEnabled"];
+        require([MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled],
+                "The floating toolbar was not enabled by default.");
+        [MetasequoiaPreferencesWindowController setFloatingToolbarEnabled:NO];
         [MetasequoiaPreferencesWindowController setCandidatePanelStyle:1];
         [MetasequoiaPreferencesWindowController setCandidatePageSize:5];
         [MetasequoiaPreferencesWindowController setCandidateFontSize:16];
@@ -418,6 +422,21 @@ int main()
                 "The appearance controls overflowed the settings page below the preview.");
         require([candidatePreview.accessibilityValue isEqualToString:@"纵向列表，5 个候选，16 pt"],
                 "The candidate preview did not reflect the stored appearance settings.");
+        NSView *floatingToolbarView =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"显示悬浮状态栏");
+        NSView *floatingToolbarCard =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"悬浮状态栏卡片");
+        require([floatingToolbarView isKindOfClass:[NSButton class]],
+                "The appearance page did not expose the floating-toolbar control.");
+        require(floatingToolbarCard != nil,
+                "The appearance page did not expose the floating-toolbar preference card.");
+        NSRect floatingToolbarRectInWindow =
+            [controller.window.contentView convertRect:floatingToolbarCard.bounds fromView:floatingToolbarCard];
+        require(NSMinY(floatingToolbarRectInWindow) >= NSMaxY(footerRestoreRectInWindow) + 8.0,
+                "The floating-toolbar preference overlapped the settings footer.");
+        NSButton *floatingToolbarButton = (NSButton *)floatingToolbarView;
+        require(floatingToolbarButton.state == NSControlStateValueOff,
+                "The floating-toolbar control did not reflect the stored disabled value.");
         NSAppearance *darkAppearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
         __block NSColor *darkCanvasColor = nil;
         __block NSColor *darkPanelColor = nil;
@@ -548,6 +567,13 @@ int main()
         require([candidatePreview.accessibilityValue isEqualToString:@"横向排列，7 个候选，20 pt"],
                 "The candidate preview did not update after the appearance controls changed.");
 
+        floatingToolbarButton.state = NSControlStateValueOn;
+        require([NSApp sendAction:floatingToolbarButton.action
+                               to:floatingToolbarButton.target
+                             from:floatingToolbarButton] &&
+                    [MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled],
+                "The floating-toolbar control did not persist the selected value.");
+
         learningButton.state = NSControlStateValueOn;
         require([NSApp sendAction:learningButton.action to:learningButton.target from:learningButton],
                 "The candidate-learning control did not dispatch its action.");
@@ -580,6 +606,7 @@ int main()
         [MetasequoiaPreferencesWindowController setCandidateLearningEnabled:NO];
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
         [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:YES];
+        [MetasequoiaPreferencesWindowController setFloatingToolbarEnabled:NO];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:YES];
         NSButton *restoreDefaultsButton = FindButtonWithTitle(controller.window.contentView, @"恢复默认设置");
@@ -596,6 +623,7 @@ int main()
                     [MetasequoiaPreferencesWindowController storedCandidateLearningEnabled] &&
                     [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] &&
                     ![MetasequoiaPreferencesWindowController storedFullWidthInputEnabled] &&
+                    [MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled] &&
                     ![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled],
                 "Restoring defaults did not restore every visible setting.");
         NSArray<NSString *> *preferenceKeys = @[
@@ -610,6 +638,7 @@ int main()
             @"MetasequoiaImeCandidateLearning",
             @"MetasequoiaImeInputModeShortcutEnabled",
             @"MetasequoiaImeFullWidthInputEnabled",
+            @"MetasequoiaImeFloatingToolbarEnabled",
             @"MetasequoiaImeWubiAutoCommitUnique",
         ];
         for (NSString *key in preferenceKeys)
