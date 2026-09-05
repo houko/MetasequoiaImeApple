@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.39.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.0...v0.39.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **mac:** show zero-initial codes and split the helpcode schema notifications ([#220](https://github.com/metasequoiaime/MSIME-Apple/issues/220)) ([aea1b76](https://github.com/metasequoiaime/MSIME-Apple/commit/aea1b76ee6adfb63ea65e5adde626878daef97f0))
+
 ## [0.39.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.38.0...v0.39.0) (2026-09-05)
 
 
