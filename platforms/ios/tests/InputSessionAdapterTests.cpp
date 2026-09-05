@@ -164,6 +164,18 @@ int RunTest() {
             "Switching keyboard schemes lost the pending suffix.");
   }
 
+  {
+    // Every local input mode is unreachable from this adapter, and two of them have no data in the
+    // compact dictionary either. A trigger must therefore leave the session alone and come back
+    // unhandled, so the keyboard passes the capital to the host application.
+    metasequoia::apple::InputSessionAdapter adapter;
+    for (const char trigger : {'U', 'T', 'K', 'J', 'E', 'M', 'Y', 'R'}) {
+      const auto result = adapter.handle_character(trigger);
+      Require(!result.handled && result.preedit.empty(),
+              "A local input mode trigger was handled by the iOS adapter.");
+    }
+  }
+
   Require(metasequoia::apple::shuangpin_key_hints(false).empty(),
           "Full pinyin produced double-pinyin key hints.");
   {
