@@ -5,6 +5,7 @@
 FOUNDATION_EXPORT NSNotificationName const MetasequoiaWillResetLearnedDataNotification;
 FOUNDATION_EXPORT NSNotificationName const MetasequoiaStandalonePreferencesDidCloseNotification;
 FOUNDATION_EXPORT NSNotificationName const MetasequoiaFloatingToolbarDidChangeNotification;
+FOUNDATION_EXPORT NSNotificationName const MetasequoiaTraditionalChineseOutputDidChangeNotification;
 
 bool MetasequoiaShouldShowPreferences(int argc, const char *argv[]);
 
@@ -37,6 +38,8 @@ bool MetasequoiaShouldShowPreferences(int argc, const char *argv[]);
 + (void)setFullWidthInputEnabled:(BOOL)enabled;
 + (BOOL)storedFloatingToolbarEnabled;
 + (void)setFloatingToolbarEnabled:(BOOL)enabled;
++ (BOOL)storedTraditionalChineseOutputEnabled;
++ (void)setTraditionalChineseOutputEnabled:(BOOL)enabled;
 + (BOOL)storedWubiAutoCommitUniqueEnabled;
 + (void)setWubiAutoCommitUniqueEnabled:(BOOL)enabled;
 - (void)showAndActivate;

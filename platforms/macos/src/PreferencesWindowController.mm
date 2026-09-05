@@ -16,6 +16,8 @@ NSNotificationName const MetasequoiaStandalonePreferencesDidCloseNotification =
     @"MetasequoiaStandalonePreferencesDidCloseNotification";
 NSNotificationName const MetasequoiaFloatingToolbarDidChangeNotification =
     @"MetasequoiaFloatingToolbarDidChangeNotification";
+NSNotificationName const MetasequoiaTraditionalChineseOutputDidChangeNotification =
+    @"MetasequoiaTraditionalChineseOutputDidChangeNotification";
 
 bool MetasequoiaShouldShowPreferences(int argc, const char *argv[])
 {
@@ -39,6 +41,7 @@ NSString * const kEnglishInputModePreferenceKey = @"MetasequoiaImeEnglishInputMo
 NSString * const kInputModeShortcutPreferenceKey = @"MetasequoiaImeInputModeShortcutEnabled";
 NSString * const kFullWidthInputPreferenceKey = @"MetasequoiaImeFullWidthInputEnabled";
 NSString * const kFloatingToolbarPreferenceKey = @"MetasequoiaImeFloatingToolbarEnabled";
+NSString * const kTraditionalChineseOutputPreferenceKey = @"MetasequoiaImeTraditionalChineseOutput";
 NSString * const kWubiAutoCommitUniquePreferenceKey = @"MetasequoiaImeWubiAutoCommitUnique";
 
 NSColor *MetasequoiaBrandColor()
@@ -613,6 +616,23 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kFloatingToolbarPreferenceKey];
     [[NSNotificationCenter defaultCenter] postNotificationName:MetasequoiaFloatingToolbarDidChangeNotification
                                                         object:@(enabled)];
+}
+
++ (BOOL)storedTraditionalChineseOutputEnabled
+{
+    return [[NSUserDefaults standardUserDefaults] boolForKey:kTraditionalChineseOutputPreferenceKey];
+}
+
++ (void)setTraditionalChineseOutputEnabled:(BOOL)enabled
+{
+    if ([self storedTraditionalChineseOutputEnabled] == enabled)
+    {
+        return;
+    }
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kTraditionalChineseOutputPreferenceKey];
+    [[NSNotificationCenter defaultCenter]
+        postNotificationName:MetasequoiaTraditionalChineseOutputDidChangeNotification
+                      object:@(enabled)];
 }
 
 + (BOOL)storedWubiAutoCommitUniqueEnabled
@@ -1405,6 +1425,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
              kWubiAutoCommitUniquePreferenceKey,
              kFullWidthInputPreferenceKey,
              kFloatingToolbarPreferenceKey,
+             kTraditionalChineseOutputPreferenceKey,
          ])
     {
         [defaults removeObjectForKey:key];
@@ -1437,6 +1458,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                   object:@([MetasequoiaPreferencesWindowController storedFullWidthInputEnabled])];
     [notifications postNotificationName:MetasequoiaFloatingToolbarDidChangeNotification
                                   object:@([MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled])];
+    [notifications
+        postNotificationName:MetasequoiaTraditionalChineseOutputDidChangeNotification
+                      object:@([MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled])];
     [self refreshControls];
 }
 

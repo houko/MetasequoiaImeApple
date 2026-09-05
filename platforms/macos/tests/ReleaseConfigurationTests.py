@@ -97,12 +97,46 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("floatingToolbarDidRequestToggleInputMode:", controller)
         self.assertIn("floatingToolbarDidRequestTogglePunctuation:", controller)
         self.assertIn("floatingToolbarDidRequestToggleFullWidth:", controller)
+        self.assertIn("floatingToolbarDidRequestToggleTraditionalOutput:", controller)
         punctuation_method = controller.split("floatingToolbarDidRequestTogglePunctuation:", 1)[1].split("\n}", 1)[0]
         self.assertLess(
             punctuation_method.index("commitLeadingCandidate:"),
             punctuation_method.index("setChinesePunctuationEnabled:"),
         )
         self.assertIn("悬浮状态栏", readme)
+
+    def test_traditional_output_converts_visible_candidates_and_commits(self):
+        cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
+        controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
+        app_target = cmake.split("add_executable(MetasequoiaIME MACOSX_BUNDLE", 1)[1].split("\n", 1)[0]
+
+        self.assertIn("src/ChineseTextConversion.mm", app_target)
+        self.assertIn('#import "ChineseTextConversion.h"', controller)
+        self.assertIn("MetasequoiaTraditionalChineseOutputDidChangeNotification", controller)
+        self.assertIn("traditionalChineseOutputEnabled:", controller)
+        self.assertIn("selectSimplifiedOutput:", controller)
+        self.assertIn("selectTraditionalOutput:", controller)
+
+        apply_result = controller.split("- (void)applyResult:", 1)[1].split("\n}", 1)[0]
+        self.assertLess(
+            apply_result.index("MetasequoiaChineseOutputString"),
+            apply_result.index("insertText:"),
+        )
+        candidate_panel = controller.split("- (void)rebuildCandidatePanelPreservingSelection:", 1)[1].split(
+            "\n}", 1
+        )[0]
+        self.assertIn("MetasequoiaChineseOutputString", candidate_panel)
+        self.assertIn("MetasequoiaIndexedCandidateString", candidate_panel)
+
+        preference_refresh = controller.split("- (void)floatingToolbarPreferenceDidChange:", 1)[1].split(
+            "\n}", 1
+        )[0]
+        self.assertIn("refreshCandidatePanelPreservingSelection", preference_refresh)
+
+        selected_callback = controller.split("- (void)candidateSelected:", 1)[1].split("\n}", 1)[0]
+        self.assertIn("MetasequoiaCandidateIndex", selected_callback)
+        self.assertIn("selectedCandidate", selected_callback)
+        self.assertIn("candidateStringIdentifier", selected_callback)
 
     def test_release_version_matches_cmake_project_version(self):
         manifest = json.loads((PROJECT_ROOT / ".release-please-manifest.json").read_text())

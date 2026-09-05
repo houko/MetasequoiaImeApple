@@ -35,6 +35,11 @@ class CandidateSelectionState
         selected_candidate_.reset();
     }
 
+    std::optional<size_t> selected_index() const
+    {
+        return selected_candidate_.has_value() ? std::optional<size_t>(selected_candidate_->index) : std::nullopt;
+    }
+
     KeyResult commit(InputSession &session) const
     {
         if (selected_candidate_.has_value())

@@ -9,6 +9,7 @@
 @property(nonatomic) BOOL toggledInputMode;
 @property(nonatomic) BOOL toggledPunctuation;
 @property(nonatomic) BOOL toggledFullWidth;
+@property(nonatomic) BOOL toggledTraditionalOutput;
 @property(nonatomic) BOOL openedSettings;
 @end
 
@@ -29,6 +30,12 @@
 {
     (void)toolbar;
     self.toggledFullWidth = YES;
+}
+
+- (void)floatingToolbarDidRequestToggleTraditionalOutput:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    self.toggledTraditionalOutput = YES;
 }
 
 - (void)floatingToolbarDidRequestOpenSettings:(MetasequoiaFloatingToolbarPanel *)toolbar
@@ -77,14 +84,15 @@ int main()
     {
         [NSApplication sharedApplication];
         NSRect visibleFrame = NSMakeRect(100.0, 80.0, 1200.0, 800.0);
-        NSRect defaultFrame = MetasequoiaFloatingToolbarFrame(NSMakeRect(0.0, 0.0, 220.0, 44.0),
+        NSRect defaultFrame = MetasequoiaFloatingToolbarFrame(NSMakeRect(0.0, 0.0, 272.0, 44.0),
                                                                visibleFrame,
                                                                NO);
-        require(NearlyEqual(NSMaxX(defaultFrame), NSMaxX(visibleFrame) - 20.0) &&
+        require(NearlyEqual(NSWidth(defaultFrame), 272.0) && NearlyEqual(NSHeight(defaultFrame), 44.0) &&
+                    NearlyEqual(NSMaxX(defaultFrame), NSMaxX(visibleFrame) - 20.0) &&
                     NearlyEqual(NSMinY(defaultFrame), NSMinY(visibleFrame) + 20.0),
-                "The floating toolbar did not default to the screen's lower-right safe area.");
+                "The floating toolbar did not use its expected size and lower-right safe area.");
 
-        NSRect restoredFrame = MetasequoiaFloatingToolbarFrame(NSMakeRect(-300.0, 2000.0, 220.0, 44.0),
+        NSRect restoredFrame = MetasequoiaFloatingToolbarFrame(NSMakeRect(-300.0, 2000.0, 272.0, 44.0),
                                                                 visibleFrame,
                                                                 YES);
         require(NSMinX(restoredFrame) >= NSMinX(visibleFrame) + 12.0 &&
@@ -105,32 +113,45 @@ int main()
         FloatingToolbarTestDelegate *firstDelegate = [[FloatingToolbarTestDelegate alloc] init];
         FloatingToolbarTestDelegate *secondDelegate = [[FloatingToolbarTestDelegate alloc] init];
         panel.toolbarDelegate = firstDelegate;
-        [panel updateEnglishInputMode:NO chinesePunctuationEnabled:YES fullWidthEnabled:NO];
+        [panel updateEnglishInputMode:NO
+            chinesePunctuationEnabled:YES
+                     fullWidthEnabled:NO
+        traditionalChineseOutputEnabled:NO];
 
         NSButton *inputModeButton = FindButton(panel.contentView, @"MetasequoiaFloatingToolbarInputMode");
         NSButton *punctuationButton = FindButton(panel.contentView, @"MetasequoiaFloatingToolbarPunctuation");
         NSButton *fullWidthButton = FindButton(panel.contentView, @"MetasequoiaFloatingToolbarFullWidth");
+        NSButton *traditionalOutputButton =
+            FindButton(panel.contentView, @"MetasequoiaFloatingToolbarTraditionalOutput");
         NSButton *settingsButton = FindButton(panel.contentView, @"MetasequoiaFloatingToolbarSettings");
         require(inputModeButton != nil && punctuationButton != nil && fullWidthButton != nil &&
-                    settingsButton != nil,
-                "The floating toolbar did not expose all four supported actions.");
+                    traditionalOutputButton != nil && settingsButton != nil,
+                "The floating toolbar did not expose all five supported actions.");
         require([inputModeButton.title isEqualToString:@"中"] &&
                     [inputModeButton.accessibilityLabel isEqualToString:@"切换到英文输入"] &&
                     [punctuationButton.title isEqualToString:@"。"] &&
-                    [fullWidthButton.title isEqualToString:@"半"],
+                    [fullWidthButton.title isEqualToString:@"半"] &&
+                    [traditionalOutputButton.title isEqualToString:@"简"] &&
+                    [traditionalOutputButton.accessibilityLabel isEqualToString:@"切换到繁体输出"],
                 "The floating toolbar did not reflect the active input states.");
 
         [inputModeButton performClick:nil];
         [punctuationButton performClick:nil];
         [fullWidthButton performClick:nil];
+        [traditionalOutputButton performClick:nil];
         [settingsButton performClick:nil];
         require(firstDelegate.toggledInputMode && firstDelegate.toggledPunctuation &&
-                    firstDelegate.toggledFullWidth && firstDelegate.openedSettings,
+                    firstDelegate.toggledFullWidth && firstDelegate.toggledTraditionalOutput &&
+                    firstDelegate.openedSettings,
                 "The floating toolbar did not forward every action to its active input controller.");
 
-        [panel updateEnglishInputMode:YES chinesePunctuationEnabled:NO fullWidthEnabled:YES];
+        [panel updateEnglishInputMode:YES
+            chinesePunctuationEnabled:NO
+                     fullWidthEnabled:YES
+        traditionalChineseOutputEnabled:YES];
         require([inputModeButton.title isEqualToString:@"英"] && [punctuationButton.title isEqualToString:@"."] &&
-                    [fullWidthButton.title isEqualToString:@"全"],
+                    [fullWidthButton.title isEqualToString:@"全"] &&
+                    [traditionalOutputButton.title isEqualToString:@"繁"],
                 "The floating toolbar did not refresh after input preferences changed.");
 
         [panel activateForDelegate:firstDelegate visible:YES];

@@ -48,6 +48,16 @@ int main()
                 "Different sanitized candidates were not compared by their complete display text.");
         Require(MetasequoiaUniqueStringIndex(@[invalidLeadString, invalidLeadString], invalidLeadString) == NSNotFound,
                 "An ambiguous sanitized candidate resolved to the wrong engine index.");
+
+        NSAttributedString *firstCollision = MetasequoiaIndexedCandidateString(@"乾", 0);
+        NSAttributedString *secondCollision = MetasequoiaIndexedCandidateString(@"乾", 1);
+        Require([firstCollision.string isEqualToString:secondCollision.string],
+                "The collision fixture did not preserve identical visible text.");
+        Require(MetasequoiaCandidateIndex(firstCollision) == 0 &&
+                    MetasequoiaCandidateIndex(secondCollision) == 1,
+                "Identical visible candidates did not preserve distinct engine identities.");
+        Require(MetasequoiaCandidateIndex([[NSAttributedString alloc] initWithString:@"乾"]) == NSNotFound,
+                "An unindexed candidate unexpectedly resolved to an engine identity.");
     }
     return 0;
 }

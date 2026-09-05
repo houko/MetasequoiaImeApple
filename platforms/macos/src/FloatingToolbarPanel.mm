@@ -4,7 +4,7 @@
 
 namespace
 {
-constexpr CGFloat kToolbarWidth = 220.0;
+constexpr CGFloat kToolbarWidth = 272.0;
 constexpr CGFloat kToolbarHeight = 44.0;
 NSString * const kToolbarFrameAutosaveName = @"MetasequoiaFloatingToolbarFrame";
 
@@ -78,6 +78,7 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
     NSButton *_inputModeButton;
     NSButton *_punctuationButton;
     NSButton *_fullWidthButton;
+    NSButton *_traditionalOutputButton;
 }
 
 + (instancetype)sharedPanel
@@ -128,13 +129,15 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
                                        @selector(togglePunctuation:));
     _fullWidthButton = ToolbarButton(@"半", @"MetasequoiaFloatingToolbarFullWidth", self,
                                      @selector(toggleFullWidth:));
+    _traditionalOutputButton = ToolbarButton(@"简", @"MetasequoiaFloatingToolbarTraditionalOutput", self,
+                                             @selector(toggleTraditionalOutput:));
     NSButton *settingsButton = ToolbarButton(@"", @"MetasequoiaFloatingToolbarSettings", self,
                                              @selector(openSettings:));
     settingsButton.image = [NSImage imageWithSystemSymbolName:@"gearshape" accessibilityDescription:@"设置"];
     settingsButton.accessibilityLabel = @"打开水杉输入法设置";
 
     NSStackView *actions = [NSStackView stackViewWithViews:@[
-        _inputModeButton, _punctuationButton, _fullWidthButton, settingsButton
+        _inputModeButton, _punctuationButton, _fullWidthButton, _traditionalOutputButton, settingsButton
     ]];
     actions.translatesAutoresizingMaskIntoConstraints = NO;
     actions.orientation = NSUserInterfaceLayoutOrientationHorizontal;
@@ -148,7 +151,10 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
         [actions.trailingAnchor constraintEqualToAnchor:background.trailingAnchor constant:-10.0],
         [actions.centerYAnchor constraintEqualToAnchor:background.centerYAnchor],
     ]];
-    [self updateEnglishInputMode:NO chinesePunctuationEnabled:YES fullWidthEnabled:NO];
+    [self updateEnglishInputMode:NO
+        chinesePunctuationEnabled:YES
+                 fullWidthEnabled:NO
+    traditionalChineseOutputEnabled:NO];
     return self;
 }
 
@@ -160,6 +166,7 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
 - (void)updateEnglishInputMode:(BOOL)englishInputMode
     chinesePunctuationEnabled:(BOOL)chinesePunctuationEnabled
              fullWidthEnabled:(BOOL)fullWidthEnabled
+traditionalChineseOutputEnabled:(BOOL)traditionalChineseOutputEnabled
 {
     _inputModeButton.title = englishInputMode ? @"英" : @"中";
     _inputModeButton.accessibilityLabel = englishInputMode ? @"切换到中文输入" : @"切换到英文输入";
@@ -168,6 +175,9 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
         chinesePunctuationEnabled ? @"切换到西文标点" : @"切换到中文标点";
     _fullWidthButton.title = fullWidthEnabled ? @"全" : @"半";
     _fullWidthButton.accessibilityLabel = fullWidthEnabled ? @"切换到半角输入" : @"切换到全角输入";
+    _traditionalOutputButton.title = traditionalChineseOutputEnabled ? @"繁" : @"简";
+    _traditionalOutputButton.accessibilityLabel =
+        traditionalChineseOutputEnabled ? @"切换到简体输出" : @"切换到繁体输出";
 }
 
 - (void)activateForDelegate:(id<MetasequoiaFloatingToolbarDelegate>)delegate visible:(BOOL)visible
@@ -228,6 +238,12 @@ NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame
 {
     (void)sender;
     [self.toolbarDelegate floatingToolbarDidRequestToggleFullWidth:self];
+}
+
+- (void)toggleTraditionalOutput:(id)sender
+{
+    (void)sender;
+    [self.toolbarDelegate floatingToolbarDidRequestToggleTraditionalOutput:self];
 }
 
 - (void)openSettings:(id)sender

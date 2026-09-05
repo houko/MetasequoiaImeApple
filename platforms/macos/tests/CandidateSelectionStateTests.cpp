@@ -69,6 +69,8 @@ void run_tests() {
       highlighted_session.candidates()[1].word;
   candidate_selection.begin_navigation();
   candidate_selection.update(1, highlighted_candidate);
+  require(candidate_selection.selected_index() == 1,
+          "The highlighted engine index was not available for a display-only refresh.");
   const auto highlighted = candidate_selection.commit(highlighted_session);
   require(
       highlighted.handled && highlighted.commit == highlighted_candidate,
@@ -81,6 +83,8 @@ void run_tests() {
   candidate_selection.begin_navigation();
   candidate_selection.update(1, reset_session.candidates()[1].word);
   candidate_selection.reset();
+  require(!candidate_selection.selected_index().has_value(),
+          "Reset retained a stale engine index.");
   const auto reset = candidate_selection.commit(reset_session);
   require(
       reset.handled && reset.commit == reset_leading_candidate,
