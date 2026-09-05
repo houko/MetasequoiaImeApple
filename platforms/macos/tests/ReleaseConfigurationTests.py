@@ -284,6 +284,15 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertEqual(used_actions, allowed_actions)
         self.assertIn("steps.release.outputs.release_created", workflow)
         self.assertIn("run: bash platforms/macos/scripts/merge-release-pr.sh", workflow)
+        merge_release_pr_script = (MACOS_ROOT / "scripts/merge-release-pr.sh").read_text()
+        # main requires the pull_request checks, which are a different set of runs from the one this
+        # script dispatches and watches. Merging on the dispatched run alone is refused by the branch
+        # protection whenever the pull_request runs are still queued.
+        self.assertIn("gh pr view \"$pr_number\" --repo \"$GH_REPO\" --json statusCheckRollup", merge_release_pr_script)
+        self.assertLess(
+            merge_release_pr_script.index("statusCheckRollup"),
+            merge_release_pr_script.index("gh pr merge"),
+        )
         self.assertIn("id: merge_release_pr", workflow)
         self.assertIn("id: promote_release_commit", workflow)
         self.assertIn("id: release_branch_before", workflow)

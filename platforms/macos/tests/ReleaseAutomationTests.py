@@ -24,7 +24,10 @@ SIGNING_SECRETS = (
 
 
 class ReleaseAutomationTests(unittest.TestCase):
-    def run_merge(self, current_base=BASE_SHA, ci_exit_code="0"):
+    ALL_GREEN = '[{"conclusion":"SUCCESS"},{"conclusion":"SUCCESS"},{"conclusion":"SUCCESS"}]'
+
+    def run_merge(self, current_base=BASE_SHA, ci_exit_code="0", check_rollup=None):
+        check_rollup = self.ALL_GREEN if check_rollup is None else check_rollup
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary = Path(temporary_directory)
             log = temporary / "gh.log"
@@ -34,7 +37,9 @@ class ReleaseAutomationTests(unittest.TestCase):
                 """#!/bin/zsh
 set -euo pipefail
 print -r -- "$*" >> "$FAKE_GH_LOG"
-if [[ "$1 $2" == "pr view" ]]; then
+if [[ "$*" == *statusCheckRollup* ]]; then
+    print -r -- "$FAKE_CHECK_ROLLUP"
+elif [[ "$1 $2" == "pr view" ]]; then
     print -r -- "{\\"number\\":42,\\"state\\":\\"OPEN\\",\\"isDraft\\":false,\\"headRefName\\":\\"release-please--branches--main--components--MetasequoiaImeApple\\",\\"headRefOid\\":\\"$FAKE_HEAD_SHA\\",\\"baseRefName\\":\\"main\\",\\"baseRefOid\\":\\"$FAKE_BASE_SHA\\",\\"title\\":\\"chore(main): release 1.2.3\\"}"
 elif [[ "$1 $2" == "workflow run" ]]; then
     exit 0
@@ -68,6 +73,7 @@ fi
                     "FAKE_BASE_SHA": BASE_SHA,
                     "FAKE_CURRENT_BASE": current_base,
                     "FAKE_CI_EXIT_CODE": ci_exit_code,
+                    "FAKE_CHECK_ROLLUP": check_rollup,
                     "FAKE_HEAD_SHA": HEAD_SHA,
                     "METASEQUOIA_RELEASE_CI_MAX_POLLS": "1",
                     "METASEQUOIA_RELEASE_CI_POLL_INTERVAL": "0",
@@ -98,6 +104,18 @@ fi
         self.assertIn("run watch 9001", calls)
         self.assertNotIn("pr merge 42", calls)
         self.assertEqual(output, "merged=false\n")
+
+    def test_release_pull_request_is_not_merged_when_its_own_checks_fail(self):
+        # main requires the pull_request checks, which are separate runs from the dispatched one this
+        # script watches. Merging on the dispatched run alone would be refused by branch protection.
+        result, calls, output = self.run_merge(
+            check_rollup='[{"conclusion":"SUCCESS"},{"conclusion":"FAILURE"}]'
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("run watch 9001", calls)
+        self.assertNotIn("pr merge 42", calls)
+        self.assertIn("failing check", result.stderr)
 
     def test_release_pull_request_stays_open_when_ci_fails(self):
         result, calls, output = self.run_merge(ci_exit_code="1")
