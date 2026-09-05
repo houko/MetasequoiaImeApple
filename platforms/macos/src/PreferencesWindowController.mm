@@ -514,7 +514,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         metasequoia::mac::NormalizeHelpcodeSchemaPreference(static_cast<int>(schema));
     [[NSUserDefaults standardUserDefaults] setInteger:normalizedSchema
                                                forKey:kQuanpinHelpcodeSchemaPreferenceKey];
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaHelpcodeDidChangeNotification"
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaHelpcodeSchemaDidChangeNotification"
                                                         object:@(normalizedSchema)];
 }
 
@@ -531,7 +531,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         metasequoia::mac::NormalizeHelpcodeSchemaPreference(static_cast<int>(schema));
     [[NSUserDefaults standardUserDefaults] setInteger:normalizedSchema
                                                forKey:kShuangpinHelpcodeSchemaPreferenceKey];
-    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaHelpcodeDidChangeNotification"
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"MetasequoiaHelpcodeSchemaDidChangeNotification"
                                                         object:@(normalizedSchema)];
 }
 
@@ -1541,6 +1541,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                   object:@([MetasequoiaPreferencesWindowController storedAutocorrectEnabled])];
     [notifications postNotificationName:@"MetasequoiaHelpcodeDidChangeNotification"
                                   object:@([MetasequoiaPreferencesWindowController storedHelpcodeEnabled])];
+    // Both schema keys fall back to the same default once removed, so a single notification describes the restored schema for either input scheme.
+    [notifications postNotificationName:@"MetasequoiaHelpcodeSchemaDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedQuanpinHelpcodeSchema])];
     [notifications postNotificationName:@"MetasequoiaChinesePunctuationDidChangeNotification"
                                   object:@([MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled])];
     [notifications postNotificationName:@"MetasequoiaCandidatePanelStyleDidChangeNotification"
