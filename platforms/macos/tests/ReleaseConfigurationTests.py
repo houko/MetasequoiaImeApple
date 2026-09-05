@@ -47,10 +47,12 @@ class ReleaseConfigurationTests(unittest.TestCase):
         workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text()
 
         self.assertIn(
-            "group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}",
+            "group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.head.ref || github.ref_name }}",
             workflow,
         )
         self.assertIn("cancel-in-progress: true", workflow)
+        # merge-release-pr.sh dispatches ci.yml and waits on that run with --exit-status, so a pull_request run on the same branch must land in a different concurrency group or it cancels the release.
+        self.assertIn("${{ github.event_name }}", workflow.split("concurrency:", 1)[1].split("permissions:", 1)[0])
         self.assertIn("on:\n  push:\n    branches:\n      - main\n  pull_request:\n", workflow)
 
     def test_current_repository_links_use_the_canonical_apple_repository(self):

@@ -57,7 +57,8 @@ jobs:
         continue-on-error: true
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # A pull request opened with GITHUB_TOKEN is authored by github-actions[bot], and its pull_request CI run is parked in action_required until a maintainer approves it, so it expires and shows a red check. RELEASE_PLEASE_TOKEN, when set, makes the pull request come from a real account and CI runs on its own.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Test and merge release pull request
         if: ${{ github.event_name == 'push' && steps.release.outputs.prs_created == 'true' }}
         id: merge_release_pr
@@ -80,7 +81,8 @@ jobs:
         id: finalized_release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # A pull request opened with GITHUB_TOKEN is authored by github-actions[bot], and its pull_request CI run is parked in action_required until a maintainer approves it, so it expires and shows a red check. RELEASE_PLEASE_TOKEN, when set, makes the pull request come from a real account and CI runs on its own.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Create draft release for promoted commit
         if: ${{ github.event_name == 'push' && steps.promote_release_commit.outputs.promoted == 'true' }}
         id: finalized_promoted_release
