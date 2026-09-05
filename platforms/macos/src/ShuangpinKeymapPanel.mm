@@ -15,9 +15,9 @@ NSDictionary<NSString *, NSString *> *Key(NSString *key, NSString *codes)
 
 NSString *DisplayUnit(const std::string &unit)
 {
-    if (unit == "v")
+    if (!unit.empty() && unit.front() == 'v')
     {
-        return @"ü";
+        return [@"ü" stringByAppendingString:[NSString stringWithUTF8String:unit.c_str() + 1]];
     }
     return [NSString stringWithUTF8String:unit.c_str()];
 }
