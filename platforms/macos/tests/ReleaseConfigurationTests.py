@@ -393,6 +393,13 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("启用辅助码", preferences_controller)
         self.assertIn("storedQuanpinHelpcodeSchema", preferences_controller)
         self.assertIn("storedShuangpinHelpcodeSchema", preferences_controller)
+        # Each preference owns one notification name here. The two schemas briefly shared MetasequoiaHelpcodeDidChangeNotification, whose payload is the enabled BOOL, so a subscriber reading -boolValue would have seen a schema index instead.
+        self.assertIn("MetasequoiaQuanpinHelpcodeSchemaDidChangeNotification", preferences_controller)
+        self.assertIn("MetasequoiaShuangpinHelpcodeSchemaDidChangeNotification", preferences_controller)
+        self.assertNotIn('@"MetasequoiaHelpcodeSchemaDidChangeNotification"', preferences_controller)
+        helpcode_enabled_setter = preferences_controller.split("+ (void)setHelpcodeEnabled:", 1)[1].split("\n}", 1)[0]
+        self.assertIn("MetasequoiaHelpcodeDidChangeNotification", helpcode_enabled_setter)
+        self.assertNotIn("Schema", helpcode_enabled_setter)
         self.assertIn("全拼辅助码方案", preferences_controller)
         self.assertIn("双拼辅助码方案", preferences_controller)
         input_controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
