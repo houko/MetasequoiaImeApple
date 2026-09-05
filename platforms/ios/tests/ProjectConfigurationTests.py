@@ -209,7 +209,9 @@ class ProjectConfigurationTests(unittest.TestCase):
 
         self.assertIn("private var shuangpinKeyHints: [String: String] = [:]", controller)
         self.assertIn("shuangpinKeyHints = session.shuangpinKeyHints()", controller)
-        self.assertIn("configuration.subtitle = hint", controller)
+        self.assertIn("hintLabel.text = hint", controller)
+        self.assertIn("label.numberOfLines = 1", controller)
+        self.assertIn("label.adjustsFontSizeToFitWidth = true", controller)
         self.assertIn("button.accessibilityValue = hint", controller)
         # English mode feeds the client directly rather than a composition, so a double-pinyin hint
         # there would describe something the key does not do.
@@ -355,7 +357,10 @@ class ProjectConfigurationTests(unittest.TestCase):
 
         self.assertIn("private enum LetterCaseState", controller)
         self.assertIn("case lowercase, shifted, capsLock", controller)
-        self.assertIn("private var letterButtons: [(button: UIButton, lowercase: String)]", controller)
+        self.assertIn(
+            "private var letterButtons: [(button: UIButton, lowercase: String, hint: UILabel)]",
+            controller,
+        )
         self.assertIn("private weak var shiftButton: UIButton?", controller)
         self.assertIn("toggleLetterCase", controller)
         self.assertIn("letterCaseState = .capsLock", controller)
