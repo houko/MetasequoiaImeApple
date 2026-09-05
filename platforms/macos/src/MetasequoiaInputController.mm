@@ -25,12 +25,8 @@
 #import <Carbon/Carbon.h>
 
 #include <memory>
-<<<<<<< HEAD
 #include <cmath>
-||||||| parent of b9d441b (feat(mac): add configurable helpcode schemes)
-=======
 #include <string>
->>>>>>> b9d441b (feat(mac): add configurable helpcode schemes)
 
 namespace
 {
