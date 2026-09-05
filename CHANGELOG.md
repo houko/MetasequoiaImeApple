@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.38.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.37.0...v0.38.0) (2026-09-05)
+
+
+### Features
+
+* **mac:** add toolbar utility menu ([#207](https://github.com/metasequoiaime/MSIME-Apple/issues/207)) ([cfad9b9](https://github.com/metasequoiaime/MSIME-Apple/commit/cfad9b9993d61beb1427918e2cb1abcc0c74e437))
+* **mac:** add traditional Chinese output ([#206](https://github.com/metasequoiaime/MSIME-Apple/issues/206)) ([5c241a8](https://github.com/metasequoiaime/MSIME-Apple/commit/5c241a8190b5a89a4f01f8373b532f8fa2eec52d))
+
 ## [0.37.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.36.0...v0.37.0) (2026-09-05)
 
 
