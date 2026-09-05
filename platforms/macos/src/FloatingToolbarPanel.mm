@@ -1,0 +1,238 @@
+#import "FloatingToolbarPanel.h"
+
+#include <algorithm>
+
+namespace
+{
+constexpr CGFloat kToolbarWidth = 220.0;
+constexpr CGFloat kToolbarHeight = 44.0;
+NSString * const kToolbarFrameAutosaveName = @"MetasequoiaFloatingToolbarFrame";
+
+NSButton *ToolbarButton(NSString *title, NSString *identifier, id target, SEL action)
+{
+    NSButton *button = [NSButton buttonWithTitle:title target:target action:action];
+    button.translatesAutoresizingMaskIntoConstraints = NO;
+    button.bordered = NO;
+    button.font = [NSFont systemFontOfSize:15.0 weight:NSFontWeightMedium];
+    button.contentTintColor = [NSColor labelColor];
+    button.accessibilityIdentifier = identifier;
+    [button.widthAnchor constraintEqualToConstant:42.0].active = YES;
+    [button.heightAnchor constraintEqualToConstant:32.0].active = YES;
+    return button;
+}
+
+NSScreen *ScreenContainingFrame(NSRect frame)
+{
+    NSScreen *bestScreen = nil;
+    CGFloat bestArea = 0.0;
+    for (NSScreen *screen in NSScreen.screens)
+    {
+        NSRect intersection = NSIntersectionRect(frame, screen.frame);
+        CGFloat area = intersection.size.width * intersection.size.height;
+        if (area > bestArea)
+        {
+            bestArea = area;
+            bestScreen = screen;
+        }
+    }
+    return bestScreen;
+}
+
+NSScreen *ScreenContainingMouse()
+{
+    NSPoint mouseLocation = NSEvent.mouseLocation;
+    for (NSScreen *screen in NSScreen.screens)
+    {
+        if (NSPointInRect(mouseLocation, screen.frame))
+        {
+            return screen;
+        }
+    }
+    return NSScreen.mainScreen;
+}
+}
+
+NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame, NSRect visibleFrame, BOOL hasSavedFrame)
+{
+    constexpr CGFloat kDefaultMargin = 20.0;
+    constexpr CGFloat kRestoredMargin = 12.0;
+    proposedFrame.size = NSMakeSize(kToolbarWidth, kToolbarHeight);
+    if (!hasSavedFrame)
+    {
+        proposedFrame.origin.x = NSMaxX(visibleFrame) - proposedFrame.size.width - kDefaultMargin;
+        proposedFrame.origin.y = NSMinY(visibleFrame) + kDefaultMargin;
+        return proposedFrame;
+    }
+
+    CGFloat minimumX = NSMinX(visibleFrame) + kRestoredMargin;
+    CGFloat maximumX = NSMaxX(visibleFrame) - proposedFrame.size.width - kRestoredMargin;
+    CGFloat minimumY = NSMinY(visibleFrame) + kRestoredMargin;
+    CGFloat maximumY = NSMaxY(visibleFrame) - proposedFrame.size.height - kRestoredMargin;
+    proposedFrame.origin.x = std::clamp(proposedFrame.origin.x, minimumX, maximumX);
+    proposedFrame.origin.y = std::clamp(proposedFrame.origin.y, minimumY, maximumY);
+    return proposedFrame;
+}
+
+@implementation MetasequoiaFloatingToolbarPanel
+{
+    NSButton *_inputModeButton;
+    NSButton *_punctuationButton;
+    NSButton *_fullWidthButton;
+}
+
++ (instancetype)sharedPanel
+{
+    static MetasequoiaFloatingToolbarPanel *panel = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        panel = [[MetasequoiaFloatingToolbarPanel alloc] init];
+    });
+    return panel;
+}
+
+- (instancetype)init
+{
+    self = [super initWithContentRect:NSMakeRect(0.0, 0.0, kToolbarWidth, kToolbarHeight)
+                            styleMask:NSWindowStyleMaskBorderless | NSWindowStyleMaskNonactivatingPanel
+                              backing:NSBackingStoreBuffered
+                                defer:NO];
+    if (self == nil)
+    {
+        return nil;
+    }
+
+    self.level = NSStatusWindowLevel;
+    self.opaque = NO;
+    self.backgroundColor = [NSColor clearColor];
+    self.hasShadow = YES;
+    self.hidesOnDeactivate = NO;
+    self.becomesKeyOnlyIfNeeded = YES;
+    self.movableByWindowBackground = YES;
+    self.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces |
+                              NSWindowCollectionBehaviorFullScreenAuxiliary;
+    [self setFrameAutosaveName:kToolbarFrameAutosaveName];
+
+    NSVisualEffectView *background = [[NSVisualEffectView alloc] initWithFrame:self.contentView.bounds];
+    background.translatesAutoresizingMaskIntoConstraints = NO;
+    background.material = NSVisualEffectMaterialPopover;
+    background.blendingMode = NSVisualEffectBlendingModeBehindWindow;
+    background.state = NSVisualEffectStateActive;
+    background.wantsLayer = YES;
+    background.layer.cornerRadius = 10.0;
+    background.layer.masksToBounds = YES;
+    self.contentView = background;
+
+    _inputModeButton = ToolbarButton(@"中", @"MetasequoiaFloatingToolbarInputMode", self,
+                                     @selector(toggleInputMode:));
+    _punctuationButton = ToolbarButton(@"。", @"MetasequoiaFloatingToolbarPunctuation", self,
+                                       @selector(togglePunctuation:));
+    _fullWidthButton = ToolbarButton(@"半", @"MetasequoiaFloatingToolbarFullWidth", self,
+                                     @selector(toggleFullWidth:));
+    NSButton *settingsButton = ToolbarButton(@"", @"MetasequoiaFloatingToolbarSettings", self,
+                                             @selector(openSettings:));
+    settingsButton.image = [NSImage imageWithSystemSymbolName:@"gearshape" accessibilityDescription:@"设置"];
+    settingsButton.accessibilityLabel = @"打开水杉输入法设置";
+
+    NSStackView *actions = [NSStackView stackViewWithViews:@[
+        _inputModeButton, _punctuationButton, _fullWidthButton, settingsButton
+    ]];
+    actions.translatesAutoresizingMaskIntoConstraints = NO;
+    actions.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    actions.alignment = NSLayoutAttributeCenterY;
+    actions.distribution = NSStackViewDistributionEqualSpacing;
+    actions.spacing = 8.0;
+    [background addSubview:actions];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [actions.leadingAnchor constraintEqualToAnchor:background.leadingAnchor constant:10.0],
+        [actions.trailingAnchor constraintEqualToAnchor:background.trailingAnchor constant:-10.0],
+        [actions.centerYAnchor constraintEqualToAnchor:background.centerYAnchor],
+    ]];
+    [self updateEnglishInputMode:NO chinesePunctuationEnabled:YES fullWidthEnabled:NO];
+    return self;
+}
+
+- (BOOL)canBecomeKeyWindow
+{
+    return NO;
+}
+
+- (void)updateEnglishInputMode:(BOOL)englishInputMode
+    chinesePunctuationEnabled:(BOOL)chinesePunctuationEnabled
+             fullWidthEnabled:(BOOL)fullWidthEnabled
+{
+    _inputModeButton.title = englishInputMode ? @"英" : @"中";
+    _inputModeButton.accessibilityLabel = englishInputMode ? @"切换到中文输入" : @"切换到英文输入";
+    _punctuationButton.title = chinesePunctuationEnabled ? @"。" : @".";
+    _punctuationButton.accessibilityLabel =
+        chinesePunctuationEnabled ? @"切换到西文标点" : @"切换到中文标点";
+    _fullWidthButton.title = fullWidthEnabled ? @"全" : @"半";
+    _fullWidthButton.accessibilityLabel = fullWidthEnabled ? @"切换到半角输入" : @"切换到全角输入";
+}
+
+- (void)activateForDelegate:(id<MetasequoiaFloatingToolbarDelegate>)delegate visible:(BOOL)visible
+{
+    self.toolbarDelegate = delegate;
+    [self setVisible:visible forDelegate:delegate];
+}
+
+- (void)setVisible:(BOOL)visible forDelegate:(id<MetasequoiaFloatingToolbarDelegate>)delegate
+{
+    if (self.toolbarDelegate != delegate)
+    {
+        return;
+    }
+    if (!visible)
+    {
+        [self orderOut:nil];
+        return;
+    }
+
+    BOOL hasSavedFrame = [[NSUserDefaults standardUserDefaults]
+        objectForKey:[@"NSWindow Frame " stringByAppendingString:kToolbarFrameAutosaveName]] != nil;
+    NSScreen *screen = hasSavedFrame ? ScreenContainingFrame(self.frame) : ScreenContainingMouse();
+    if (screen == nil)
+    {
+        screen = NSScreen.mainScreen;
+    }
+    if (screen != nil)
+    {
+        [self setFrame:MetasequoiaFloatingToolbarFrame(self.frame, screen.visibleFrame, hasSavedFrame) display:NO];
+    }
+    [self orderFrontRegardless];
+}
+
+- (void)deactivateForDelegate:(id<MetasequoiaFloatingToolbarDelegate>)delegate
+{
+    if (self.toolbarDelegate != delegate)
+    {
+        return;
+    }
+    [self orderOut:nil];
+    self.toolbarDelegate = nil;
+}
+
+- (void)toggleInputMode:(id)sender
+{
+    (void)sender;
+    [self.toolbarDelegate floatingToolbarDidRequestToggleInputMode:self];
+}
+
+- (void)togglePunctuation:(id)sender
+{
+    (void)sender;
+    [self.toolbarDelegate floatingToolbarDidRequestTogglePunctuation:self];
+}
+
+- (void)toggleFullWidth:(id)sender
+{
+    (void)sender;
+    [self.toolbarDelegate floatingToolbarDidRequestToggleFullWidth:self];
+}
+
+- (void)openSettings:(id)sender
+{
+    (void)sender;
+    [self.toolbarDelegate floatingToolbarDidRequestOpenSettings:self];
+}
+@end
