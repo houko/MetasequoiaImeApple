@@ -8,6 +8,7 @@
 - (void)floatingToolbarDidRequestToggleInputMode:(MetasequoiaFloatingToolbarPanel *)toolbar;
 - (void)floatingToolbarDidRequestTogglePunctuation:(MetasequoiaFloatingToolbarPanel *)toolbar;
 - (void)floatingToolbarDidRequestToggleFullWidth:(MetasequoiaFloatingToolbarPanel *)toolbar;
+- (void)floatingToolbarDidRequestToggleTraditionalOutput:(MetasequoiaFloatingToolbarPanel *)toolbar;
 - (void)floatingToolbarDidRequestOpenSettings:(MetasequoiaFloatingToolbarPanel *)toolbar;
 @end
 
@@ -20,7 +21,8 @@ FOUNDATION_EXPORT NSRect MetasequoiaFloatingToolbarFrame(NSRect proposedFrame,
 + (instancetype)sharedPanel;
 - (void)updateEnglishInputMode:(BOOL)englishInputMode
     chinesePunctuationEnabled:(BOOL)chinesePunctuationEnabled
-             fullWidthEnabled:(BOOL)fullWidthEnabled;
+             fullWidthEnabled:(BOOL)fullWidthEnabled
+traditionalChineseOutputEnabled:(BOOL)traditionalChineseOutputEnabled;
 - (void)activateForDelegate:(id<MetasequoiaFloatingToolbarDelegate>)delegate visible:(BOOL)visible;
 - (void)setVisible:(BOOL)visible forDelegate:(id<MetasequoiaFloatingToolbarDelegate>)delegate;
 - (void)deactivateForDelegate:(id<MetasequoiaFloatingToolbarDelegate>)delegate;

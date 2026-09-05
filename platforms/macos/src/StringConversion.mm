@@ -41,3 +41,24 @@ NSUInteger MetasequoiaUniqueStringIndex(NSArray<NSString *> *values, NSString *t
     }
     return match;
 }
+
+namespace
+{
+NSAttributedStringKey const kMetasequoiaCandidateIndexAttribute = @"MetasequoiaCandidateIndex";
+}
+
+NSAttributedString *MetasequoiaIndexedCandidateString(NSString *value, NSUInteger index)
+{
+    return [[NSAttributedString alloc] initWithString:value
+                                          attributes:@{kMetasequoiaCandidateIndexAttribute : @(index)}];
+}
+
+NSUInteger MetasequoiaCandidateIndex(NSAttributedString *candidate)
+{
+    if (candidate.length == 0)
+    {
+        return NSNotFound;
+    }
+    id value = [candidate attribute:kMetasequoiaCandidateIndexAttribute atIndex:0 effectiveRange:nil];
+    return [value isKindOfClass:[NSNumber class]] ? [value unsignedIntegerValue] : NSNotFound;
+}
