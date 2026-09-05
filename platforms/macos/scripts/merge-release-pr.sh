@@ -75,6 +75,24 @@ if [[ "$(jq -er .state <<< "$current_pr_json")" != OPEN || \
     exit 1
 fi
 
+# The dispatched run above proves this commit builds, but main requires the pull_request checks
+# specifically, and those are a separate set of runs started when the release pull request opened.
+# They normally finish first; wait rather than letting a slow queue abort the release.
+for ((attempt = 1; attempt <= max_polls; ++attempt)); do
+    rollup=$(gh pr view "$pr_number" --repo "$GH_REPO" --json statusCheckRollup \
+        --jq '[.statusCheckRollup[] | select(.conclusion != null or .status != null)]')
+    pending=$(jq -r '[.[] | select((.conclusion // .status) as $s | $s == "QUEUED" or $s == "IN_PROGRESS" or $s == "PENDING" or $s == null)] | length' <<< "$rollup")
+    failed=$(jq -r '[.[] | select((.conclusion // "") as $c | $c == "FAILURE" or $c == "TIMED_OUT" or $c == "CANCELLED" or $c == "ACTION_REQUIRED")] | length' <<< "$rollup")
+    if [[ "$failed" != 0 ]]; then
+        printf '%s\n' "Release PR #$pr_number has a failing check; refusing to merge it." >&2
+        exit 1
+    fi
+    if [[ "$pending" == 0 ]]; then
+        break
+    fi
+    sleep "$poll_interval"
+done
+
 gh pr merge "$pr_number" --repo "$GH_REPO" --squash --delete-branch \
     --match-head-commit "$head_sha" --subject "$title" \
     --body "Automated release PR merge after CI passed."
