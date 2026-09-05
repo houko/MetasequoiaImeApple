@@ -259,7 +259,7 @@ class ProjectConfigurationTests(unittest.TestCase):
         adapter = (IOS_ROOT.parents[1] / "shared/apple-bridge/InputSessionAdapter.cpp").read_text()
         bridge_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.h").read_text()
         controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
-        profile = (IOS_ROOT.parents[1] / "tools/MetasequoiaImeDict/build_profile.py").read_text()
+        profile = (IOS_ROOT.parents[1] / "vendor/MetasequoiaImeEngine/dictionary/build_profile.py").read_text()
 
         self.assertIn("InputSnapshot open_local_mode(char trigger);", adapter_header)
         self.assertIn("openLocalMode:", bridge_header)
@@ -276,7 +276,7 @@ class ProjectConfigurationTests(unittest.TestCase):
         for enabled in ("unicode", "date_time", "super_jianpin"):
             self.assertIn(f"options.{enabled} = true;", options)
         # quick_phrase reads quick_parases and temporary_japanese reads dict_japanese.dat, neither of
-        # which is in MSIME-Dict's mobile product: its manifest declares features ['pinyin']. Emoji
+        # which is in Engine's mobile product: its manifest declares features ['pinyin']. Emoji
         # and kaomoji read others.db and temporary English reads english.db, none of which Apple
         # fetches at all.
         for disabled in ("quick_phrase", "emoji", "kaomoji", "temporary_english", "temporary_japanese"):
