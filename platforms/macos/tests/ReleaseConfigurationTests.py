@@ -180,6 +180,20 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("selectedCandidate", selected_callback)
         self.assertIn("candidateStringIdentifier", selected_callback)
 
+    def test_floating_toolbar_uses_native_utility_actions(self):
+        toolbar = (MACOS_ROOT / "src/FloatingToolbarPanel.mm").read_text()
+        controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
+        readme = (PROJECT_ROOT / "README.md").read_text()
+
+        self.assertIn("CreateMetasequoiaFloatingToolbarUtilityMenu", toolbar)
+        self.assertIn("popUpMenuPositioningItem", toolbar)
+        self.assertIn("floatingToolbarDidRequestCheckForUpdates:", controller)
+        self.assertIn("floatingToolbarDidRequestOpenWebsite:", controller)
+        hide_method = controller.split("- (void)floatingToolbarDidRequestHide:", 1)[1].split("\n}", 1)[0]
+        self.assertIn("setFloatingToolbarEnabled:NO", hide_method)
+        self.assertIn("https://msime.app/", controller)
+        self.assertIn("隐藏悬浮状态栏", readme)
+
     def test_release_version_matches_cmake_project_version(self):
         manifest = json.loads((PROJECT_ROOT / ".release-please-manifest.json").read_text())
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
