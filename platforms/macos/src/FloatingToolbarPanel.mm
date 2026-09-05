@@ -77,6 +77,9 @@ NSMenu *CreateMetasequoiaFloatingToolbarUtilityMenu(id target)
 {
     NSMenu *menu = [[NSMenu alloc] initWithTitle:@"水杉输入法"];
     for (NSMenuItem *item in @[
+             [[NSMenuItem alloc] initWithTitle:@"表情与符号…"
+                                       action:@selector(openCharacterPalette:)
+                                keyEquivalent:@""],
              [[NSMenuItem alloc] initWithTitle:@"打开设置…" action:@selector(openSettings:) keyEquivalent:@""],
              [[NSMenuItem alloc] initWithTitle:@"检查更新…" action:@selector(checkForUpdates:) keyEquivalent:@""],
          ])
@@ -291,6 +294,12 @@ traditionalChineseOutputEnabled:(BOOL)traditionalChineseOutputEnabled
 {
     (void)sender;
     [self.toolbarDelegate floatingToolbarDidRequestOpenSettings:self];
+}
+
+- (void)openCharacterPalette:(id)sender
+{
+    (void)sender;
+    [self.toolbarDelegate floatingToolbarDidRequestOpenCharacterPalette:self];
 }
 
 - (void)checkForUpdates:(id)sender

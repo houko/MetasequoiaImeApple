@@ -871,6 +871,12 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         ![MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled]];
 }
 
+- (void)floatingToolbarDidRequestOpenCharacterPalette:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [NSApp orderFrontCharacterPalette:nil];
+}
+
 - (void)floatingToolbarDidRequestOpenSettings:(MetasequoiaFloatingToolbarPanel *)toolbar
 {
     (void)toolbar;

@@ -340,6 +340,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("是 Sparkle 的更新载荷，不是供手动打开的安装包", readme)
         self.assertIn("启用全拼纠错", readme)
         self.assertIn("原生的「水杉输入法设置」面板", readme)
+        self.assertIn("表情与符号", readme)
         self.assertIn("当前用户的 `~/Library/Input Methods`", readme)
         self.assertIn("可能会请求管理员授权", readme)
         self.assertIn("不想注销或使用管理员权限", readme)
