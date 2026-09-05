@@ -349,6 +349,23 @@ int main()
             [generalPage convertRect:candidatePageShortcutCard.bounds fromView:candidatePageShortcutCard];
         require(NSMaxY(candidatePageShortcutCardRect) <= NSMaxY(generalPage.bounds),
                 "The candidate page shortcut card overflowed the keyboard-input page.");
+        NSButton *footerRestoreButton = FindButtonWithTitle(controller.window.contentView, @"恢复默认设置");
+        require(footerRestoreButton != nil, "The settings footer restore button was not found.");
+        NSRect candidatePageShortcutRectInWindow =
+            [controller.window.contentView convertRect:candidatePageShortcutCard.bounds
+                                              fromView:candidatePageShortcutCard];
+        NSRect footerRestoreRectInWindow =
+            [controller.window.contentView convertRect:footerRestoreButton.bounds fromView:footerRestoreButton];
+        require(NSMinY(candidatePageShortcutRectInWindow) >= NSMaxY(footerRestoreRectInWindow) + 8.0,
+                "The keyboard-input controls overlapped the settings footer.");
+        NSView *wubiSettingsRowInCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔功能行");
+        require(wubiSettingsRowInCard != nil && !wubiSettingsRowInCard.hidden,
+                "The Wubi settings row was not visible for the card width check.");
+        for (NSView *cardEntry in wubiSettingsRowInCard.superview.subviews)
+        {
+            require(cardEntry.hidden || NSWidth(cardEntry.frame) == NSWidth(wubiSettingsRowInCard.superview.bounds),
+                    "A scheme card row or separator did not fill its card width.");
+        }
         NSRect feedbackCardRect = [updatesPage convertRect:feedbackCard.bounds fromView:feedbackCard];
         require(NSMaxY(feedbackCardRect) <= NSMaxY(updatesPage.bounds),
                 "The feedback card overflowed the updates page.");

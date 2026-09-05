@@ -22,8 +22,8 @@ bool MetasequoiaShouldShowPreferences(int argc, const char *argv[])
 
 namespace
 {
-constexpr CGFloat kWindowWidth = 980.0;
-constexpr CGFloat kWindowHeight = 720.0;
+constexpr CGFloat kWindowWidth = 720.0;
+constexpr CGFloat kWindowHeight = 660.0;
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
@@ -119,8 +119,8 @@ void ConfigureCard(NSBox *card)
     card.titlePosition = NSNoTitle;
     card.borderWidth = 1.0;
     card.cornerRadius = 12.0;
-    card.borderColor = [[NSColor separatorColor] colorWithAlphaComponent:0.55];
-    card.fillColor = [NSColor windowBackgroundColor];
+    card.borderColor = [NSColor separatorColor];
+    card.fillColor = [NSColor controlBackgroundColor];
     card.translatesAutoresizingMaskIntoConstraints = NO;
 }
 
@@ -148,7 +148,7 @@ NSView *PreferenceRow(NSString *title, NSView *control)
         [label.trailingAnchor constraintLessThanOrEqualToAnchor:control.leadingAnchor constant:-12.0],
         [control.trailingAnchor constraintEqualToAnchor:row.trailingAnchor],
         [control.centerYAnchor constraintEqualToAnchor:row.centerYAnchor],
-        [control.widthAnchor constraintEqualToConstant:220.0],
+        [control.widthAnchor constraintEqualToConstant:188.0],
     ]];
     return row;
 }
@@ -680,7 +680,6 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     window.titleVisibility = NSWindowTitleHidden;
     window.titlebarAppearsTransparent = YES;
     window.movableByWindowBackground = YES;
-    window.backgroundColor = [NSColor windowBackgroundColor];
 
     self = [super initWithWindow:window];
     if (self == nil)
