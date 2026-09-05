@@ -33,6 +33,9 @@ targets:
       - path: vendor/MetasequoiaImeEngine/japanese
         excludes:
           - "*.h"
+      - path: vendor/MetasequoiaImeEngine/local_modes
+        excludes:
+          - "*.h"
       - path: vendor/MetasequoiaImeEngine/providers
         excludes:
           - "*.h"
