@@ -31,6 +31,16 @@ NS_ASSUME_NONNULL_BEGIN
 - (MetasequoiaInputSnapshot *)selectCandidateAtIndex:(NSUInteger)index;
 - (MetasequoiaInputSnapshot *)switchToShuangpin:(BOOL)usesShuangpin;
 
+/// Opens one of the engine's local input modes by its trigger letter. The engine keys these off a
+/// capital delivered with a shift-only modifier, which this keyboard has no way to produce, so the
+/// mode is named instead. A mode that is switched off, or a letter that names none, leaves the
+/// session untouched and reports itself unhandled.
+- (MetasequoiaInputSnapshot *)openLocalMode:(NSString *)trigger;
+
+/// YES while the Unicode local mode is open, when the digits are input for a code point rather than
+/// candidate numbers.
+@property(nonatomic, readonly, getter=isInUnicodeMode) BOOL inUnicodeMode;
+
 /// Per-key double-pinyin hints for the scheme the session is actually running, keyed by uppercase
 /// letter. Empty in full pinyin. Derived from the engine's own profile so a frontend never hardcodes
 /// a keymap that can drift from the scheme.

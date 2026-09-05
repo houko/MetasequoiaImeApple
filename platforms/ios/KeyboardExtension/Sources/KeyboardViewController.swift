@@ -7,7 +7,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   }
 
   private let session = MetasequoiaInputSessionBridge()
-  private let preeditLabel = UILabel()
+  private let preeditButton = UIButton()
   private let candidateScrollView = UIScrollView()
   private let diagnosticLabel = UILabel()
   private let previousPageButton = UIButton()
@@ -128,10 +128,19 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     container.backgroundColor = MetasequoiaTheme.keyBackground.withAlphaComponent(0.82)
     container.layer.cornerRadius = 12
 
-    preeditLabel.font = .preferredFont(forTextStyle: .subheadline)
-    preeditLabel.textColor = MetasequoiaTheme.forestUIColor
-    preeditLabel.adjustsFontForContentSizeCategory = true
-    preeditLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+    var preeditConfiguration = UIButton.Configuration.plain()
+    preeditConfiguration.contentInsets = .zero
+    preeditConfiguration.baseForegroundColor = MetasequoiaTheme.forestUIColor
+    preeditConfiguration.titleTextAttributesTransformer =
+      UIConfigurationTextAttributesTransformer { attributes in
+        var attributes = attributes
+        attributes.font = .preferredFont(forTextStyle: .subheadline)
+        return attributes
+      }
+    preeditButton.configuration = preeditConfiguration
+    preeditButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+    preeditButton.showsMenuAsPrimaryAction = true
+    preeditButton.accessibilityIdentifier = "preeditButton"
 
     updateLanguageModeButton()
     languageModeButton.addAction(
@@ -167,7 +176,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       for: .primaryActionTriggered)
 
     let content = UIStackView(arrangedSubviews: [
-      languageModeButton, schemeButton, preeditLabel, candidateScrollView, diagnosticLabel,
+      languageModeButton, schemeButton, preeditButton, candidateScrollView, diagnosticLabel,
       previousPageButton, nextPageButton,
     ])
     content.axis = .horizontal
@@ -347,6 +356,13 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
     playInputClick()
     if !isChineseMode {
       textDocumentProxy.insertText(symbol)
+      return
+    }
+
+    // Unicode mode reads a hexadecimal code point, so while it is open its digits are input rather
+    // than candidate numbers. Its letters already reach the session through handleCharacter.
+    if session.isInUnicodeMode, symbol.count == 1, symbol >= "0", symbol <= "9" {
+      render(session.handleCharacter(symbol))
       return
     }
 
@@ -611,6 +627,47 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       !pageable || candidatePageStart + Self.candidatePageSize >= visibleCandidates.count
   }
 
+  // The engine's local input modes open on a capital carried with a shift-only modifier, which this
+  // keyboard has no key for. While nothing is being composed the strip's own name is dead space, so
+  // it doubles as the way in; during a composition it goes back to showing the preedit and the menu
+  // is withdrawn, because a mode cannot open on top of a composition anyway.
+  private static let localInputModes = [
+    (trigger: "U", title: "Unicode 码点"),
+    (trigger: "T", title: "日期时间"),
+    (trigger: "J", title: "超级简拼"),
+  ]
+
+  private func updatePreeditButton() {
+    let idle = visiblePreedit.isEmpty
+    let title = idle ? (isChineseMode ? "水杉输入法" : "英文输入") : visiblePreedit
+    if var configuration = preeditButton.configuration {
+      configuration.title = title
+      preeditButton.configuration = configuration
+    }
+
+    let offersModes = idle && isChineseMode
+    preeditButton.menu =
+      offersModes
+      ? UIMenu(
+        title: "本地输入",
+        children: Self.localInputModes.map { mode in
+          UIAction(title: mode.title) { [weak self] _ in
+            self?.openLocalInputMode(mode.trigger)
+          }
+        })
+      : nil
+    // Withdrawing the menu is what makes the button inert; disabling it would dim the title, and
+    // this is the preedit, which has to keep reading as the text the user is composing.
+    preeditButton.accessibilityLabel = offersModes ? "本地输入模式" : title
+    preeditButton.accessibilityValue = offersModes ? nil : title
+    preeditButton.accessibilityTraits = offersModes ? .button : .staticText
+  }
+
+  private func openLocalInputMode(_ trigger: String) {
+    playInputClick()
+    render(session.openLocalMode(trigger))
+  }
+
   private func chineseOutput(_ text: String) -> String {
     ChineseTextConversion.outputString(text, traditional: usesTraditionalOutput)
   }
@@ -766,8 +823,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   }
 
   private func renderCandidateStrip() {
-    preeditLabel.text =
-      visiblePreedit.isEmpty ? (isChineseMode ? "水杉输入法" : "英文输入") : visiblePreedit
+    updatePreeditButton()
     for view in candidateStack.arrangedSubviews {
       candidateStack.removeArrangedSubview(view)
       view.removeFromSuperview()

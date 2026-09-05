@@ -202,6 +202,18 @@ void ConfigureDataDirectory() {
   return [self snapshotFrom:_adapter->switch_to_shuangpin(usesShuangpin)];
 }
 
+- (MetasequoiaInputSnapshot *)openLocalMode:(NSString *)trigger {
+  const char *utf8 = trigger.UTF8String;
+  if (utf8 == nullptr || utf8[0] == '\0' || utf8[1] != '\0') {
+    return [self snapshotFrom:_adapter->open_local_mode('\0')];
+  }
+  return [self snapshotFrom:_adapter->open_local_mode(utf8[0])];
+}
+
+- (BOOL)isInUnicodeMode {
+  return _adapter->in_unicode_mode() ? YES : NO;
+}
+
 - (NSDictionary<NSString *, NSString *> *)shuangpinKeyHints {
   const auto hints =
       metasequoia::apple::shuangpin_key_hints(_adapter->uses_shuangpin());

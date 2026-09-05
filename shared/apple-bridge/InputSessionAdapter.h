@@ -27,6 +27,14 @@ public:
   InputSessionAdapter &operator=(const InputSessionAdapter &) = delete;
 
   InputSnapshot handle_character(char character);
+  // Opens one of the engine's local input modes. The engine keys these off a capital delivered with
+  // its shift_only flag, which no iOS key can produce, so the frontend names the mode instead and
+  // this turns it back into the keystroke the engine expects. A mode that is switched off, or a
+  // letter that names none, leaves the session untouched and reports itself unhandled.
+  InputSnapshot open_local_mode(char trigger);
+  // None while no local mode is open. A frontend needs this to know that its digits are input for a
+  // Unicode code point rather than candidate numbers.
+  bool in_unicode_mode() const;
   InputSnapshot handle_candidate_key(char character);
   InputSnapshot handle_punctuation(char character);
   InputSnapshot handle_backspace();
