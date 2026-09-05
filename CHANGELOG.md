@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.35.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.35.0...v0.35.1) (2026-09-05)
+
+
+### Bug Fixes
+
+* **mac:** restore compact settings layout ([#204](https://github.com/metasequoiaime/MSIME-Apple/issues/204)) ([4fcb9b6](https://github.com/metasequoiaime/MSIME-Apple/commit/4fcb9b636236c185d2db868bf8a07d6add4c8f24))
+
 ## [0.35.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.34.0...v0.35.0) (2026-09-04)
 
 
