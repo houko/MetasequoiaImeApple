@@ -53,13 +53,14 @@ static void Require(bool condition, const char *message)
 
 @interface RecordingInputClient : NSObject
 @property(nonatomic, copy) NSString *committed;
+@property(nonatomic, copy) NSString *marked;
 @end
 @implementation RecordingInputClient
 - (NSDictionary *)attributesForCharacterIndex:(NSUInteger)index lineHeightRectangle:(NSRect *)rect
 { (void)index; *rect = NSMakeRect(100, 400, 1, 20); return @{}; }
 - (void)insertText:(id)text replacementRange:(NSRange)range { (void)range; self.committed = text; }
 - (void)setMarkedText:(id)text selectionRange:(NSRange)selection replacementRange:(NSRange)replacement
-{ (void)text; (void)selection; (void)replacement; }
+{ self.marked = text; (void)selection; (void)replacement; }
 @end
 
 // The test category is in the controller's translation unit so it can create a
@@ -67,6 +68,7 @@ static void Require(bool condition, const char *message)
 @interface MetasequoiaInputController (PaginationTestFixture)
 - (void)prepareTestPanel:(RecordingCandidatePanel *)panel;
 - (NSUInteger)testCandidateCount;
+- (void)preparePartialInput;
 - (NSString *)testCandidateAtIndex:(NSUInteger)index;
 @end
 @implementation MetasequoiaInputController (PaginationTestFixture)
@@ -76,6 +78,12 @@ static void Require(bool condition, const char *message)
     _session = std::make_unique<metasequoia::InputSession>();
     [self reloadSessionFromPreferences];
     for (char character : std::string("nihao")) _session->handle_character(character);
+    [self updateCandidatePanel];
+}
+- (void)preparePartialInput
+{
+    _session = std::make_unique<metasequoia::InputSession>(SchemeType::Quanpin, true, false, true, false);
+    for (char character : std::string("shui'lin")) _session->handle_character(character);
     [self updateCandidatePanel];
 }
 - (NSUInteger)testCandidateCount { return _session->candidates().size(); }
@@ -113,6 +121,19 @@ static void RunTests()
         RecordingCandidatePanel *panel = [RecordingCandidatePanel new];
         PaginationTestController *controller = [PaginationTestController alloc];
         controller.testClient = [RecordingInputClient new];
+        [controller prepareTestPanel:panel];
+        [controller preparePartialInput];
+        Press(controller, 49, @" ");
+        Require([controller.testClient.committed isEqualToString:@"水"] &&
+                    [controller.testClient.marked isEqualToString:@"lin"] && panel.visible,
+                "Partial selection did not insert the prefix and render the remaining preedit.");
+        Press(controller, 49, @" ");
+        Require([controller.testClient.committed isEqualToString:@"林"] && !panel.visible,
+                "Completing partial input did not clear the candidate panel.");
+        [controller preparePartialInput];
+        [controller commitLeadingCandidate:controller.testClient];
+        Require([controller.testClient.committed isEqualToString:@"水林"] && !panel.visible,
+                "Host passthrough discarded the unselected suffix.");
         [controller prepareTestPanel:panel];
         const NSUInteger pageSize = size.unsignedIntegerValue;
         Require([controller testCandidateCount] > pageSize, "The fixture needs multiple pages.");
@@ -217,6 +238,13 @@ int main()
             NSString *sql = [NSString stringWithFormat:@"INSERT INTO tbl_2_n VALUES('ni''hao','nh','候选%d',%d)", index, 120-index];
             Require(sqlite3_exec(database, sql.UTF8String, nullptr, nullptr, nullptr) == SQLITE_OK, "Cannot insert fixture.");
         }
+        Require(sqlite3_exec(database,
+            "CREATE TABLE tbl_1_s(key TEXT,jp TEXT,value TEXT,weight INTEGER);"
+            "INSERT INTO tbl_1_s VALUES('shui','s','水',100);"
+            "CREATE TABLE tbl_1_l(key TEXT,jp TEXT,value TEXT,weight INTEGER);"
+            "INSERT INTO tbl_1_l VALUES('lin','l','林',100);"
+            "CREATE TABLE tbl_2_s(key TEXT,jp TEXT,value TEXT,weight INTEGER)",
+            nullptr, nullptr, nullptr) == SQLITE_OK, "Cannot create partial-selection fixture.");
         sqlite3_close(database);
         try { RunTests(); }
         catch (const std::exception &error)

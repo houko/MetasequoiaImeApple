@@ -80,7 +80,7 @@ InputSnapshot InputSessionAdapter::switch_to_shuangpin(bool uses_shuangpin) {
   if (uses_shuangpin == this->uses_shuangpin()) {
     return MakeSnapshot(impl_->session, {});
   }
-  const auto result = impl_->session.handle_command(Command::CommitCandidate);
+  const auto result = impl_->session.finish_composition();
   auto snapshot = MakeSnapshot(impl_->session, result);
   const auto scheme =
       uses_shuangpin ? SchemeType::Shuangpin : SchemeType::Quanpin;
