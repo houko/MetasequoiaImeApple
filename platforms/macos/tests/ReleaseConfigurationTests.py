@@ -298,6 +298,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("update payload, not a package to open manually", readme)
         self.assertIn("enable full-pinyin autocorrection", readme)
         self.assertIn("native 水杉输入法设置 panel", readme)
+        self.assertIn("表情与符号", readme)
         self.assertIn("current user's copy in `~/Library/Input Methods`", readme)
         self.assertIn("may request administrator authorization", readme)
         self.assertIn("without logging out or administrator privileges", readme)

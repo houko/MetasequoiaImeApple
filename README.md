@@ -52,7 +52,7 @@ The input method uses Sparkle 2 to check the repository's signed update feed aut
 
 The text input menu also shows whether 水杉 is in 中文输入 or 英文输入 mode and whether Chinese candidates use 简体输出 or 繁体输出. Choose either input mode directly, or press Shift+Space; switching to English commits the active Chinese composition before subsequent keys pass through unchanged. The Shift+Space shortcut is enabled by default and can be disabled in settings when it conflicts with another workflow.
 
-The compact native floating status bar mirrors the current Chinese/English, punctuation, full-width, and simplified/traditional states. Its gear button opens a native utility menu for settings, update checks, msime.app, and 隐藏悬浮状态栏; the bar can be enabled again from the existing settings control.
+The compact native floating status bar mirrors the current Chinese/English, punctuation, full-width, and simplified/traditional states. Its gear button opens a native utility menu for the macOS 表情与符号 viewer, settings, update checks, msime.app, and 隐藏悬浮状态栏; the bar can be enabled again from the existing settings control.
 
 ## Development tests
 

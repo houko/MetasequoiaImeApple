@@ -10,6 +10,7 @@
 @property(nonatomic) BOOL toggledPunctuation;
 @property(nonatomic) BOOL toggledFullWidth;
 @property(nonatomic) BOOL toggledTraditionalOutput;
+@property(nonatomic) BOOL openedCharacterPalette;
 @property(nonatomic) BOOL openedSettings;
 @property(nonatomic) BOOL checkedForUpdates;
 @property(nonatomic) BOOL openedWebsite;
@@ -45,6 +46,12 @@
 {
     (void)toolbar;
     self.openedSettings = YES;
+}
+
+- (void)floatingToolbarDidRequestOpenCharacterPalette:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    self.openedCharacterPalette = YES;
 }
 
 - (void)floatingToolbarDidRequestCheckForUpdates:(MetasequoiaFloatingToolbarPanel *)toolbar
@@ -168,19 +175,22 @@ int main()
                 "The floating toolbar did not forward every state action to its active input controller.");
 
         NSMenu *utilityMenu = CreateMetasequoiaFloatingToolbarUtilityMenu(panel);
-        require(utilityMenu.numberOfItems == 6 &&
-                    [[utilityMenu itemAtIndex:0].title isEqualToString:@"打开设置…"] &&
-                    [[utilityMenu itemAtIndex:1].title isEqualToString:@"检查更新…"] &&
-                    [utilityMenu itemAtIndex:2].separatorItem &&
-                    [[utilityMenu itemAtIndex:3].title isEqualToString:@"访问 msime.app"] &&
-                    [utilityMenu itemAtIndex:4].separatorItem &&
-                    [[utilityMenu itemAtIndex:5].title isEqualToString:@"隐藏悬浮状态栏"],
+        require(utilityMenu.numberOfItems == 7 &&
+                    [[utilityMenu itemAtIndex:0].title isEqualToString:@"表情与符号…"] &&
+                    [[utilityMenu itemAtIndex:1].title isEqualToString:@"打开设置…"] &&
+                    [[utilityMenu itemAtIndex:2].title isEqualToString:@"检查更新…"] &&
+                    [utilityMenu itemAtIndex:3].separatorItem &&
+                    [[utilityMenu itemAtIndex:4].title isEqualToString:@"访问 msime.app"] &&
+                    [utilityMenu itemAtIndex:5].separatorItem &&
+                    [[utilityMenu itemAtIndex:6].title isEqualToString:@"隐藏悬浮状态栏"],
                 "The toolbar utility menu did not expose the expected native actions.");
         [utilityMenu performActionForItemAtIndex:0];
         [utilityMenu performActionForItemAtIndex:1];
-        [utilityMenu performActionForItemAtIndex:3];
-        [utilityMenu performActionForItemAtIndex:5];
-        require(firstDelegate.openedSettings && firstDelegate.checkedForUpdates &&
+        [utilityMenu performActionForItemAtIndex:2];
+        [utilityMenu performActionForItemAtIndex:4];
+        [utilityMenu performActionForItemAtIndex:6];
+        require(firstDelegate.openedCharacterPalette && firstDelegate.openedSettings &&
+                    firstDelegate.checkedForUpdates &&
                     firstDelegate.openedWebsite && firstDelegate.hidToolbar,
                 "The toolbar utility menu did not forward every action to its active input controller.");
 
