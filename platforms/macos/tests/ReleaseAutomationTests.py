@@ -490,7 +490,8 @@ fi
         self.assertLess(calls.index("--notes-file"), calls.index("release upload"))
         self.assertIn("macos-universal-unsigned.pkg", calls)
         self.assertIn("macos-universal-unsigned-update.zip", calls)
-        self.assertNotIn("appcast.xml", calls)
+        # The appcast is signed with the Ed25519 update key, not with an Apple identity, so an Apple-unsigned release still publishes it and Sparkle keeps working.
+        self.assertIn("appcast.xml", calls)
         self.assertIn("--draft=false", calls)
 
     def test_same_mode_retry_keeps_notes_and_reuploads_with_clobber(self):

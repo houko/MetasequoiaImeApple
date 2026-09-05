@@ -110,6 +110,25 @@ class ReleaseConfigurationTests(unittest.TestCase):
         )
         self.assertRegex(alpha_output, r"hasAlpha:\s*no")
 
+    def test_input_controller_survives_the_engine_helpcode_semantics(self):
+        controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
+
+        # InputSession::helpcode_enabled() reports false for schemes without helpcodes, so an unguarded comparison never matches a Wubi session and rebuilds the engine on every keystroke.
+        matches = controller.split("bool SessionMatchesPreferences(", 1)[1].split("\n}", 1)[0]
+        self.assertIn("SchemeUsesHelpcodes(preferences.scheme)", matches)
+        self.assertNotIn("session.helpcode_enabled() == preferences.helpcodeEnabled &&", matches)
+        scheme_guard = controller.split("bool SchemeUsesHelpcodes(", 1)[1].split("\n}", 1)[0]
+        self.assertIn("SchemeType::Quanpin", scheme_guard)
+        self.assertIn("SchemeType::Shuangpin", scheme_guard)
+
+        # The engine consumes A-Z during a composition as helpcode input. macOS does not offer that, so uppercase must stay unhandled here and commit the leading candidate instead. The full-width and keymap-highlight paths elsewhere in this file legitimately look at uppercase, so scope the check to the key-routing branch.
+        character_branch = controller.split("case metasequoia::mac::ControllerKeyAction::Character:", 1)[1].split(
+            "if (!result.handled)", 1
+        )[0]
+        self.assertIn("if (character >= 'a' && character <= 'z')", character_branch)
+        self.assertNotIn("character <= 'Z'", character_branch)
+        self.assertIn("HandleCharacterWithWubiAutoCommit", character_branch)
+
     def test_input_controller_owns_a_native_floating_status_toolbar(self):
         cmake = (PROJECT_ROOT / "CMakeLists.txt").read_text()
         controller = (MACOS_ROOT / "src/MetasequoiaInputController.mm").read_text()
@@ -322,7 +341,8 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("$RUNNER_TEMP/generate-sparkle-appcast.sh", workflow)
         self.assertIn("SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}", workflow)
         self.assertIn("steps.signing.outputs.signing_enabled == 'true'", workflow)
-        self.assertIn("Unsigned releases do not publish a Sparkle appcast", workflow)
+        self.assertIn("secrets.SPARKLE_ED_PRIVATE_KEY != ''", workflow)
+        self.assertNotIn("name: Generate signed Sparkle appcast\n        if: ${{ steps.signing.outputs.signing_enabled", workflow)
         self.assertIn("Unsigned release: skipping Developer ID signature verification before packaging.", workflow)
         self.assertIn("Unsigned release: skipping source bundle Developer ID signature verification.", release_packager)
         self.assertIn("Sparkle-2.9.6.tar.xz", workflow)
@@ -341,7 +361,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("作为翻页键", readme)
         self.assertIn("macos-universal-update.zip", readme)
         self.assertIn("`appcast.xml`", readme)
-        self.assertIn("兜底的未签名发布会有意省略 `appcast.xml`", readme)
+        self.assertIn("即使产物未经 Apple 签名，appcast 依然会发布", readme)
         self.assertIn("是 Sparkle 的更新载荷，不是供手动打开的安装包", readme)
         self.assertIn("启用全拼纠错", readme)
         self.assertIn("原生的「水杉输入法设置」面板", readme)

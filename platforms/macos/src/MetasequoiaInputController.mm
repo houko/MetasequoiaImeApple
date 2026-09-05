@@ -70,11 +70,19 @@ SessionPreferences ReadSessionPreferences()
     };
 }
 
+// helpcode_enabled() reports false for every scheme that has no helpcodes, so comparing it directly can never match a Wubi session built with the preference on, and the caller would rebuild the engine on every keystroke. Only the schemes that carry helpcodes can be compared on it.
+bool SchemeUsesHelpcodes(SchemeType scheme)
+{
+    return scheme == SchemeType::Quanpin || scheme == SchemeType::Shuangpin;
+}
+
 bool SessionMatchesPreferences(const metasequoia::InputSession &session, const SessionPreferences &preferences)
 {
+    const bool helpcodeMatches = !SchemeUsesHelpcodes(preferences.scheme) ||
+                                 session.helpcode_enabled() == preferences.helpcodeEnabled;
     return session.scheme_type() == preferences.scheme &&
            session.quanpin_autocorrect_enabled() == preferences.autocorrectEnabled &&
-           session.helpcode_enabled() == preferences.helpcodeEnabled &&
+           helpcodeMatches &&
            session.chinese_punctuation_enabled() == preferences.chinesePunctuationEnabled &&
            session.candidate_learning_enabled() == preferences.candidateLearningEnabled;
 }
@@ -510,7 +518,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         if (characters.length == 1)
         {
             const unichar character = [characters characterAtIndex:0];
-            if ((character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z'))
+            // Only lowercase reaches the session. The engine now treats A-Z during a composition as helpcode input, which macOS never asked for and does not document; forwarding it would swallow the capital instead of committing the leading candidate and letting the application insert it.
+            if (character >= 'a' && character <= 'z')
             {
                 result = metasequoia::mac::HandleCharacterWithWubiAutoCommit(
                     *_session, static_cast<char>(character), _wubiAutoCommitUniqueEnabled);
