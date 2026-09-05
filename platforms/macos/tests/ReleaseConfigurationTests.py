@@ -38,6 +38,11 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("ShuangpinKeymapPanelTests.mm", cmake)
         self.assertIn("小鹤双拼键位提示", readme)
 
+        keymap_panel = (MACOS_ROOT / "src/ShuangpinKeymapPanel.mm").read_text()
+        self.assertIn("profile.zero_initials", keymap_panel)
+        self.assertIn("MetasequoiaXiaoheZeroInitialText", keymap_panel)
+        self.assertIn("零声母", readme)
+
     def test_ci_cancels_duplicate_runs_for_the_same_source_branch(self):
         workflow = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text()
 

@@ -100,7 +100,7 @@ int main(int argc, const char *argv[])
                 [[MetasequoiaShuangpinKeymapPanel alloc] init];
             [previewPanel updateHighlightedKey:@"v"];
             NSWindow *previewWindow = [[NSWindow alloc]
-                initWithContentRect:NSMakeRect(0.0, 0.0, 620.0, 184.0)
+                initWithContentRect:NSMakeRect(0.0, 0.0, 620.0, 203.0)
                           styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable)
                             backing:NSBackingStoreBuffered
                               defer:NO];
@@ -123,6 +123,22 @@ int main(int argc, const char *argv[])
             Require([DisplayedUnits(KeyDefinition(key)) isEqualToSet:expectedUnits[key]],
                     "The visual keymap drifted from the engine's Xiaohe profile.");
         }
+        NSString *zeroInitialText = MetasequoiaXiaoheZeroInitialText();
+        const ShuangpinProfile &xiaohe = GetXiaoheShuangpinProfile();
+        Require(xiaohe.zero_initials.size() > 0,
+                "The Xiaohe profile stopped carrying zero-initial syllables.");
+        for (const auto &entry : xiaohe.zero_initials)
+        {
+            NSString *pair = [NSString stringWithFormat:@"%@=%@",
+                                                        DisplayUnit(entry.first),
+                                                        [NSString stringWithUTF8String:entry.second.c_str()]];
+            // These codes are the part of Xiaohe a beginner cannot derive from the key caps, and they map to a two-letter code rather than to one key, so the panel has to spell them out.
+            Require([zeroInitialText containsString:pair],
+                    "The keymap hint dropped a zero-initial syllable from the engine's Xiaohe profile.");
+        }
+        Require([zeroInitialText isEqualToString:MetasequoiaXiaoheZeroInitialText()],
+                "The zero-initial line was not stable across calls.");
+
         Require(MetasequoiaShouldShowShuangpinKeymap(YES, YES, YES) &&
                     !MetasequoiaShouldShowShuangpinKeymap(NO, YES, YES) &&
                     !MetasequoiaShouldShowShuangpinKeymap(YES, NO, YES) &&
@@ -130,10 +146,11 @@ int main(int argc, const char *argv[])
                 "The keymap visibility policy escaped the enabled Shuangpin composition.");
 
         const NSRect visibleFrame = NSMakeRect(0.0, 0.0, 1440.0, 900.0);
-        const NSSize panelSize = NSMakeSize(620.0, 184.0);
+        const NSSize panelSize = NSMakeSize(620.0, 203.0);
         NSRect frame = MetasequoiaShuangpinKeymapPanelFrame(
             NSMakeRect(400.0, 400.0, 2.0, 20.0), panelSize, 60.0, visibleFrame);
-        Require(NearlyEqual(frame.origin.x, 400.0) && NearlyEqual(frame.origin.y, 148.0),
+        // Assert the gap the placement exists to preserve rather than a literal origin, so growing the panel does not fail this for a reason unrelated to placement.
+        Require(NearlyEqual(frame.origin.x, 400.0) && NearlyEqual(NSMaxY(frame) + 60.0 + 8.0, 400.0),
                 "The keymap panel was not placed below the candidate clearance.");
         frame = MetasequoiaShuangpinKeymapPanelFrame(
             NSMakeRect(1400.0, 400.0, 2.0, 20.0), panelSize, 60.0, visibleFrame);

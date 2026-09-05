@@ -5,6 +5,9 @@
 FOUNDATION_EXPORT NSArray<NSArray<NSDictionary<NSString *, NSString *> *> *> *
 MetasequoiaXiaoheKeymapRows(void);
 
+// The zero-initial syllables map to a two-letter code rather than to a single key, so they cannot be shown on the key caps and need their own line.
+FOUNDATION_EXPORT NSString *MetasequoiaXiaoheZeroInitialText(void);
+
 FOUNDATION_EXPORT BOOL MetasequoiaShouldShowShuangpinKeymap(BOOL isShuangpin,
                                                             BOOL enabled,
                                                             BOOL hasComposition);
