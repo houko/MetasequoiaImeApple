@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.40.0...v0.41.0) (2026-09-05)
+
+
+### Features
+
+* **dict:** 从 MSIME-Dict release 取词库，删掉 Dict submodule ([3623e3b](https://github.com/metasequoiaime/MSIME-Apple/commit/3623e3be8f609bcd89cc031ea4350f91ce0c6c51))
+
 ## [0.40.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.4...v0.40.0) (2026-09-05)
 
 
