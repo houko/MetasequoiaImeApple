@@ -684,14 +684,26 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
                 selectedIndex, _candidateData.count, pageSize);
             _candidateHighlightedIndex = selectedIndex;
             _candidatePageStart = selectedPageStart;
+            NSUInteger pagesAdvanced = 0;
             if (pageSize > 0)
             {
                 for (NSUInteger pageStart = 0; pageStart < selectedPageStart; pageStart += pageSize)
                 {
                     [_candidatePanel pageDown:self];
+                    ++pagesAdvanced;
                 }
             }
-            [self selectCandidateAtIndex:selectedIndex pageStart:selectedPageStart];
+            if (![self selectCandidateAtIndex:selectedIndex pageStart:selectedPageStart])
+            {
+                // The panel could not re-highlight the preserved candidate, so fall back to the fresh-panel state instead of tracking a selection the user cannot see.
+                for (NSUInteger page = 0; page < pagesAdvanced; ++page)
+                {
+                    [_candidatePanel pageUp:self];
+                }
+                _candidateSelection.reset();
+                _candidateHighlightedIndex = 0;
+                _candidatePageStart = 0;
+            }
         }
     }
     else
@@ -742,6 +754,16 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     }
     if (index == NSNotFound)
     {
+        NSMutableArray<NSString *> *displayStrings = [NSMutableArray arrayWithCapacity:_candidateData.count];
+        for (NSAttributedString *candidate in _candidateData)
+        {
+            [displayStrings addObject:candidate.string];
+        }
+        index = MetasequoiaUniqueStringIndex(displayStrings, candidateString.string);
+    }
+    if (index == NSNotFound)
+    {
+        // Last resort for display strings that collide after conversion (干/乾): the highlighted line is only trustworthy relative to the page the controller itself navigated to, so exact text matching runs first.
         const NSInteger selectedIdentifier = [_candidatePanel selectedCandidate];
         const NSInteger selectedLine = selectedIdentifier == NSNotFound
                                            ? NSNotFound
@@ -750,15 +772,6 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         {
             index = _candidatePageStart + static_cast<NSUInteger>(selectedLine);
         }
-    }
-    if (index == NSNotFound)
-    {
-        NSMutableArray<NSString *> *displayStrings = [NSMutableArray arrayWithCapacity:_candidateData.count];
-        for (NSAttributedString *candidate in _candidateData)
-        {
-            [displayStrings addObject:candidate.string];
-        }
-        index = MetasequoiaUniqueStringIndex(displayStrings, candidateString.string);
     }
     if (index == NSNotFound || index >= _session->candidates().size())
     {
