@@ -175,20 +175,27 @@ int main()
         require(!panel.visible && panel.toolbarDelegate == nil,
                 "A deallocated input controller left the floating toolbar on screen.");
 
+        // Every panel above is still alive and still owns the autosave name, so AppKit can flush their frames over the seeded value at any point and the restored panel would read a position this test never wrote. Release the name first so the panel constructed below is the only claimant, which is also how the real process is configured.
+        [panel setFrameAutosaveName:@""];
+
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         NSString *savedFrameKey = @"NSWindow Frame MetasequoiaFloatingToolbarFrame";
         id previousSavedFrame = [defaults objectForKey:savedFrameKey];
+        [defaults removeObjectForKey:savedFrameKey];
         NSScreen *restoreScreen = panel.screen != nil ? panel.screen : NSScreen.mainScreen;
         NSRect restoreVisibleFrame =
             restoreScreen != nil ? restoreScreen.visibleFrame : NSMakeRect(0.0, 0.0, 1200.0, 800.0);
-        NSRect savedFrame = NSMakeRect(std::round(NSMaxX(restoreVisibleFrame) - 220.0 - 60.0),
-                                       std::round(NSMaxY(restoreVisibleFrame) - 44.0 - 60.0),
-                                       220.0,
-                                       44.0);
-        // Serializing through a panel writes exactly the string AppKit itself stores for that frame, so the test does not depend on the private layout of the saved-frame default.
+        // Serializing through a panel writes exactly the string AppKit itself stores for that frame, so the test does not depend on the private layout of the saved-frame default. Its natural size is also the toolbar's real size, which changes whenever a button is added; MetasequoiaFloatingToolbarFrame forces the restored frame back to that size, so a hardcoded width here would move the origin and fail for a reason that has nothing to do with restoration.
         MetasequoiaFloatingToolbarPanel *savingPanel = [[MetasequoiaFloatingToolbarPanel alloc] init];
+        NSSize toolbarSize = savingPanel.frame.size;
+        NSRect savedFrame = NSMakeRect(std::round(NSMaxX(restoreVisibleFrame) - toolbarSize.width - 60.0),
+                                       std::round(NSMaxY(restoreVisibleFrame) - toolbarSize.height - 60.0),
+                                       toolbarSize.width,
+                                       toolbarSize.height);
         [savingPanel setFrame:savedFrame display:NO];
-        [defaults setObject:[savingPanel stringWithSavedFrame] forKey:savedFrameKey];
+        NSString *savedFrameDescriptor = savingPanel.stringWithSavedFrame;
+        [savingPanel setFrameAutosaveName:@""];
+        [defaults setObject:savedFrameDescriptor forKey:savedFrameKey];
 
         MetasequoiaFloatingToolbarPanel *restoredPanel = [[MetasequoiaFloatingToolbarPanel alloc] init];
         FloatingToolbarTestDelegate *restoredDelegate = [[FloatingToolbarTestDelegate alloc] init];
