@@ -892,6 +892,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 - (void)floatingToolbarDidRequestOpenCharacterPalette:(MetasequoiaFloatingToolbarPanel *)toolbar
 {
     (void)toolbar;
+    // The Character Viewer inserts straight into the client, so settle any marked text first; otherwise the session would resend the pending composition after the inserted symbol.
+    [self commitLeadingCandidate:self.client];
     [NSApp orderFrontCharacterPalette:nil];
 }
 
