@@ -5,6 +5,7 @@
 #include "../src/CandidateDisplay.h"
 #include "../src/InputModeRouting.h"
 #include "../src/FullWidthInput.h"
+#include "../src/HelpcodeSchemaPreference.h"
 #include "../src/InputSchemePreference.h"
 #include "../src/WubiCommitPolicy.h"
 
@@ -102,6 +103,16 @@ int main()
         std::filesystem::path(__FILE__).parent_path() / "../../../vendor/MetasequoiaImeHelpCode";
     require(setenv("METASEQUOIA_IME_DATA_DIR", helpcodeDataDirectory.lexically_normal().c_str(), 1) == 0,
             "The candidate display test could not select its helpcode data.");
+    require(HelpcodeUtils::select_helpcode_schema(metasequoia::mac::HelpcodeSchemaIdentifier(1)) &&
+                CandidateDisplayText(WordItem{"ni", "你", 1}, SchemeType::Quanpin, true) == "你(rE)" &&
+                HelpcodeUtils::select_helpcode_schema(metasequoia::mac::HelpcodeSchemaIdentifier(2)) &&
+                CandidateDisplayText(WordItem{"ni", "你", 1}, SchemeType::Quanpin, true) == "你(rP)" &&
+                HelpcodeUtils::select_helpcode_schema(metasequoia::mac::HelpcodeSchemaIdentifier(3)) &&
+                CandidateDisplayText(WordItem{"ni", "你", 1}, SchemeType::Quanpin, true) == "你(rG)" &&
+                HelpcodeUtils::select_helpcode_schema(metasequoia::mac::HelpcodeSchemaIdentifier(4)) &&
+                CandidateDisplayText(WordItem{"ni", "你", 1}, SchemeType::Quanpin, true) == "你(rX)" &&
+                HelpcodeUtils::select_helpcode_schema(metasequoia::mac::HelpcodeSchemaIdentifier(0)),
+            "A configured helpcode scheme did not select its packaged engine table.");
     require(CandidateDisplayText(WordItem{"ni", "你", 1}, SchemeType::Quanpin, true) == "你(rX)" &&
                 CandidateDisplayText(WordItem{"nimen", "你们", 1}, SchemeType::Shuangpin, true) == "你们(rR)",
             "Pinyin candidate display did not append the configured auxiliary code.");
@@ -170,6 +181,16 @@ int main()
     require(metasequoia::mac::ShouldPrepareInputSession(false) &&
                 !metasequoia::mac::ShouldPrepareInputSession(true),
             "Direct English mode did not bypass input-session preparation.");
+    require(metasequoia::mac::NormalizeHelpcodeSchemaPreference(0) == 0 &&
+                metasequoia::mac::NormalizeHelpcodeSchemaPreference(4) == 4 &&
+                metasequoia::mac::NormalizeHelpcodeSchemaPreference(99) == 0,
+            "The stored helpcode scheme was not normalized safely.");
+    require(std::string(metasequoia::mac::HelpcodeSchemaIdentifier(0)) == "lantian" &&
+                std::string(metasequoia::mac::HelpcodeSchemaIdentifier(1)) == "ziranma" &&
+                std::string(metasequoia::mac::HelpcodeSchemaIdentifier(2)) == "shouyou2_0" &&
+                std::string(metasequoia::mac::HelpcodeSchemaIdentifier(3)) == "shouyouplus" &&
+                std::string(metasequoia::mac::HelpcodeSchemaIdentifier(4)) == "xiaohe",
+            "The Mac helpcode choices did not map to the engine's five supported schemas.");
 
     require(NormalizeCandidatePanelStyle(0) == CandidatePanelStyle::Horizontal &&
                 NormalizeCandidatePanelStyle(1) == CandidatePanelStyle::Vertical &&
