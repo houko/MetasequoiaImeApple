@@ -105,6 +105,8 @@ targets:
         buildPhase: resources
       - path: platforms/ios/KeyboardExtension/Resources/msime.db.sha256
         buildPhase: resources
+      - path: platforms/ios/KeyboardExtension/Resources/dictionary-manifest.json
+        buildPhase: resources
     settings:
       base:
         GENERATE_INFOPLIST_FILE: NO

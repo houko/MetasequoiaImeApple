@@ -142,3 +142,7 @@ shasum -a 256 -c MetasequoiaIME-vX.Y.Z-macos-universal.zip.sha256
 ## 隐私与安全
 
 输入处理与候选学习全部在设备本地完成，数据处理细节见 [PRIVACY.md](PRIVACY.md)。发现疑似安全漏洞请按 [SECURITY.md](SECURITY.md) 的说明私下报告，不要提交公开 issue。
+
+### 词库产品边界
+
+macOS 使用固定发布词库；iOS 从同一已校验的数据库调用 `tools/MetasequoiaImeDict/build_profile.py --profile mobile --source ...`。初始化工具：`git submodule update --init --recursive`。工具 gitlink 与数据发布源 commit 分别记录，移动产物同时带格式、压缩规则、来源摘要和文件摘要清单。现代发布必须携带清单；已锁定的 `dict-2026.09.05` 是明确的无清单兼容入口。
