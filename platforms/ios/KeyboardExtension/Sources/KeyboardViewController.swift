@@ -15,7 +15,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
   private let candidateStack = UIStackView()
   private let languageModeButton = UIButton()
   private let schemeButton = UIButton()
-  private var letterButtons: [(button: UIButton, lowercase: String)] = []
+  private var letterButtons: [(button: UIButton, lowercase: String, hint: UILabel)] = []
   private var letterRowViews: [UIView] = []
   private var symbolRowViews: [UIView] = []
   private var layoutToggleButton: UIButton?
@@ -212,10 +212,34 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       let button = makeKey(title: text, accessibilityLabel: text.uppercased()) { [weak self] in
         self?.handleCharacter(text)
       }
-      letterButtons.append((button: button, lowercase: text))
+      letterButtons.append((button: button, lowercase: text, hint: attachHintLabel(to: button)))
       row.addArrangedSubview(button)
     }
     return row
+  }
+
+  // A key is about 36pt wide and the longest Xiaohe mapping is nine characters, so the hint has to
+  // be one line that shrinks rather than a subtitle that wraps: wrapping pushed the letter itself
+  // out of the top of the key.
+  private func attachHintLabel(to button: UIButton) -> UILabel {
+    let label = UILabel()
+    label.font = .systemFont(ofSize: 9, weight: .regular)
+    label.textColor = MetasequoiaTheme.forestUIColor.withAlphaComponent(0.8)
+    label.textAlignment = .center
+    label.numberOfLines = 1
+    label.adjustsFontSizeToFitWidth = true
+    label.minimumScaleFactor = 0.6
+    label.isHidden = true
+    label.isAccessibilityElement = false
+    label.translatesAutoresizingMaskIntoConstraints = false
+    button.addSubview(label)
+
+    NSLayoutConstraint.activate([
+      label.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 2),
+      label.trailingAnchor.constraint(equalTo: button.trailingAnchor, constant: -2),
+      label.bottomAnchor.constraint(equalTo: button.bottomAnchor, constant: -2),
+    ])
+    return label
   }
 
   private func makeSymbolRow(_ symbols: [String]) -> UIStackView {
@@ -428,15 +452,20 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
 
   private func updateLetterCaseControls() {
     let usesUppercase = !isChineseMode && letterCaseState != .lowercase
-    for (button, lowercase) in letterButtons {
+    for (button, lowercase, hintLabel) in letterButtons {
       // A hint only means something while the key feeds a double-pinyin composition, so English
       // mode drops it even though the scheme underneath is unchanged.
       let hint = isChineseMode ? shuangpinKeyHints[lowercase.uppercased()] : nil
       if var configuration = button.configuration {
         configuration.title = usesUppercase ? lowercase.uppercased() : lowercase
-        configuration.subtitle = hint
+        // The hint sits along the bottom edge, so the letter is lifted clear of it instead of
+        // staying centred in the whole key.
+        configuration.contentInsets = NSDirectionalEdgeInsets(
+          top: 0, leading: 0, bottom: hint == nil ? 0 : 11, trailing: 0)
         button.configuration = configuration
       }
+      hintLabel.text = hint
+      hintLabel.isHidden = hint == nil
       button.accessibilityLabel =
         usesUppercase
         ? "大写 \(lowercase.uppercased())" : "字母 \(lowercase.uppercased())"
@@ -804,16 +833,6 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
       attributes.font = .preferredFont(forTextStyle: .title3)
       return attributes
     }
-    // Only the letter keys carry a subtitle, and only in double pinyin. It has to read as a hint
-    // rather than compete with the letter, so it is small and dimmed.
-    configuration.titlePadding = 0
-    configuration.subtitleTextAttributesTransformer =
-      UIConfigurationTextAttributesTransformer { attributes in
-        var attributes = attributes
-        attributes.font = .systemFont(ofSize: 9, weight: .regular)
-        attributes.foregroundColor = MetasequoiaTheme.forestUIColor.withAlphaComponent(0.75)
-        return attributes
-      }
     let button = UIButton(configuration: configuration, primaryAction: UIAction { _ in action() })
     button.accessibilityLabel = accessibilityLabel
     return button
