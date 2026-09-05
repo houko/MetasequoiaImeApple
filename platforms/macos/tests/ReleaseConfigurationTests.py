@@ -610,7 +610,14 @@ class ReleaseConfigurationTests(unittest.TestCase):
 
         self.assertEqual(dependabot.count('package-ecosystem: "github-actions"'), 1)
         self.assertEqual(dependabot.count('package-ecosystem: "gitsubmodule"'), 1)
-        self.assertEqual(dependabot.count('interval: "monthly"'), 2)
+        # Assert each ecosystem's own interval rather than a total count: counting means changing
+        # either schedule fails on an arithmetic mismatch that says nothing about which one moved.
+        actions_block = dependabot.split('package-ecosystem: "github-actions"', 1)[1].split("- package-ecosystem:", 1)[0]
+        submodule_block = dependabot.split('package-ecosystem: "gitsubmodule"', 1)[1].split("- package-ecosystem:", 1)[0]
+        self.assertIn('interval: "monthly"', actions_block)
+        # The engine submodule moves fast enough that a monthly sweep lets it drift far enough for a
+        # single bump to carry unrelated behaviour changes, which is how #222 landed two regressions.
+        self.assertIn('interval: "daily"', submodule_block)
         self.assertEqual(dependabot.count('prefix: "chore(deps)"'), 2)
         self.assertEqual(submodule_value("vendor/MetasequoiaImeEngine", "path"), "vendor/MetasequoiaImeEngine")
         self.assertEqual(
