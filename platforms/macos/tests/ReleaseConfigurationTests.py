@@ -580,7 +580,7 @@ class ReleaseConfigurationTests(unittest.TestCase):
         )
         self.assertEqual(
             submodule_value("vendor/MetasequoiaImeHelpCode", "url"),
-            "https://github.com/metasequoiaime/MetasequoiaImeHelpCode.git",
+            "https://github.com/metasequoiaime/MSIME-HelpCode.git",
         )
 
     def test_macos_bundle_packages_helpcode_assets(self):

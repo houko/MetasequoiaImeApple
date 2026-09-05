@@ -312,6 +312,27 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("handleInputModeList(from: sender, with: event)", controller)
         self.assertNotIn("advanceToNextInputMode()", controller)
 
+    def test_bridge_compiles_every_engine_source_directory(self):
+        # macOS pulls the engine in with add_subdirectory, so it tracks new engine directories on its own. This target enumerates them by hand, so a directory added upstream silently drops out of the static library and only surfaces as undefined symbols at link time — which is how local_modes broke the keyboard extension.
+        engine_root = IOS_ROOT.parents[1] / "vendor/MetasequoiaImeEngine"
+        if not (engine_root / "core").is_dir():
+            self.skipTest("engine submodule is not checked out")
+
+        project = (IOS_ROOT / "project.yml").read_text()
+        not_built = {"tests"}
+        missing = []
+        for directory in sorted(engine_root.iterdir()):
+            if not directory.is_dir() or directory.name.startswith("."):
+                continue
+            if directory.name in not_built:
+                continue
+            if not any(directory.glob("*.cpp")):
+                continue
+            if f"vendor/MetasequoiaImeEngine/{directory.name}" not in project:
+                missing.append(directory.name)
+
+        self.assertEqual(missing, [], f"engine directories missing from the bridge target: {missing}")
+
 
 if __name__ == "__main__":
     unittest.main()
