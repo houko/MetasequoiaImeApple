@@ -241,7 +241,7 @@ jobs:
           METASEQUOIA_INSTALLER_DISTRIBUTION: ${{ runner.temp }}/InstallerDistribution.xml.in
         run: exec "$RUNNER_TEMP/package-release.sh" "$TAG_NAME" build/MetasequoiaIME.app dist
       - name: Generate signed Sparkle appcast
-        if: ${{ steps.signing.outputs.signing_enabled == 'true' }}
+        if: ${{ secrets.SPARKLE_ED_PRIVATE_KEY != '' }}
         env:
           GH_REPO: ${{ github.repository }}
           TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
@@ -262,9 +262,9 @@ jobs:
           update_archive="dist/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX-update.zip"
           SPARKLE_TOOLS_DIR="$sparkle_root/bin" \
             exec "$RUNNER_TEMP/generate-sparkle-appcast.sh" "$TAG_NAME" "$update_archive" dist/appcast.xml
-      - name: Skip Sparkle appcast for unsigned release
-        if: ${{ steps.signing.outputs.signing_enabled != 'true' }}
-        run: echo 'Unsigned releases do not publish a Sparkle appcast because update signatures cannot be trusted.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Skip Sparkle appcast without an update key
+        if: ${{ secrets.SPARKLE_ED_PRIVATE_KEY == '' }}
+        run: echo 'No SPARKLE_ED_PRIVATE_KEY is configured, so this release ships without an appcast and automatic updates stay paused.' >> "$GITHUB_STEP_SUMMARY"
       - name: Revalidate draft release target
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

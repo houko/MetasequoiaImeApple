@@ -35,7 +35,8 @@ update_archive="$dist_dir/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX-
 installer="$dist_dir/MetasequoiaIME-$TAG_NAME-macos-universal$ASSET_SUFFIX.pkg"
 appcast="$dist_dir/appcast.xml"
 artifacts=("$installer" "$installer.sha256" "$archive" "$archive.sha256" "$update_archive" "$update_archive.sha256")
-if [[ "$release_mode" == signed ]]; then
+# The Sparkle appcast is signed with the project's Ed25519 update key, which is independent of Apple code signing, so publish it whenever the release job produced one.
+if [[ -f "$appcast" ]]; then
     artifacts+=("$appcast")
 fi
 for artifact in "${artifacts[@]}"; do
@@ -95,7 +96,7 @@ if [[ "$current_notes" != *"$mode_marker"* || "$current_notes" != *"$install_gui
 fi
 
 upload_args=("$installer" "$installer.sha256" "$archive" "$archive.sha256" "$update_archive" "$update_archive.sha256")
-if [[ "$release_mode" == signed ]]; then
+if [[ -f "$appcast" ]]; then
     upload_args+=("$appcast")
 fi
 gh release upload "$TAG_NAME" --repo "$GH_REPO" "${upload_args[@]}" --clobber
