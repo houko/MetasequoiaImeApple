@@ -32,7 +32,11 @@ brew install cmake boost fmt spdlog
 ./platforms/macos/scripts/build.sh
 ```
 
-词库构建会从官方源数据生成 `vendor/MetasequoiaImeDict/out/msime.db`。该数据库文件有意不纳入版本库。
+构建脚本会下载 `product-lock.json` 锁定的那个 MSIME-Dict release，逐个校验 SHA256，再放到 `vendor/MetasequoiaImeDict/out/msime.db`。该数据库文件有意不纳入版本库。Windows 和 Linux 取的是同一份产物，所以三个平台分发的 `msime.db` 逐字节一致。
+
+换用新的词库版本：`python3 scripts/product_lock.py refresh --dictionary-tag dict-YYYY.MM.DD`，然后 review 产生的 diff。
+
+只有在改动词库源数据、需要在发布前看到结果时，才用 `python3 platforms/macos/scripts/build_dictionary.py` 从源码构建。
 
 ## 为当前用户安装
 

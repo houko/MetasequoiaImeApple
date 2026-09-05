@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "dictionary": {
+    "repository": "metasequoiaime/MSIME-Dict",
+    "tag": "dict-2026.09.05",
+    "assets": {
+      "msime.db": "9e68e88be036206fc14d44db7111376b1d92f9173b04d623e601e31edd664c2f",
+      "SHA256SUMS.txt": "32a9a5272926573c98ba9c81dd50b81ec24410fa2cc3716e6a832bf547a87f41"
+    }
+  }
+}
