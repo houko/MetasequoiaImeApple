@@ -742,6 +742,20 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     }
     window.delegate = self;
     _updateController = updateController;
+    // The floating toolbar menu can hide the bar while this window is open, and this checkbox is the documented way to bring it back, so it must follow the preference instead of waiting for the next refreshControls.
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(floatingToolbarPreferenceDidChange:)
+                                                 name:MetasequoiaFloatingToolbarDidChangeNotification
+                                               object:nil];
+    // The toolbar menu writes the punctuation and full-width preferences too, and refreshControls only runs on presentation or on an explicit page change, so without these observers the checkboxes would keep showing a stale state and write it back on the next click.
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(chinesePunctuationPreferenceDidChange:)
+                                                 name:@"MetasequoiaChinesePunctuationDidChangeNotification"
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(fullWidthInputPreferenceDidChange:)
+                                                 name:@"MetasequoiaFullWidthInputDidChangeNotification"
+                                               object:nil];
 
     NSView *contentView = [[NSView alloc] initWithFrame:frame];
     window.contentView = contentView;
@@ -1236,6 +1250,35 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     {
         [[NSWorkspace sharedWorkspace] openURL:feedback];
     }
+}
+
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)floatingToolbarPreferenceDidChange:(NSNotification *)notification
+{
+    (void)notification;
+    _floatingToolbarButton.state = [MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled]
+                                       ? NSControlStateValueOn
+                                       : NSControlStateValueOff;
+}
+
+- (void)chinesePunctuationPreferenceDidChange:(NSNotification *)notification
+{
+    (void)notification;
+    _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled]
+                                          ? NSControlStateValueOn
+                                          : NSControlStateValueOff;
+}
+
+- (void)fullWidthInputPreferenceDidChange:(NSNotification *)notification
+{
+    (void)notification;
+    _fullWidthInputButton.state = [MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]
+                                      ? NSControlStateValueOn
+                                      : NSControlStateValueOff;
 }
 
 - (void)refreshControls

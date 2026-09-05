@@ -12,6 +12,9 @@
 @property(nonatomic) BOOL toggledTraditionalOutput;
 @property(nonatomic) BOOL openedSettings;
 @property(nonatomic, strong) MetasequoiaFloatingToolbarPanel *ownedPanel;
+@property(nonatomic) BOOL checkedForUpdates;
+@property(nonatomic) BOOL openedWebsite;
+@property(nonatomic) BOOL hidToolbar;
 @end
 
 @implementation FloatingToolbarTestDelegate
@@ -43,6 +46,24 @@
 {
     (void)toolbar;
     self.openedSettings = YES;
+}
+
+- (void)floatingToolbarDidRequestCheckForUpdates:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    self.checkedForUpdates = YES;
+}
+
+- (void)floatingToolbarDidRequestOpenWebsite:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    self.openedWebsite = YES;
+}
+
+- (void)floatingToolbarDidRequestHide:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    self.hidToolbar = YES;
 }
 
 - (void)dealloc
@@ -134,6 +155,9 @@ int main()
         require(inputModeButton != nil && punctuationButton != nil && fullWidthButton != nil &&
                     traditionalOutputButton != nil && settingsButton != nil,
                 "The floating toolbar did not expose all five supported actions.");
+        require(settingsButton.action == @selector(showUtilityMenu:) &&
+                    [settingsButton.accessibilityLabel isEqualToString:@"打开水杉输入法工具菜单"],
+                "The toolbar gear did not expose the native utility menu.");
         require([inputModeButton.title isEqualToString:@"中"] &&
                     [inputModeButton.accessibilityLabel isEqualToString:@"切换到英文输入"] &&
                     [punctuationButton.title isEqualToString:@"。"] &&
@@ -146,11 +170,26 @@ int main()
         [punctuationButton performClick:nil];
         [fullWidthButton performClick:nil];
         [traditionalOutputButton performClick:nil];
-        [settingsButton performClick:nil];
         require(firstDelegate.toggledInputMode && firstDelegate.toggledPunctuation &&
-                    firstDelegate.toggledFullWidth && firstDelegate.toggledTraditionalOutput &&
-                    firstDelegate.openedSettings,
-                "The floating toolbar did not forward every action to its active input controller.");
+                    firstDelegate.toggledFullWidth && firstDelegate.toggledTraditionalOutput,
+                "The floating toolbar did not forward every state action to its active input controller.");
+
+        NSMenu *utilityMenu = CreateMetasequoiaFloatingToolbarUtilityMenu(panel);
+        require(utilityMenu.numberOfItems == 6 &&
+                    [[utilityMenu itemAtIndex:0].title isEqualToString:@"打开设置…"] &&
+                    [[utilityMenu itemAtIndex:1].title isEqualToString:@"检查更新…"] &&
+                    [utilityMenu itemAtIndex:2].separatorItem &&
+                    [[utilityMenu itemAtIndex:3].title isEqualToString:@"访问 msime.app"] &&
+                    [utilityMenu itemAtIndex:4].separatorItem &&
+                    [[utilityMenu itemAtIndex:5].title isEqualToString:@"隐藏悬浮状态栏"],
+                "The toolbar utility menu did not expose the expected native actions.");
+        [utilityMenu performActionForItemAtIndex:0];
+        [utilityMenu performActionForItemAtIndex:1];
+        [utilityMenu performActionForItemAtIndex:3];
+        [utilityMenu performActionForItemAtIndex:5];
+        require(firstDelegate.openedSettings && firstDelegate.checkedForUpdates &&
+                    firstDelegate.openedWebsite && firstDelegate.hidToolbar,
+                "The toolbar utility menu did not forward every action to its active input controller.");
 
         [panel updateEnglishInputMode:YES
             chinesePunctuationEnabled:NO
