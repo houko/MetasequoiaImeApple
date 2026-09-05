@@ -26,8 +26,13 @@ bool MetasequoiaShouldShowPreferences(int argc, const char *argv[])
 
 namespace
 {
-constexpr CGFloat kWindowWidth = 720.0;
+constexpr CGFloat kWindowWidth = 680.0;
 constexpr CGFloat kWindowHeight = 660.0;
+NSToolbarIdentifier const kPreferencesToolbarIdentifier = @"MetasequoiaPreferencesToolbar";
+NSToolbarItemIdentifier const kKeyboardToolbarItemIdentifier = @"MetasequoiaPreferencesKeyboard";
+NSToolbarItemIdentifier const kAppearanceToolbarItemIdentifier = @"MetasequoiaPreferencesAppearance";
+NSToolbarItemIdentifier const kDataToolbarItemIdentifier = @"MetasequoiaPreferencesData";
+NSToolbarItemIdentifier const kUpdatesToolbarItemIdentifier = @"MetasequoiaPreferencesUpdates";
 NSString * const kSchemePreferenceKey = @"MetasequoiaImeInputScheme";
 NSString * const kAutocorrectPreferenceKey = @"MetasequoiaImeQuanpinAutocorrect";
 NSString * const kHelpcodePreferenceKey = @"MetasequoiaImeHelpcodeEnabled";
@@ -394,6 +399,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 
 @end
 
+@interface MetasequoiaPreferencesWindowController () <NSToolbarDelegate>
+@end
+
 @implementation MetasequoiaPreferencesWindowController
 {
     NSArray<NSButton *> *_schemeButtons;
@@ -419,7 +427,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSTextField *_automaticUpdateLabel;
     NSButton *_updatePageButton;
     NSArray<NSView *> *_preferencePages;
-    NSArray<NSButton *> *_navigationButtons;
+    NSArray<NSToolbarItemIdentifier> *_preferenceToolbarItemIdentifiers;
     MetasequoiaUpdateController *_updateController;
     BOOL _standaloneLaunch;
 }
@@ -675,9 +683,10 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     window.title = @"水杉输入法设置";
     window.releasedWhenClosed = NO;
     window.restorable = NO;
-    window.titleVisibility = NSWindowTitleHidden;
-    window.titlebarAppearsTransparent = YES;
-    window.movableByWindowBackground = YES;
+    window.titleVisibility = NSWindowTitleVisible;
+    window.titlebarAppearsTransparent = NO;
+    window.movableByWindowBackground = NO;
+    window.toolbarStyle = NSWindowToolbarStylePreference;
 
     self = [super initWithWindow:window];
     if (self == nil)
@@ -686,102 +695,22 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     }
     window.delegate = self;
     _updateController = updateController;
+    _preferenceToolbarItemIdentifiers = @[
+        kKeyboardToolbarItemIdentifier,
+        kAppearanceToolbarItemIdentifier,
+        kDataToolbarItemIdentifier,
+        kUpdatesToolbarItemIdentifier,
+    ];
+    NSToolbar *toolbar = [[NSToolbar alloc] initWithIdentifier:kPreferencesToolbarIdentifier];
+    toolbar.delegate = self;
+    toolbar.displayMode = NSToolbarDisplayModeIconAndLabel;
+    toolbar.sizeMode = NSToolbarSizeModeRegular;
+    toolbar.allowsUserCustomization = NO;
+    toolbar.autosavesConfiguration = NO;
+    window.toolbar = toolbar;
 
     NSView *contentView = [[NSView alloc] initWithFrame:frame];
     window.contentView = contentView;
-
-    NSBox *sidebar = [[NSBox alloc] initWithFrame:NSZeroRect];
-    sidebar.boxType = NSBoxCustom;
-    sidebar.titlePosition = NSNoTitle;
-    sidebar.borderWidth = 0.0;
-    sidebar.fillColor = MetasequoiaBrandColor();
-    sidebar.accessibilityLabel = @"水杉输入法导航";
-    sidebar.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSImageView *iconView = [[NSImageView alloc] initWithFrame:NSZeroRect];
-    iconView.image = NSApp.applicationIconImage;
-    iconView.imageScaling = NSImageScaleProportionallyUpOrDown;
-    iconView.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *brandTitle = [NSTextField labelWithString:@"水杉输入法"];
-    brandTitle.font = [NSFont systemFontOfSize:20.0 weight:NSFontWeightSemibold];
-    brandTitle.textColor = [NSColor whiteColor];
-    brandTitle.alignment = NSTextAlignmentCenter;
-    brandTitle.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *brandDescription = [NSTextField labelWithString:@"轻巧、专注的中文输入体验"];
-    brandDescription.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightRegular];
-    brandDescription.textColor = [[NSColor whiteColor] colorWithAlphaComponent:0.9];
-    brandDescription.alignment = NSTextAlignmentCenter;
-    brandDescription.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSArray<NSString *> *navigationTitles = @[ @"键盘输入", @"外观", @"词库与数据", @"更新与反馈" ];
-    NSArray<NSString *> *navigationSymbols =
-        @[ @"keyboard", @"paintpalette", @"books.vertical", @"exclamationmark.bubble" ];
-    NSMutableArray<NSButton *> *navigationButtons = [NSMutableArray arrayWithCapacity:navigationTitles.count];
-    for (NSInteger index = 0; index < static_cast<NSInteger>(navigationTitles.count); ++index)
-    {
-        NSButton *button = [NSButton buttonWithTitle:navigationTitles[index]
-                                              target:self
-                                              action:@selector(selectPreferencesPage:)];
-        [button setButtonType:NSButtonTypeToggle];
-        button.tag = index;
-        button.font = [NSFont systemFontOfSize:13.0 weight:NSFontWeightMedium];
-        button.attributedTitle =
-            [[NSAttributedString alloc] initWithString:navigationTitles[index]
-                                            attributes:@{
-                                                NSFontAttributeName : button.font,
-                                                NSForegroundColorAttributeName : [NSColor whiteColor],
-                                            }];
-        button.alignment = NSTextAlignmentLeft;
-        button.bordered = NO;
-        button.contentTintColor = [NSColor whiteColor];
-        button.imagePosition = NSImageLeading;
-        NSImage *navigationImage = [NSImage imageWithSystemSymbolName:navigationSymbols[index]
-                                             accessibilityDescription:navigationTitles[index]];
-        navigationImage = [navigationImage imageWithSymbolConfiguration:
-                                                [NSImageSymbolConfiguration
-                                                    configurationWithHierarchicalColor:[NSColor whiteColor]]];
-        [navigationImage setTemplate:NO];
-        button.image = navigationImage;
-        button.accessibilityLabel = navigationTitles[index];
-        button.wantsLayer = YES;
-        button.layer.cornerRadius = 8.0;
-        button.translatesAutoresizingMaskIntoConstraints = NO;
-        [button.heightAnchor constraintEqualToConstant:38.0].active = YES;
-        [navigationButtons addObject:button];
-    }
-    _navigationButtons = [navigationButtons copy];
-
-    NSStackView *navigationStack = [NSStackView stackViewWithViews:_navigationButtons];
-    navigationStack.orientation = NSUserInterfaceLayoutOrientationVertical;
-    navigationStack.alignment = NSLayoutAttributeLeading;
-    navigationStack.distribution = NSStackViewDistributionFill;
-    navigationStack.spacing = 6.0;
-    navigationStack.translatesAutoresizingMaskIntoConstraints = NO;
-    for (NSButton *button in _navigationButtons)
-    {
-        [button.widthAnchor constraintEqualToAnchor:navigationStack.widthAnchor].active = YES;
-    }
-
-    NSButton *websiteButton = [NSButton buttonWithTitle:@"msime.app" target:self action:@selector(openWebsite:)];
-    websiteButton.bordered = NO;
-    websiteButton.contentTintColor = [NSColor whiteColor];
-    websiteButton.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightMedium];
-    websiteButton.attributedTitle =
-        [[NSAttributedString alloc] initWithString:@"msime.app"
-                                        attributes:@{
-                                            NSFontAttributeName : websiteButton.font,
-                                            NSForegroundColorAttributeName : [NSColor whiteColor],
-                                        }];
-    websiteButton.toolTip = @"打开水杉输入法官网";
-    websiteButton.translatesAutoresizingMaskIntoConstraints = NO;
-
-    NSTextField *brandTag = [NSTextField labelWithString:@"METASEQUOIA  ·  macOS"];
-    brandTag.font = [NSFont monospacedSystemFontOfSize:9.0 weight:NSFontWeightMedium];
-    brandTag.textColor = [[NSColor whiteColor] colorWithAlphaComponent:0.8];
-    brandTag.alignment = NSTextAlignmentCenter;
-    brandTag.translatesAutoresizingMaskIntoConstraints = NO;
 
     NSView *settingsPanel = [[NSView alloc] initWithFrame:NSZeroRect];
     settingsPanel.translatesAutoresizingMaskIntoConstraints = NO;
@@ -1028,13 +957,6 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     closeButton.keyEquivalent = @"\r";
     closeButton.translatesAutoresizingMaskIntoConstraints = NO;
 
-    [contentView addSubview:sidebar];
-    [sidebar addSubview:iconView];
-    [sidebar addSubview:brandTitle];
-    [sidebar addSubview:brandDescription];
-    [sidebar addSubview:navigationStack];
-    [sidebar addSubview:websiteButton];
-    [sidebar addSubview:brandTag];
     [contentView addSubview:settingsPanel];
     [settingsPanel addSubview:pageContainer];
     for (NSView *page in _preferencePages)
@@ -1051,29 +973,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [settingsPanel addSubview:closeButton];
 
     [NSLayoutConstraint activateConstraints:@[
-        [sidebar.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor],
-        [sidebar.topAnchor constraintEqualToAnchor:contentView.topAnchor],
-        [sidebar.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor],
-        [sidebar.widthAnchor constraintEqualToConstant:190.0],
-        [iconView.topAnchor constraintEqualToAnchor:sidebar.topAnchor constant:44.0],
-        [iconView.centerXAnchor constraintEqualToAnchor:sidebar.centerXAnchor],
-        [iconView.widthAnchor constraintEqualToConstant:52.0],
-        [iconView.heightAnchor constraintEqualToConstant:52.0],
-        [brandTitle.topAnchor constraintEqualToAnchor:iconView.bottomAnchor constant:16.0],
-        [brandTitle.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:16.0],
-        [brandTitle.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-16.0],
-        [brandDescription.topAnchor constraintEqualToAnchor:brandTitle.bottomAnchor constant:8.0],
-        [brandDescription.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:16.0],
-        [brandDescription.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-16.0],
-        [navigationStack.topAnchor constraintEqualToAnchor:brandDescription.bottomAnchor constant:26.0],
-        [navigationStack.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:16.0],
-        [navigationStack.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-16.0],
-        [websiteButton.centerXAnchor constraintEqualToAnchor:sidebar.centerXAnchor],
-        [websiteButton.bottomAnchor constraintEqualToAnchor:brandTag.topAnchor constant:-10.0],
-        [brandTag.leadingAnchor constraintEqualToAnchor:sidebar.leadingAnchor constant:12.0],
-        [brandTag.trailingAnchor constraintEqualToAnchor:sidebar.trailingAnchor constant:-12.0],
-        [brandTag.bottomAnchor constraintEqualToAnchor:sidebar.bottomAnchor constant:-20.0],
-        [settingsPanel.leadingAnchor constraintEqualToAnchor:sidebar.trailingAnchor],
+        [settingsPanel.leadingAnchor constraintEqualToAnchor:contentView.leadingAnchor],
         [settingsPanel.trailingAnchor constraintEqualToAnchor:contentView.trailingAnchor],
         [settingsPanel.topAnchor constraintEqualToAnchor:contentView.topAnchor],
         [settingsPanel.bottomAnchor constraintEqualToAnchor:contentView.bottomAnchor],
@@ -1087,9 +987,52 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         [closeButton.centerYAnchor constraintEqualToAnchor:restoreButton.centerYAnchor],
         [closeButton.widthAnchor constraintGreaterThanOrEqualToConstant:80.0],
     ]];
-    [self selectPreferencesPage:_navigationButtons.firstObject];
+    [self showPreferencesPageAtIndex:0 toolbarIndex:0];
     [self refreshUpdateControls];
     return self;
+}
+
+- (NSArray<NSToolbarItemIdentifier> *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
+{
+    (void)toolbar;
+    return _preferenceToolbarItemIdentifiers;
+}
+
+- (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
+{
+    (void)toolbar;
+    return _preferenceToolbarItemIdentifiers;
+}
+
+- (NSArray<NSToolbarItemIdentifier> *)toolbarSelectableItemIdentifiers:(NSToolbar *)toolbar
+{
+    (void)toolbar;
+    return _preferenceToolbarItemIdentifiers;
+}
+
+- (NSToolbarItem *)toolbar:(NSToolbar *)toolbar
+        itemForItemIdentifier:(NSToolbarItemIdentifier)itemIdentifier
+    willBeInsertedIntoToolbar:(BOOL)flag
+{
+    (void)toolbar;
+    (void)flag;
+    const NSInteger index = [_preferenceToolbarItemIdentifiers indexOfObject:itemIdentifier];
+    if (index == NSNotFound)
+    {
+        return nil;
+    }
+    NSArray<NSString *> *labels = @[ @"键盘输入", @"外观", @"词库与数据", @"更新与反馈" ];
+    NSArray<NSString *> *symbols =
+        @[ @"keyboard", @"paintpalette", @"books.vertical", @"arrow.triangle.2.circlepath" ];
+    NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+    item.label = labels[index];
+    item.paletteLabel = labels[index];
+    item.toolTip = labels[index];
+    item.image = [NSImage imageWithSystemSymbolName:symbols[index] accessibilityDescription:labels[index]];
+    item.target = self;
+    item.action = @selector(selectPreferencesPageFromToolbar:);
+    item.tag = index;
+    return item;
 }
 
 - (void)refreshUpdateControls
@@ -1111,29 +1054,23 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [_updateController checkForUpdates:sender];
 }
 
-- (void)selectPreferencesPage:(id)sender
+- (void)selectPreferencesPageFromToolbar:(id)sender
 {
-    NSButton *selectedButton = [sender isKindOfClass:[NSButton class]] ? (NSButton *)sender : nil;
-    const NSInteger selectedIndex = selectedButton == nil ? 0 : selectedButton.tag;
-    [self showPreferencesPageAtIndex:selectedIndex sidebarIndex:selectedIndex];
+    NSToolbarItem *selectedItem = [sender isKindOfClass:[NSToolbarItem class]] ? (NSToolbarItem *)sender : nil;
+    const NSInteger selectedIndex = selectedItem == nil ? 0 : selectedItem.tag;
+    [self showPreferencesPageAtIndex:selectedIndex toolbarIndex:selectedIndex];
 }
 
-- (void)showPreferencesPageAtIndex:(NSInteger)pageIndex sidebarIndex:(NSInteger)sidebarIndex
+- (void)showPreferencesPageAtIndex:(NSInteger)pageIndex toolbarIndex:(NSInteger)toolbarIndex
 {
     for (NSInteger index = 0; index < static_cast<NSInteger>(_preferencePages.count); ++index)
     {
         const BOOL selected = index == pageIndex;
         _preferencePages[index].hidden = !selected;
     }
-    for (NSInteger index = 0; index < static_cast<NSInteger>(_navigationButtons.count); ++index)
+    if (toolbarIndex >= 0 && toolbarIndex < static_cast<NSInteger>(_preferenceToolbarItemIdentifiers.count))
     {
-        const BOOL selected = index == sidebarIndex;
-        NSButton *button = _navigationButtons[index];
-        button.state = selected ? NSControlStateValueOn : NSControlStateValueOff;
-        button.accessibilityValue = @(selected);
-        NSColor *backgroundColor =
-            selected ? [[NSColor whiteColor] colorWithAlphaComponent:0.16] : [NSColor clearColor];
-        button.layer.backgroundColor = backgroundColor.CGColor;
+        self.window.toolbar.selectedItemIdentifier = _preferenceToolbarItemIdentifiers[toolbarIndex];
     }
 }
 
@@ -1141,13 +1078,13 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
 {
     (void)sender;
     [self refreshControls];
-    [self showPreferencesPageAtIndex:4 sidebarIndex:0];
+    [self showPreferencesPageAtIndex:4 toolbarIndex:0];
 }
 
 - (void)backToKeyboardInput:(id)sender
 {
     (void)sender;
-    [self showPreferencesPageAtIndex:0 sidebarIndex:0];
+    [self showPreferencesPageAtIndex:0 toolbarIndex:0];
 }
 
 - (void)openWebsite:(id)sender
