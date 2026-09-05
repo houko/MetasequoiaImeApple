@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.40.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.4...v0.40.0) (2026-09-05)
+
+
+### Features
+
+* **ios:** add traditional Chinese output ([d5cc70b](https://github.com/metasequoiaime/MSIME-Apple/commit/d5cc70b4bb7a073e39ea89ea4058f536013fbc93))
+
+
+### Bug Fixes
+
+* **ios:** give every generated target a product name ([304018b](https://github.com/metasequoiaime/MSIME-Apple/commit/304018bb46f7a76663f7f44c8d8fc322dbc07d4f))
+* **ios:** open the compact dictionary with URI handling ([f993b7c](https://github.com/metasequoiaime/MSIME-Apple/commit/f993b7c26509f2e4e9bf15b35caf36b85a110987))
+
 ## [0.39.4](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.3...v0.39.4) (2026-09-05)
 
 
