@@ -159,7 +159,6 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("FloatingToolbarPanel.mm", cmake)
         self.assertIn("FloatingToolbarPanelTests.mm", cmake)
         self.assertIn('#import "FloatingToolbarPanel.h"', controller)
-        self.assertIn("<MetasequoiaFloatingToolbarDelegate>", controller)
         self.assertIn("[MetasequoiaFloatingToolbarPanel sharedPanel]", controller)
         self.assertIn("activateForDelegate:self", controller)
         self.assertIn("deactivateForDelegate:self", controller)

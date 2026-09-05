@@ -4,6 +4,7 @@
 #import "FloatingToolbarPanel.h"
 #import "ChineseTextConversion.h"
 #include "CandidateFontSize.h"
+#import "CandidatePanel.h"
 #include "CandidateDisplay.h"
 #include "CandidatePageSize.h"
 #include "CandidatePanelStyle.h"
@@ -88,7 +89,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 }
 } // namespace
 
-@interface MetasequoiaInputController () <MetasequoiaFloatingToolbarDelegate>
+@interface MetasequoiaInputController () <MetasequoiaFloatingToolbarDelegate, MetasequoiaCandidatePanelDelegate>
 @end
 
 @implementation MetasequoiaInputController
@@ -96,10 +97,12 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     std::unique_ptr<metasequoia::InputSession> _session;
     std::string _activeHelpcodeSchema;
     metasequoia::mac::CandidateSelectionState _candidateSelection;
-    IMKCandidates *_candidatePanel;
+    MetasequoiaCandidatePanel *_candidatePanel;
     MetasequoiaFloatingToolbarPanel *_floatingToolbarPanel;
     MetasequoiaShuangpinKeymapPanel *_shuangpinKeymapPanel;
     NSArray *_candidateData;
+    NSArray *_visibleCandidateData;
+    NSUInteger _candidatePageSize;
     NSUInteger _candidateHighlightedIndex;
     NSUInteger _candidatePageStart;
     BOOL _candidateLineIdentifiersCollapsed;
@@ -114,7 +117,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     self = [super initWithServer:server delegate:delegate client:inputClient];
     if (self != nil)
     {
-        _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
+        _candidatePanel = [MetasequoiaCandidatePanel new];
+        _candidatePanel.delegate = self;
         _floatingToolbarPanel = [MetasequoiaFloatingToolbarPanel sharedPanel];
         _shuangpinKeymapPanel = [[MetasequoiaShuangpinKeymapPanel alloc] init];
         [_candidatePanel setAttributes:metasequoia::mac::CandidatePanelAttributes(
@@ -189,7 +193,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     _candidatePageStart = 0;
     _candidateLineIdentifiersCollapsed = NO;
     _candidateData = @[];
-    [_candidatePanel setCandidateData:_candidateData];
+    _visibleCandidateData = @[];
+    [_candidatePanel setCandidateData:_visibleCandidateData];
     [_candidatePanel hide];
     [_shuangpinKeymapPanel orderOut:nil];
     _dictionaryRetryAfter = 0.0;
@@ -211,7 +216,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 
     const SessionPreferences preferences = ReadSessionPreferences();
     [_candidatePanel setPanelType:metasequoia::mac::CandidatePanelTypeForStyle(preferences.candidatePanelStyle)];
-    [_candidatePanel setSelectionKeys:metasequoia::mac::CandidateSelectionKeys(preferences.candidatePageSize)];
+    _candidatePageSize = preferences.candidatePageSize;
+    [_candidatePanel setSelectionKeys:metasequoia::mac::CandidateSelectionKeys(_candidatePageSize)];
     [_candidatePanel setAttributes:metasequoia::mac::CandidatePanelAttributes(preferences.candidateFontSize)];
     _wubiAutoCommitUniqueEnabled = preferences.wubiAutoCommitUniqueEnabled;
     const bool helpcodeSchemaMatches = _activeHelpcodeSchema == preferences.helpcodeSchema;
@@ -229,7 +235,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     _candidatePageStart = 0;
     _candidateLineIdentifiersCollapsed = NO;
     _candidateData = @[];
-    [_candidatePanel setCandidateData:_candidateData];
+    _visibleCandidateData = @[];
+    [_candidatePanel setCandidateData:_visibleCandidateData];
     [_candidatePanel hide];
     [_shuangpinKeymapPanel orderOut:nil];
 }
@@ -287,56 +294,90 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     _candidateSelection.update(static_cast<size_t>(index), _session->candidates()[index].word);
     _candidateHighlightedIndex = index;
     _candidatePageStart = metasequoia::mac::CandidatePageStart(
-        index, _candidateData.count, _candidatePanel.selectionKeys.count);
+        index, _candidateData.count, _candidatePageSize);
+}
+
+- (void)showCurrentCandidatePage
+{
+    // On macOS 26, selectionKeys does not reliably limit the visible list.
+    // Own page boundaries here; retain global engine indices on each string.
+    const NSUInteger count = std::min(_candidatePageSize, _candidateData.count - _candidatePageStart);
+    _visibleCandidateData = [_candidateData subarrayWithRange:NSMakeRange(_candidatePageStart, count)];
+    _candidateLineIdentifiersCollapsed = NO;
+    _candidatePanel.hasPreviousPage = _candidatePageStart > 0;
+    _candidatePanel.hasNextPage = _candidatePageStart + count < _candidateData.count;
+    NSRect caretRect = NSZeroRect;
+    [self.client attributesForCharacterIndex:0 lineHeightRectangle:&caretRect];
+    _candidatePanel.caretRect = caretRect;
+    [_candidatePanel setCandidateData:_visibleCandidateData];
+    [_candidatePanel show:kIMKLocateCandidatesBelowHint];
+    if (count >= 2)
+    {
+        const NSInteger first = [_candidatePanel candidateIdentifierAtLineNumber:0];
+        const NSInteger second = [_candidatePanel candidateIdentifierAtLineNumber:1];
+        _candidateLineIdentifiersCollapsed = first != NSNotFound && first == second;
+    }
+}
+
+- (void)candidatePanelPreviousPage
+{
+    if (_candidatePageSize > 0 && _candidatePageStart >= _candidatePageSize)
+    {
+        const NSUInteger target = _candidatePageStart - _candidatePageSize;
+        [self selectCandidateAtIndex:target pageStart:target];
+    }
+}
+
+- (void)candidatePanelNextPage
+{
+    if (_candidatePageSize > 0 && _candidatePageStart + _candidatePageSize < _candidateData.count)
+    {
+        const NSUInteger target = _candidatePageStart + _candidatePageSize;
+        [self selectCandidateAtIndex:target pageStart:target];
+    }
 }
 
 - (BOOL)selectCandidateAtIndex:(NSUInteger)index pageStart:(NSUInteger)pageStart
 {
-    if (index >= _candidateData.count || index < pageStart)
+    if (index >= _candidateData.count || index < pageStart || index - pageStart >= _candidatePageSize)
     {
         return NO;
     }
-
+    const NSUInteger previousPageStart = _candidatePageStart;
+    const NSUInteger previousIndex = _candidateHighlightedIndex;
+    if (pageStart != _candidatePageStart)
+    {
+        _candidatePageStart = pageStart;
+        [self showCurrentCandidatePage];
+    }
     const NSUInteger line = index - pageStart;
     const NSInteger identifier = [_candidatePanel candidateIdentifierAtLineNumber:static_cast<NSInteger>(line)];
-    const NSInteger firstIdentifier = [_candidatePanel candidateIdentifierAtLineNumber:0];
-    const NSInteger secondIdentifier = [_candidatePanel candidateIdentifierAtLineNumber:1];
-    const NSUInteger candidatesOnPage = std::min(_candidatePanel.selectionKeys.count,
-                                                  _candidateData.count - pageStart);
-    if (candidatesOnPage >= 2 && firstIdentifier != NSNotFound && firstIdentifier == secondIdentifier)
-    {
-        _candidateLineIdentifiersCollapsed = YES;
-    }
-    const BOOL lineMappingIsUsable =
-        !_candidateLineIdentifiersCollapsed && identifier != NSNotFound &&
-        [_candidatePanel lineNumberForCandidateWithIdentifier:identifier] == static_cast<NSInteger>(line) &&
-        (candidatesOnPage < 2 || (firstIdentifier != NSNotFound && secondIdentifier != NSNotFound &&
-                                  firstIdentifier != secondIdentifier));
-
+    const BOOL lineMappingIsUsable = !_candidateLineIdentifiersCollapsed && identifier != NSNotFound &&
+        [_candidatePanel lineNumberForCandidateWithIdentifier:identifier] == static_cast<NSInteger>(line);
+    BOOL selected = NO;
     if (lineMappingIsUsable)
     {
-        if (![_candidatePanel selectCandidateWithIdentifier:identifier] ||
-            ![[_candidatePanel selectedCandidateString].string
-                isEqualToString:[_candidateData[index] string]])
-        {
-            return NO;
-        }
+        selected = [_candidatePanel selectCandidateWithIdentifier:identifier] &&
+            [[_candidatePanel selectedCandidateString].string isEqualToString:[_candidateData[index] string]];
+    }
+    else if (_candidateLineIdentifiersCollapsed &&
+             NSProcessInfo.processInfo.operatingSystemVersion.majorVersion == 26)
+    {
+        // This workaround takes an ordinal within the data passed to the panel,
+        // which is now the current page, not the complete engine candidate list.
+        selected = [_candidatePanel selectCandidateWithIdentifier:static_cast<NSInteger>(line)];
+    }
+    if (selected)
+    {
         _candidateSelection.begin_navigation();
         [self trackCandidateAtIndex:index];
         return YES;
     }
-
-    const NSInteger operatingSystemMajorVersion = NSProcessInfo.processInfo.operatingSystemVersion.majorVersion;
-    if (_candidateLineIdentifiersCollapsed && operatingSystemMajorVersion == 26)
+    if (previousPageStart != _candidatePageStart)
     {
-        // macOS 26 can collapse every visible-line identifier to zero after setCandidateData:.
-        // In that detected OS-specific failure mode the panel accepts the array ordinal.
-        if ([_candidatePanel selectCandidateWithIdentifier:static_cast<NSInteger>(index)])
-        {
-            _candidateSelection.begin_navigation();
-            [self trackCandidateAtIndex:index];
-            return YES;
-        }
+        _candidatePageStart = previousPageStart;
+        [self showCurrentCandidatePage];
+        [self selectCandidateAtIndex:previousIndex pageStart:previousPageStart];
     }
     return NO;
 }
@@ -410,94 +451,42 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         candidatePageShortcutCharacter, candidatePageShortcutModified))
     {
     case metasequoia::mac::ControllerKeyAction::MoveCandidateLeft:
-        if (!metasequoia::mac::IsPrimaryCandidateDirection(event.keyCode, _candidatePanel.panelType))
-        {
-            return YES;
-        }
-        _candidateSelection.begin_navigation();
-        [_candidatePanel moveLeft:self];
-        if (_candidateHighlightedIndex > 0)
-        {
-            --_candidateHighlightedIndex;
-        }
-        [self trackCandidateAtIndex:_candidateHighlightedIndex];
-        return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateRight:
-        if (!metasequoia::mac::IsPrimaryCandidateDirection(event.keyCode, _candidatePanel.panelType))
-        {
-            return YES;
-        }
-        _candidateSelection.begin_navigation();
-        [_candidatePanel moveRight:self];
-        if (_candidateHighlightedIndex + 1 < _candidateData.count)
-        {
-            ++_candidateHighlightedIndex;
-        }
-        [self trackCandidateAtIndex:_candidateHighlightedIndex];
-        return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateUp:
-        if (!metasequoia::mac::IsPrimaryCandidateDirection(event.keyCode, _candidatePanel.panelType))
-        {
-            return YES;
-        }
-        _candidateSelection.begin_navigation();
-        [_candidatePanel moveUp:self];
-        if (_candidateHighlightedIndex > 0)
-        {
-            --_candidateHighlightedIndex;
-        }
-        [self trackCandidateAtIndex:_candidateHighlightedIndex];
-        return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateDown:
+    {
         if (!metasequoia::mac::IsPrimaryCandidateDirection(event.keyCode, _candidatePanel.panelType))
         {
             return YES;
         }
-        _candidateSelection.begin_navigation();
-        [_candidatePanel moveDown:self];
-        if (_candidateHighlightedIndex + 1 < _candidateData.count)
-        {
-            ++_candidateHighlightedIndex;
-        }
-        [self trackCandidateAtIndex:_candidateHighlightedIndex];
+        const BOOL backwards = event.keyCode == kVK_LeftArrow || event.keyCode == kVK_UpArrow;
+        const NSUInteger target = backwards ? (_candidateHighlightedIndex > 0 ? _candidateHighlightedIndex - 1 : 0)
+                                            : std::min(_candidateHighlightedIndex + 1, _candidateData.count - 1);
+        [self selectCandidateAtIndex:target pageStart:metasequoia::mac::CandidatePageStart(
+            target, _candidateData.count, _candidatePageSize)];
         return YES;
+    }
     case metasequoia::mac::ControllerKeyAction::MoveCandidatePageUp:
-    {
-        const NSUInteger pageSize = _candidatePanel.selectionKeys.count;
-        if (pageSize == 0 || _candidatePageStart == 0)
+        if (_candidatePageSize > 0 && _candidatePageStart >= _candidatePageSize)
         {
-            return YES;
-        }
-        const NSUInteger targetPageStart = _candidatePageStart - pageSize;
-        [_candidatePanel pageUp:self];
-        if (![self selectCandidateAtIndex:targetPageStart pageStart:targetPageStart])
-        {
-            [_candidatePanel pageDown:self];
+            const NSUInteger target = _candidatePageStart - _candidatePageSize;
+            [self selectCandidateAtIndex:target pageStart:target];
         }
         return YES;
-    }
     case metasequoia::mac::ControllerKeyAction::MoveCandidatePageDown:
-    {
-        const NSUInteger pageSize = _candidatePanel.selectionKeys.count;
-        if (pageSize == 0 || _candidatePageStart + pageSize >= _candidateData.count)
+        if (_candidatePageSize > 0 && _candidatePageStart + _candidatePageSize < _candidateData.count)
         {
-            return YES;
-        }
-        const NSUInteger targetPageStart = _candidatePageStart + pageSize;
-        [_candidatePanel pageDown:self];
-        if (![self selectCandidateAtIndex:targetPageStart pageStart:targetPageStart])
-        {
-            [_candidatePanel pageUp:self];
+            const NSUInteger target = _candidatePageStart + _candidatePageSize;
+            [self selectCandidateAtIndex:target pageStart:target];
         }
         return YES;
-    }
     case metasequoia::mac::ControllerKeyAction::MoveCandidateHome:
         [self selectCandidateAtIndex:_candidatePageStart pageStart:_candidatePageStart];
         return YES;
     case metasequoia::mac::ControllerKeyAction::MoveCandidateEnd:
         [self selectCandidateAtIndex:metasequoia::mac::CandidatePageEnd(
                                          _candidatePageStart, _candidateData.count,
-                                         _candidatePanel.selectionKeys.count)
+                                         _candidatePageSize)
                            pageStart:_candidatePageStart];
         return YES;
     case metasequoia::mac::ControllerKeyAction::Backspace:
@@ -531,7 +520,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
             else if (character >= '1' && character <= '9')
             {
                 result = _candidateSelection.commit_number(
-                    *_session, static_cast<char>(character), _candidatePanel.selectionKeys.count);
+                    *_session, static_cast<char>(character), _candidatePageSize);
                 if (!result.handled && _session->has_composition())
                 {
                     return YES;
@@ -691,49 +680,27 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         ++candidateIndex;
     }
     _candidateData = [data copy];
-    [_candidatePanel setCandidateData:_candidateData];
     if (_session->has_composition() && _candidateData.count > 0)
     {
-        [_candidatePanel show:kIMKLocateCandidatesBelowHint];
-        if (_candidateData.count >= 2)
+        const NSUInteger selectedIndex = preservedSelection.has_value() && preservedSelection.value() < _candidateData.count
+                                             ? preservedSelection.value() : 0;
+        _candidatePageStart = metasequoia::mac::CandidatePageStart(selectedIndex, _candidateData.count, _candidatePageSize);
+        [self showCurrentCandidatePage];
+        if (preservedSelection.has_value())
         {
-            const NSInteger firstIdentifier = [_candidatePanel candidateIdentifierAtLineNumber:0];
-            const NSInteger secondIdentifier = [_candidatePanel candidateIdentifierAtLineNumber:1];
-            _candidateLineIdentifiersCollapsed =
-                firstIdentifier != NSNotFound && firstIdentifier == secondIdentifier;
-        }
-        if (preservedSelection.has_value() && preservedSelection.value() < _candidateData.count)
-        {
-            const NSUInteger selectedIndex = static_cast<NSUInteger>(preservedSelection.value());
-            const NSUInteger pageSize = _candidatePanel.selectionKeys.count;
-            const NSUInteger selectedPageStart = metasequoia::mac::CandidatePageStart(
-                selectedIndex, _candidateData.count, pageSize);
-            _candidateHighlightedIndex = selectedIndex;
-            _candidatePageStart = selectedPageStart;
-            NSUInteger pagesAdvanced = 0;
-            if (pageSize > 0)
+            if (![self selectCandidateAtIndex:selectedIndex pageStart:_candidatePageStart])
             {
-                for (NSUInteger pageStart = 0; pageStart < selectedPageStart; pageStart += pageSize)
-                {
-                    [_candidatePanel pageDown:self];
-                    ++pagesAdvanced;
-                }
-            }
-            if (![self selectCandidateAtIndex:selectedIndex pageStart:selectedPageStart])
-            {
-                // The panel could not re-highlight the preserved candidate, so fall back to the fresh-panel state instead of tracking a selection the user cannot see.
-                for (NSUInteger page = 0; page < pagesAdvanced; ++page)
-                {
-                    [_candidatePanel pageUp:self];
-                }
                 _candidateSelection.reset();
                 _candidateHighlightedIndex = 0;
                 _candidatePageStart = 0;
+                [self showCurrentCandidatePage];
             }
         }
     }
     else
     {
+        _visibleCandidateData = @[];
+        [_candidatePanel setCandidateData:_visibleCandidateData];
         [_candidatePanel hide];
     }
 }
@@ -741,7 +708,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 - (NSArray *)candidates:(id)sender
 {
     (void)sender;
-    return _candidateData != nil ? _candidateData : @[];
+    return _visibleCandidateData != nil ? _visibleCandidateData : @[];
 }
 
 - (void)candidateSelectionChanged:(NSAttributedString *)candidateString
@@ -762,9 +729,9 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         NSUInteger identifierIndex = NSNotFound;
         if (selectedIdentifier != NSNotFound)
         {
-            for (NSUInteger candidateIndex = 0; candidateIndex < _candidateData.count; ++candidateIndex)
+            for (NSUInteger candidateIndex = 0; candidateIndex < _visibleCandidateData.count; ++candidateIndex)
             {
-                if ([_candidatePanel candidateStringIdentifier:_candidateData[candidateIndex]] != selectedIdentifier)
+                if ([_candidatePanel candidateStringIdentifier:_visibleCandidateData[candidateIndex]] != selectedIdentifier)
                 {
                     continue;
                 }
@@ -773,19 +740,20 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
                     identifierIndex = NSNotFound;
                     break;
                 }
-                identifierIndex = candidateIndex;
+                identifierIndex = _candidatePageStart + candidateIndex;
             }
         }
         index = identifierIndex;
     }
     if (index == NSNotFound)
     {
-        NSMutableArray<NSString *> *displayStrings = [NSMutableArray arrayWithCapacity:_candidateData.count];
-        for (NSAttributedString *candidate in _candidateData)
+        NSMutableArray<NSString *> *displayStrings = [NSMutableArray arrayWithCapacity:_visibleCandidateData.count];
+        for (NSAttributedString *candidate in _visibleCandidateData)
         {
             [displayStrings addObject:candidate.string];
         }
-        index = MetasequoiaUniqueStringIndex(displayStrings, candidateString.string);
+        const NSUInteger line = MetasequoiaUniqueStringIndex(displayStrings, candidateString.string);
+        if (line != NSNotFound) index = _candidatePageStart + line;
     }
     if (index == NSNotFound)
     {
@@ -794,7 +762,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         const NSInteger selectedLine = selectedIdentifier == NSNotFound
                                            ? NSNotFound
                                            : [_candidatePanel lineNumberForCandidateWithIdentifier:selectedIdentifier];
-        if (selectedLine != NSNotFound && selectedLine >= 0)
+        if (selectedLine != NSNotFound && selectedLine >= 0 &&
+            static_cast<NSUInteger>(selectedLine) < _visibleCandidateData.count)
         {
             index = _candidatePageStart + static_cast<NSUInteger>(selectedLine);
         }
