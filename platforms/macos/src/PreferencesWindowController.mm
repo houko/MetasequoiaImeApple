@@ -747,6 +747,15 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                              selector:@selector(floatingToolbarPreferenceDidChange:)
                                                  name:MetasequoiaFloatingToolbarDidChangeNotification
                                                object:nil];
+    // The toolbar menu writes the punctuation and full-width preferences too, and refreshControls only runs on presentation or on an explicit page change, so without these observers the checkboxes would keep showing a stale state and write it back on the next click.
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(chinesePunctuationPreferenceDidChange:)
+                                                 name:@"MetasequoiaChinesePunctuationDidChangeNotification"
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(fullWidthInputPreferenceDidChange:)
+                                                 name:@"MetasequoiaFullWidthInputDidChangeNotification"
+                                               object:nil];
 
     NSView *contentView = [[NSView alloc] initWithFrame:frame];
     window.contentView = contentView;
@@ -1254,6 +1263,22 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     _floatingToolbarButton.state = [MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled]
                                        ? NSControlStateValueOn
                                        : NSControlStateValueOff;
+}
+
+- (void)chinesePunctuationPreferenceDidChange:(NSNotification *)notification
+{
+    (void)notification;
+    _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled]
+                                          ? NSControlStateValueOn
+                                          : NSControlStateValueOff;
+}
+
+- (void)fullWidthInputPreferenceDidChange:(NSNotification *)notification
+{
+    (void)notification;
+    _fullWidthInputButton.state = [MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]
+                                      ? NSControlStateValueOn
+                                      : NSControlStateValueOff;
 }
 
 - (void)refreshControls

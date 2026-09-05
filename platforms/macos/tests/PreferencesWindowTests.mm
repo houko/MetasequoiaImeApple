@@ -623,6 +623,23 @@ int main()
         require(floatingToolbarButton.state == NSControlStateValueOn,
                 "The floating-toolbar control did not follow the preference after the bar was re-enabled.");
 
+        NSButton *chinesePunctuationButton = FindButtonWithTitle(controller.window.contentView, @"使用中文标点");
+        require(chinesePunctuationButton != nil,
+                "The keyboard-input page did not expose the Chinese punctuation toggle.");
+        [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:NO];
+        require(chinesePunctuationButton.state == NSControlStateValueOff,
+                "The Chinese punctuation control did not follow the preference after the toolbar switched to ASCII punctuation.");
+        [MetasequoiaPreferencesWindowController setChinesePunctuationEnabled:YES];
+        require(chinesePunctuationButton.state == NSControlStateValueOn,
+                "The Chinese punctuation control did not follow the preference after the toolbar restored Chinese punctuation.");
+
+        [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:NO];
+        require(fullWidthButton.state == NSControlStateValueOff,
+                "The full-width input control did not follow the preference after the toolbar switched to half-width input.");
+        [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:YES];
+        require(fullWidthButton.state == NSControlStateValueOn,
+                "The full-width input control did not follow the preference after the toolbar switched to full-width input.");
+
         learningButton.state = NSControlStateValueOn;
         require([NSApp sendAction:learningButton.action to:learningButton.target from:learningButton],
                 "The candidate-learning control did not dispatch its action.");
