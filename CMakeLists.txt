@@ -39,6 +39,10 @@ if(BUILD_TESTING)
     target_compile_options(MetasequoiaInputControllerKeyRoutingTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(MetasequoiaInputControllerKeyRoutingTests PRIVATE MetasequoiaIme::Engine ${APPKIT_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
     add_test(NAME input_controller_key_routing COMMAND MetasequoiaInputControllerKeyRoutingTests)
+    add_executable(MetasequoiaCandidatePanelTests ${METASEQUOIA_MACOS_ROOT}/tests/CandidatePanelTests.mm ${METASEQUOIA_MACOS_ROOT}/src/CandidatePanel.mm)
+    target_compile_options(MetasequoiaCandidatePanelTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
+    target_link_libraries(MetasequoiaCandidatePanelTests PRIVATE ${APPKIT_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
+    add_test(NAME candidate_panel COMMAND MetasequoiaCandidatePanelTests)
     add_executable(MetasequoiaInputMenuTests ${METASEQUOIA_MACOS_ROOT}/tests/InputMenuTests.mm)
     target_compile_options(MetasequoiaInputMenuTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
     target_link_libraries(MetasequoiaInputMenuTests PRIVATE ${APPKIT_FRAMEWORK})
@@ -151,7 +155,7 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-fmt.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/MIT-spdlog.txt
         ${METASEQUOIA_IME_LEGAL_DIRECTORY}/Sparkle-LICENSE.txt)
-    add_executable(MetasequoiaIME MACOSX_BUNDLE ${METASEQUOIA_MACOS_ROOT}/src/main.mm ${METASEQUOIA_MACOS_ROOT}/src/ChineseTextConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm ${METASEQUOIA_MACOS_ROOT}/src/FloatingToolbarPanel.mm ${METASEQUOIA_MACOS_ROOT}/src/InputSourceRegistration.mm ${METASEQUOIA_MACOS_ROOT}/src/MetasequoiaInputController.mm ${METASEQUOIA_MACOS_ROOT}/src/PreferencesWindowController.mm ${METASEQUOIA_MACOS_ROOT}/src/ShuangpinKeymapPanel.mm ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/UpdateController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICONS} ${METASEQUOIA_IME_HELPCODES} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
+    add_executable(MetasequoiaIME MACOSX_BUNDLE ${METASEQUOIA_MACOS_ROOT}/src/main.mm ${METASEQUOIA_MACOS_ROOT}/src/CandidatePanel.mm ${METASEQUOIA_MACOS_ROOT}/src/ChineseTextConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm ${METASEQUOIA_MACOS_ROOT}/src/FloatingToolbarPanel.mm ${METASEQUOIA_MACOS_ROOT}/src/InputSourceRegistration.mm ${METASEQUOIA_MACOS_ROOT}/src/MetasequoiaInputController.mm ${METASEQUOIA_MACOS_ROOT}/src/PreferencesWindowController.mm ${METASEQUOIA_MACOS_ROOT}/src/ShuangpinKeymapPanel.mm ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm ${METASEQUOIA_MACOS_ROOT}/src/UpdateController.mm ${METASEQUOIA_IME_DICTIONARY} ${METASEQUOIA_IME_ICONS} ${METASEQUOIA_IME_HELPCODES} ${METASEQUOIA_IME_LOCALIZATIONS} ${METASEQUOIA_IME_LEGAL_RESOURCES} ${METASEQUOIA_IME_UNINSTALLER})
     set_source_files_properties(${METASEQUOIA_IME_DICTIONARY} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(${METASEQUOIA_IME_ICONS} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_source_files_properties(${METASEQUOIA_IME_HELPCODES}
@@ -172,6 +176,20 @@ if(METASEQUOIA_IME_BUILD_INPUT_METHOD)
         VERBATIM)
     add_custom_target(MetasequoiaIMESign ALL COMMAND /usr/bin/codesign --force --deep --sign - "$<TARGET_BUNDLE_DIR:MetasequoiaIME>" DEPENDS MetasequoiaIME VERBATIM)
     if(BUILD_TESTING)
+        add_executable(MetasequoiaCandidatePaginationTests
+            ${METASEQUOIA_MACOS_ROOT}/tests/CandidatePaginationTests.mm
+            ${METASEQUOIA_MACOS_ROOT}/src/CandidatePanel.mm
+            ${METASEQUOIA_MACOS_ROOT}/src/ChineseTextConversion.mm
+            ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm
+            ${METASEQUOIA_MACOS_ROOT}/src/FloatingToolbarPanel.mm
+            ${METASEQUOIA_MACOS_ROOT}/src/PreferencesWindowController.mm
+            ${METASEQUOIA_MACOS_ROOT}/src/ShuangpinKeymapPanel.mm
+            ${METASEQUOIA_MACOS_ROOT}/src/StringConversion.mm
+            ${METASEQUOIA_MACOS_ROOT}/src/UpdateController.mm)
+        target_compile_options(MetasequoiaCandidatePaginationTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
+        target_link_libraries(MetasequoiaCandidatePaginationTests PRIVATE MetasequoiaIme::Engine MetasequoiaSparkle ${APPKIT_FRAMEWORK} ${CARBON_FRAMEWORK} ${INPUT_METHOD_KIT_FRAMEWORK})
+        set_target_properties(MetasequoiaCandidatePaginationTests PROPERTIES BUILD_RPATH "${METASEQUOIA_SPARKLE_ROOT}")
+        add_test(NAME candidate_pagination COMMAND MetasequoiaCandidatePaginationTests)
         add_executable(MetasequoiaDictionaryInstallerTests ${METASEQUOIA_MACOS_ROOT}/tests/DictionaryInstallerTests.mm ${METASEQUOIA_MACOS_ROOT}/src/DictionaryInstaller.mm)
         target_compile_options(MetasequoiaDictionaryInstallerTests PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic -Werror)
         target_link_libraries(MetasequoiaDictionaryInstallerTests PRIVATE MetasequoiaIme::Engine ${APPKIT_FRAMEWORK})
