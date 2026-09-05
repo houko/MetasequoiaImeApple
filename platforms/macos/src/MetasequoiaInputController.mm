@@ -2,6 +2,7 @@
 
 #import "DictionaryInstaller.h"
 #import "FloatingToolbarPanel.h"
+#import "ChineseTextConversion.h"
 #include "CandidateFontSize.h"
 #include "CandidateDisplay.h"
 #include "CandidatePageSize.h"
@@ -115,6 +116,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
                  @"MetasequoiaChinesePunctuationDidChangeNotification",
                  @"MetasequoiaEnglishInputModeDidChangeNotification",
                  @"MetasequoiaFullWidthInputDidChangeNotification",
+                 MetasequoiaTraditionalChineseOutputDidChangeNotification,
              ])
         {
             [[NSNotificationCenter defaultCenter] addObserver:self
@@ -138,7 +140,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [_floatingToolbarPanel
               updateEnglishInputMode:[MetasequoiaPreferencesWindowController storedEnglishInputMode]
         chinesePunctuationEnabled:[MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled]
-                 fullWidthEnabled:[MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]];
+                 fullWidthEnabled:[MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]
+    traditionalChineseOutputEnabled:[MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled]];
     if (!_serverActive || _floatingToolbarPanel.toolbarDelegate != self)
     {
         return;
@@ -150,8 +153,12 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 
 - (void)floatingToolbarPreferenceDidChange:(NSNotification *)notification
 {
-    (void)notification;
     [self refreshFloatingToolbar];
+    if ([notification.name isEqualToString:MetasequoiaTraditionalChineseOutputDidChangeNotification] &&
+        _serverActive && _session != nullptr && _session->has_composition())
+    {
+        [self refreshCandidatePanelPreservingSelection];
+    }
 }
 
 - (void)prepareForLearnedDataReset:(NSNotification *)notification
@@ -287,7 +294,8 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     if (lineMappingIsUsable)
     {
         if (![_candidatePanel selectCandidateWithIdentifier:identifier] ||
-            ![[_candidatePanel selectedCandidateString].string isEqualToString:_candidateData[index]])
+            ![[_candidatePanel selectedCandidateString].string
+                isEqualToString:[_candidateData[index] string]])
         {
             return NO;
         }
@@ -558,7 +566,12 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     const NSRange replacementRange = NSMakeRange(NSNotFound, NSNotFound);
     if (result.commit.has_value())
     {
-        [client insertText:MetasequoiaStringFromUtf8(*result.commit) replacementRange:replacementRange];
+        const BOOL traditionalOutput =
+            _session->scheme_type() != SchemeType::JapaneseRomaji &&
+            [MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled];
+        NSString *commit = MetasequoiaChineseOutputString(MetasequoiaStringFromUtf8(*result.commit),
+                                                           traditionalOutput);
+        [client insertText:commit replacementRange:replacementRange];
         _candidateSelection.reset();
         [_candidatePanel hide];
         [_shuangpinKeymapPanel orderOut:nil];
@@ -619,15 +632,37 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 
 - (void)updateCandidatePanel
 {
-    _candidateSelection.reset();
-    _candidateHighlightedIndex = 0;
-    _candidatePageStart = 0;
+    [self rebuildCandidatePanelPreservingSelection:NO];
+}
+
+- (void)refreshCandidatePanelPreservingSelection
+{
+    [self rebuildCandidatePanelPreservingSelection:YES];
+}
+
+- (void)rebuildCandidatePanelPreservingSelection:(BOOL)preserveSelection
+{
+    const std::optional<size_t> preservedSelection =
+        preserveSelection ? _candidateSelection.selected_index() : std::nullopt;
+    if (!preserveSelection)
+    {
+        _candidateSelection.reset();
+        _candidateHighlightedIndex = 0;
+        _candidatePageStart = 0;
+    }
     _candidateLineIdentifiersCollapsed = NO;
     NSMutableArray *data = [NSMutableArray arrayWithCapacity:_session->candidates().size()];
+    const BOOL traditionalOutput =
+        _session->scheme_type() != SchemeType::JapaneseRomaji &&
+        [MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled];
+    NSUInteger candidateIndex = 0;
     for (const WordItem &candidate : _session->candidates())
     {
-        [data addObject:MetasequoiaStringFromUtf8(metasequoia::mac::CandidateDisplayText(
-                            candidate, _session->scheme_type(), _session->helpcode_enabled()))];
+        NSString *display = MetasequoiaStringFromUtf8(metasequoia::mac::CandidateDisplayText(
+            candidate, _session->scheme_type(), _session->helpcode_enabled()));
+        NSString *convertedDisplay = MetasequoiaChineseOutputString(display, traditionalOutput);
+        [data addObject:MetasequoiaIndexedCandidateString(convertedDisplay, candidateIndex)];
+        ++candidateIndex;
     }
     _candidateData = [data copy];
     [_candidatePanel setCandidateData:_candidateData];
@@ -640,6 +675,23 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
             const NSInteger secondIdentifier = [_candidatePanel candidateIdentifierAtLineNumber:1];
             _candidateLineIdentifiersCollapsed =
                 firstIdentifier != NSNotFound && firstIdentifier == secondIdentifier;
+        }
+        if (preservedSelection.has_value() && preservedSelection.value() < _candidateData.count)
+        {
+            const NSUInteger selectedIndex = static_cast<NSUInteger>(preservedSelection.value());
+            const NSUInteger pageSize = _candidatePanel.selectionKeys.count;
+            const NSUInteger selectedPageStart = metasequoia::mac::CandidatePageStart(
+                selectedIndex, _candidateData.count, pageSize);
+            _candidateHighlightedIndex = selectedIndex;
+            _candidatePageStart = selectedPageStart;
+            if (pageSize > 0)
+            {
+                for (NSUInteger pageStart = 0; pageStart < selectedPageStart; pageStart += pageSize)
+                {
+                    [_candidatePanel pageDown:self];
+                }
+            }
+            [self selectCandidateAtIndex:selectedIndex pageStart:selectedPageStart];
         }
     }
     else
@@ -665,9 +717,49 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     {
         return;
     }
-    // InputMethodKit reports the selected display string rather than its index. Refuse an ambiguous
-    // callback instead of committing the wrong engine candidate after invalid UTF-8 was replaced.
-    const NSUInteger index = MetasequoiaUniqueStringIndex(_candidateData, candidateString.string);
+    NSUInteger index = MetasequoiaCandidateIndex(candidateString);
+    if (index == NSNotFound)
+    {
+        const NSInteger selectedIdentifier = [_candidatePanel selectedCandidate];
+        NSUInteger identifierIndex = NSNotFound;
+        if (selectedIdentifier != NSNotFound)
+        {
+            for (NSUInteger candidateIndex = 0; candidateIndex < _candidateData.count; ++candidateIndex)
+            {
+                if ([_candidatePanel candidateStringIdentifier:_candidateData[candidateIndex]] != selectedIdentifier)
+                {
+                    continue;
+                }
+                if (identifierIndex != NSNotFound)
+                {
+                    identifierIndex = NSNotFound;
+                    break;
+                }
+                identifierIndex = candidateIndex;
+            }
+        }
+        index = identifierIndex;
+    }
+    if (index == NSNotFound)
+    {
+        const NSInteger selectedIdentifier = [_candidatePanel selectedCandidate];
+        const NSInteger selectedLine = selectedIdentifier == NSNotFound
+                                           ? NSNotFound
+                                           : [_candidatePanel lineNumberForCandidateWithIdentifier:selectedIdentifier];
+        if (selectedLine != NSNotFound && selectedLine >= 0)
+        {
+            index = _candidatePageStart + static_cast<NSUInteger>(selectedLine);
+        }
+    }
+    if (index == NSNotFound)
+    {
+        NSMutableArray<NSString *> *displayStrings = [NSMutableArray arrayWithCapacity:_candidateData.count];
+        for (NSAttributedString *candidate in _candidateData)
+        {
+            [displayStrings addObject:candidate.string];
+        }
+        index = MetasequoiaUniqueStringIndex(displayStrings, candidateString.string);
+    }
     if (index == NSNotFound || index >= _session->candidates().size())
     {
         return;
@@ -756,6 +848,13 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         ![MetasequoiaPreferencesWindowController storedFullWidthInputEnabled]];
 }
 
+- (void)floatingToolbarDidRequestToggleTraditionalOutput:(MetasequoiaFloatingToolbarPanel *)toolbar
+{
+    (void)toolbar;
+    [MetasequoiaPreferencesWindowController setTraditionalChineseOutputEnabled:
+        ![MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled]];
+}
+
 - (void)floatingToolbarDidRequestOpenSettings:(MetasequoiaFloatingToolbarPanel *)toolbar
 {
     (void)toolbar;
@@ -774,9 +873,23 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [self setEnglishInputMode:YES client:self.client];
 }
 
+- (void)selectSimplifiedOutput:(id)sender
+{
+    (void)sender;
+    [MetasequoiaPreferencesWindowController setTraditionalChineseOutputEnabled:NO];
+}
+
+- (void)selectTraditionalOutput:(id)sender
+{
+    (void)sender;
+    [MetasequoiaPreferencesWindowController setTraditionalChineseOutputEnabled:YES];
+}
+
 - (NSMenu *)menu
 {
-    return CreateMetasequoiaInputMenu(self, [MetasequoiaPreferencesWindowController storedEnglishInputMode]);
+    return CreateMetasequoiaInputMenu(
+        self, [MetasequoiaPreferencesWindowController storedEnglishInputMode],
+        [MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled]);
 }
 
 - (NSUInteger)recognizedEvents:(id)sender

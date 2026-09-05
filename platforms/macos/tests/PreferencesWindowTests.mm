@@ -145,6 +145,28 @@ int main()
         [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"MetasequoiaImeFloatingToolbarEnabled"];
         require([MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled],
                 "The floating toolbar was not enabled by default.");
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"MetasequoiaImeTraditionalChineseOutput"];
+        require(![MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled],
+                "Traditional Chinese output was unexpectedly enabled by default.");
+        [MetasequoiaPreferencesWindowController setTraditionalChineseOutputEnabled:YES];
+        require([MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled],
+                "The traditional Chinese output preference was not stored.");
+        __block NSUInteger traditionalOutputNotificationCount = 0;
+        id traditionalOutputObserver = [[NSNotificationCenter defaultCenter]
+            addObserverForName:MetasequoiaTraditionalChineseOutputDidChangeNotification
+                        object:nil
+                         queue:nil
+                    usingBlock:^(NSNotification *notification) {
+                      (void)notification;
+                      ++traditionalOutputNotificationCount;
+                    }];
+        [MetasequoiaPreferencesWindowController setTraditionalChineseOutputEnabled:YES];
+        require(traditionalOutputNotificationCount == 0,
+                "Selecting the active output script emitted a destructive no-op refresh.");
+        [MetasequoiaPreferencesWindowController setTraditionalChineseOutputEnabled:NO];
+        require(traditionalOutputNotificationCount == 1,
+                "Changing the output script did not emit exactly one refresh notification.");
+        [[NSNotificationCenter defaultCenter] removeObserver:traditionalOutputObserver];
         [MetasequoiaPreferencesWindowController setFloatingToolbarEnabled:NO];
         [MetasequoiaPreferencesWindowController setCandidatePanelStyle:1];
         [MetasequoiaPreferencesWindowController setCandidatePageSize:5];
@@ -628,6 +650,7 @@ int main()
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
         [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:YES];
         [MetasequoiaPreferencesWindowController setFloatingToolbarEnabled:NO];
+        [MetasequoiaPreferencesWindowController setTraditionalChineseOutputEnabled:YES];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:YES];
         [[NSUserDefaults standardUserDefaults] setBool:YES
@@ -647,6 +670,7 @@ int main()
                     [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] &&
                     ![MetasequoiaPreferencesWindowController storedFullWidthInputEnabled] &&
                     [MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled] &&
+                    ![MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled] &&
                     ![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled] &&
                     ![[NSUserDefaults standardUserDefaults]
                         boolForKey:@"MetasequoiaImeShuangpinKeymapEnabled"],
@@ -664,6 +688,7 @@ int main()
             @"MetasequoiaImeInputModeShortcutEnabled",
             @"MetasequoiaImeFullWidthInputEnabled",
             @"MetasequoiaImeFloatingToolbarEnabled",
+            @"MetasequoiaImeTraditionalChineseOutput",
             @"MetasequoiaImeWubiAutoCommitUnique",
             @"MetasequoiaImeShuangpinKeymapEnabled",
         ];
