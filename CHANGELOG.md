@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.39.4](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.3...v0.39.4) (2026-09-05)
+
+
+### Bug Fixes
+
+* **release:** wait for the pull request's own checks before merging ([#230](https://github.com/metasequoiaime/MSIME-Apple/issues/230)) ([8da6573](https://github.com/metasequoiaime/MSIME-Apple/commit/8da65738b9c9e21c107adc2e001542f817cb40fe))
+
 ## [0.39.3](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.2...v0.39.3) (2026-09-05)
 
 
