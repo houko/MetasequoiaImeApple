@@ -39,6 +39,8 @@ bool MetasequoiaShouldShowPreferences(int argc, const char *argv[]);
 + (void)setFloatingToolbarEnabled:(BOOL)enabled;
 + (BOOL)storedWubiAutoCommitUniqueEnabled;
 + (void)setWubiAutoCommitUniqueEnabled:(BOOL)enabled;
++ (BOOL)storedShuangpinKeymapEnabled;
++ (void)setShuangpinKeymapEnabled:(BOOL)enabled;
 - (void)showAndActivate;
 - (void)showAndActivateForStandaloneLaunch;
 @end

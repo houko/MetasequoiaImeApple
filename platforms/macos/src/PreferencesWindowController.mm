@@ -40,6 +40,7 @@ NSString * const kInputModeShortcutPreferenceKey = @"MetasequoiaImeInputModeShor
 NSString * const kFullWidthInputPreferenceKey = @"MetasequoiaImeFullWidthInputEnabled";
 NSString * const kFloatingToolbarPreferenceKey = @"MetasequoiaImeFloatingToolbarEnabled";
 NSString * const kWubiAutoCommitUniquePreferenceKey = @"MetasequoiaImeWubiAutoCommitUnique";
+NSString * const kShuangpinKeymapPreferenceKey = @"MetasequoiaImeShuangpinKeymapEnabled";
 
 NSColor *MetasequoiaBrandColor()
 {
@@ -435,6 +436,9 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     NSArray<NSButton *> *_schemeButtons;
     NSPopUpButton *_shuangpinSchemeButton;
     NSPopUpButton *_wubiSchemeButton;
+    NSButton *_shuangpinKeymapButton;
+    NSView *_shuangpinKeymapRow;
+    NSView *_shuangpinKeymapSeparator;
     NSView *_wubiSettingsRow;
     NSButton *_autocorrectButton;
     NSButton *_helpcodeButton;
@@ -666,6 +670,19 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                                         object:@(enabled)];
 }
 
++ (BOOL)storedShuangpinKeymapEnabled
+{
+    return [[NSUserDefaults standardUserDefaults] boolForKey:kShuangpinKeymapPreferenceKey];
+}
+
++ (void)setShuangpinKeymapEnabled:(BOOL)enabled
+{
+    [[NSUserDefaults standardUserDefaults] setBool:enabled forKey:kShuangpinKeymapPreferenceKey];
+    [[NSNotificationCenter defaultCenter]
+        postNotificationName:@"MetasequoiaShuangpinKeymapDidChangeNotification"
+                      object:@(enabled)];
+}
+
 - (instancetype)initWithWindowNibName:(NSNibName)windowNibName owner:(id)owner
 {
     (void)windowNibName;
@@ -818,6 +835,13 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     _wubiSchemeButton = [[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO];
     [_wubiSchemeButton addItemWithTitle:@"86 五笔"];
     _wubiSchemeButton.accessibilityLabel = @"五笔方案";
+    _shuangpinKeymapButton = [NSButton checkboxWithTitle:@"显示小鹤双拼键位提示"
+                                                   target:self
+                                                   action:@selector(shuangpinKeymapChanged:)];
+    _shuangpinKeymapButton.accessibilityLabel = @"显示小鹤双拼键位提示";
+    _shuangpinKeymapRow = PreferenceRow(@"双拼初学者", _shuangpinKeymapButton);
+    _shuangpinKeymapRow.accessibilityLabel = @"双拼键位提示行";
+    _shuangpinKeymapSeparator = CardSeparator();
     for (NSInteger index = 0; index < static_cast<NSInteger>(schemeTitles.count); ++index)
     {
         NSButton *button = [NSButton radioButtonWithTitle:schemeTitles[index]
@@ -830,6 +854,11 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
         NSView *accessory = index == 1 ? _shuangpinSchemeButton : (index == 2 ? _wubiSchemeButton : nil);
         [schemeRows addObject:SchemeChoiceRow(button, accessory)];
         [schemeRows addObject:CardSeparator()];
+        if (index == 1)
+        {
+            [schemeRows addObject:_shuangpinKeymapRow];
+            [schemeRows addObject:_shuangpinKeymapSeparator];
+        }
     }
     _schemeButtons = [schemeButtons copy];
     NSButton *wubiSettingsButton = [NSButton buttonWithTitle:@"设置"
@@ -1198,7 +1227,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     }
     _shuangpinSchemeButton.enabled = storedScheme == 1;
     _wubiSchemeButton.enabled = storedScheme == 2;
+    _shuangpinKeymapRow.hidden = storedScheme != 1;
+    _shuangpinKeymapSeparator.hidden = storedScheme != 1;
     _wubiSettingsRow.hidden = storedScheme != 2;
+    _shuangpinKeymapButton.state =
+        [MetasequoiaPreferencesWindowController storedShuangpinKeymapEnabled] ? NSControlStateValueOn
+                                                                              : NSControlStateValueOff;
     _autocorrectButton.state = [MetasequoiaPreferencesWindowController storedAutocorrectEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _helpcodeButton.state = [MetasequoiaPreferencesWindowController storedHelpcodeEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
     _chinesePunctuationButton.state = [MetasequoiaPreferencesWindowController storedChinesePunctuationEnabled] ? NSControlStateValueOn : NSControlStateValueOff;
@@ -1382,6 +1416,12 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
     [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:button.state == NSControlStateValueOn];
 }
 
+- (void)shuangpinKeymapChanged:(id)sender
+{
+    NSButton *button = (NSButton *)sender;
+    [MetasequoiaPreferencesWindowController setShuangpinKeymapEnabled:button.state == NSControlStateValueOn];
+}
+
 - (void)confirmResetLearningData:(id)sender
 {
     (void)sender;
@@ -1442,6 +1482,7 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
              kCandidateLearningPreferenceKey,
              kInputModeShortcutPreferenceKey,
              kWubiAutoCommitUniquePreferenceKey,
+             kShuangpinKeymapPreferenceKey,
              kFullWidthInputPreferenceKey,
              kFloatingToolbarPreferenceKey,
          ])
@@ -1472,6 +1513,8 @@ NSView *PreferencesPage(NSString *title, NSString *summary, NSArray<NSView *> *c
                                   object:@([MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled])];
     [notifications postNotificationName:@"MetasequoiaWubiAutoCommitUniqueDidChangeNotification"
                                   object:@([MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled])];
+    [notifications postNotificationName:@"MetasequoiaShuangpinKeymapDidChangeNotification"
+                                  object:@([MetasequoiaPreferencesWindowController storedShuangpinKeymapEnabled])];
     [notifications postNotificationName:@"MetasequoiaFullWidthInputDidChangeNotification"
                                   object:@([MetasequoiaPreferencesWindowController storedFullWidthInputEnabled])];
     [notifications postNotificationName:MetasequoiaFloatingToolbarDidChangeNotification

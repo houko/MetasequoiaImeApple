@@ -1,0 +1,162 @@
+#import "../src/ShuangpinKeymapPanel.h"
+
+#import <AppKit/AppKit.h>
+
+#include "shuangpin/shuangpin_profile.h"
+
+#include <cmath>
+#include <cstring>
+#include <stdexcept>
+
+namespace
+{
+void Require(bool condition, const char *message)
+{
+    if (!condition)
+    {
+        throw std::runtime_error(message);
+    }
+}
+
+NSDictionary<NSString *, NSString *> *KeyDefinition(NSString *key)
+{
+    for (NSArray<NSDictionary<NSString *, NSString *> *> *row in MetasequoiaXiaoheKeymapRows())
+    {
+        for (NSDictionary<NSString *, NSString *> *definition in row)
+        {
+            if ([definition[@"key"] isEqualToString:key])
+            {
+                return definition;
+            }
+        }
+    }
+    return nil;
+}
+
+bool NearlyEqual(CGFloat first, CGFloat second)
+{
+    return std::abs(first - second) < 0.01;
+}
+
+NSString *DisplayUnit(const std::string &unit)
+{
+    if (!unit.empty() && unit.front() == 'v')
+    {
+        return [@"ü" stringByAppendingString:[NSString stringWithUTF8String:unit.c_str() + 1]];
+    }
+    return [NSString stringWithUTF8String:unit.c_str()];
+}
+
+NSDictionary<NSString *, NSSet<NSString *> *> *ExpectedXiaoheUnitsByKey()
+{
+    NSMutableDictionary<NSString *, NSMutableSet<NSString *> *> *result = [NSMutableDictionary dictionary];
+    const ShuangpinProfile &profile = GetXiaoheShuangpinProfile();
+    for (const auto &entry : profile.initials)
+    {
+        NSString *key = [NSString stringWithUTF8String:entry.second.c_str()].uppercaseString;
+        if (result[key] == nil)
+        {
+            result[key] = [NSMutableSet set];
+        }
+        [result[key] addObject:DisplayUnit(entry.first)];
+    }
+    for (const auto &entry : profile.finals)
+    {
+        NSString *key = [NSString stringWithUTF8String:entry.second.c_str()].uppercaseString;
+        if (result[key] == nil)
+        {
+            result[key] = [NSMutableSet set];
+        }
+        [result[key] addObject:DisplayUnit(entry.first)];
+    }
+    return result;
+}
+
+NSSet<NSString *> *DisplayedUnits(NSDictionary<NSString *, NSString *> *definition)
+{
+    NSString *normalized = [definition[@"codes"] stringByReplacingOccurrencesOfString:@" / "
+                                                                           withString:@" · "];
+    return [NSSet setWithArray:[normalized componentsSeparatedByString:@" · "]];
+}
+} // namespace
+
+int main(int argc, const char *argv[])
+{
+    @autoreleasepool
+    {
+        [NSApplication sharedApplication];
+        const BOOL preview = argc == 2 &&
+                             (std::strcmp(argv[1], "--preview") == 0 ||
+                              std::strcmp(argv[1], "--preview-dark") == 0);
+        if (preview)
+        {
+            [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+            [NSApp finishLaunching];
+            if (std::strcmp(argv[1], "--preview-dark") == 0)
+            {
+                NSApp.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+            }
+            MetasequoiaShuangpinKeymapPanel *previewPanel =
+                [[MetasequoiaShuangpinKeymapPanel alloc] init];
+            [previewPanel updateHighlightedKey:@"v"];
+            NSWindow *previewWindow = [[NSWindow alloc]
+                initWithContentRect:NSMakeRect(0.0, 0.0, 620.0, 184.0)
+                          styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable)
+                            backing:NSBackingStoreBuffered
+                              defer:NO];
+            previewWindow.title = @"小鹤双拼键位提示预览";
+            previewWindow.contentView = previewPanel.contentView;
+            [previewWindow center];
+            [previewWindow makeKeyAndOrderFront:nil];
+            [NSApp activateIgnoringOtherApps:YES];
+            [NSApp run];
+            return 0;
+        }
+
+        NSArray<NSArray<NSDictionary<NSString *, NSString *> *> *> *rows =
+            MetasequoiaXiaoheKeymapRows();
+        Require(rows.count == 3 && rows[0].count == 10 && rows[1].count == 9 && rows[2].count == 7,
+                "The Xiaohe keymap did not preserve the three physical QWERTY rows.");
+        NSDictionary<NSString *, NSSet<NSString *> *> *expectedUnits = ExpectedXiaoheUnitsByKey();
+        for (NSString *key in expectedUnits)
+        {
+            Require([DisplayedUnits(KeyDefinition(key)) isEqualToSet:expectedUnits[key]],
+                    "The visual keymap drifted from the engine's Xiaohe profile.");
+        }
+        Require(MetasequoiaShouldShowShuangpinKeymap(YES, YES, YES) &&
+                    !MetasequoiaShouldShowShuangpinKeymap(NO, YES, YES) &&
+                    !MetasequoiaShouldShowShuangpinKeymap(YES, NO, YES) &&
+                    !MetasequoiaShouldShowShuangpinKeymap(YES, YES, NO),
+                "The keymap visibility policy escaped the enabled Shuangpin composition.");
+
+        const NSRect visibleFrame = NSMakeRect(0.0, 0.0, 1440.0, 900.0);
+        const NSSize panelSize = NSMakeSize(620.0, 184.0);
+        NSRect frame = MetasequoiaShuangpinKeymapPanelFrame(
+            NSMakeRect(400.0, 400.0, 2.0, 20.0), panelSize, 60.0, visibleFrame);
+        Require(NearlyEqual(frame.origin.x, 400.0) && NearlyEqual(frame.origin.y, 148.0),
+                "The keymap panel was not placed below the candidate clearance.");
+        frame = MetasequoiaShuangpinKeymapPanelFrame(
+            NSMakeRect(1400.0, 400.0, 2.0, 20.0), panelSize, 60.0, visibleFrame);
+        Require(NearlyEqual(frame.origin.x, 804.0),
+                "The keymap panel was not clamped inside the screen's right edge.");
+        frame = MetasequoiaShuangpinKeymapPanelFrame(
+            NSMakeRect(300.0, 20.0, 2.0, 20.0), panelSize, 60.0, visibleFrame);
+        Require(NearlyEqual(frame.origin.y, 108.0),
+                "The keymap panel did not clear candidates above the caret near the screen bottom.");
+
+        MetasequoiaShuangpinKeymapPanel *panel = [[MetasequoiaShuangpinKeymapPanel alloc] init];
+        Require((panel.styleMask & NSWindowStyleMaskNonactivatingPanel) != 0,
+                "The keymap panel could activate the input-method process.");
+        Require(panel.level == NSPopUpMenuWindowLevel,
+                "The keymap panel could render behind the input client.");
+        Require(!panel.opaque && panel.hasShadow,
+                "The keymap panel did not preserve its floating surface appearance.");
+        Require([panel.contentView.accessibilityLabel isEqualToString:@"小鹤双拼键位提示"],
+                "The keymap panel did not expose an accessible identity.");
+        [panel updateHighlightedKey:@"v"];
+        Require([panel.contentView.accessibilityValue containsString:@"当前按键 V：zh / ui · ü"],
+                "The highlighted key was not reflected in the accessible keymap description.");
+        [panel orderOut:nil];
+    }
+    return 0;
+}

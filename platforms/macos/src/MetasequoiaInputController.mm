@@ -12,6 +12,7 @@
 #include "InputSchemePreference.h"
 #include "WubiCommitPolicy.h"
 #import "PreferencesWindowController.h"
+#import "ShuangpinKeymapPanel.h"
 #import "UpdateController.h"
 #include "StringConversion.h"
 #include "CandidateSelectionState.h"
@@ -21,6 +22,7 @@
 #import <Carbon/Carbon.h>
 
 #include <memory>
+#include <cmath>
 
 namespace
 {
@@ -77,12 +79,14 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     metasequoia::mac::CandidateSelectionState _candidateSelection;
     IMKCandidates *_candidatePanel;
     MetasequoiaFloatingToolbarPanel *_floatingToolbarPanel;
+    MetasequoiaShuangpinKeymapPanel *_shuangpinKeymapPanel;
     NSArray *_candidateData;
     NSUInteger _candidateHighlightedIndex;
     NSUInteger _candidatePageStart;
     BOOL _candidateLineIdentifiersCollapsed;
     BOOL _wubiAutoCommitUniqueEnabled;
     BOOL _serverActive;
+    BOOL _shuangpinKeymapEnabled;
     NSTimeInterval _dictionaryRetryAfter;
 }
 
@@ -93,6 +97,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     {
         _candidatePanel = [[IMKCandidates alloc] initWithServer:server panelType:kIMKSingleRowSteppingCandidatePanel styleType:kIMKMain];
         _floatingToolbarPanel = [MetasequoiaFloatingToolbarPanel sharedPanel];
+        _shuangpinKeymapPanel = [[MetasequoiaShuangpinKeymapPanel alloc] init];
         [_candidatePanel setAttributes:metasequoia::mac::CandidatePanelAttributes(
                                            static_cast<size_t>([MetasequoiaPreferencesWindowController storedCandidateFontSize]))];
 
@@ -124,6 +129,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
 - (void)dealloc
 {
     [_floatingToolbarPanel deactivateForDelegate:self];
+    [_shuangpinKeymapPanel orderOut:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
@@ -160,11 +166,18 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     _candidateData = @[];
     [_candidatePanel setCandidateData:_candidateData];
     [_candidatePanel hide];
+    [_shuangpinKeymapPanel orderOut:nil];
     _dictionaryRetryAfter = 0.0;
 }
 
 - (void)reloadSessionFromPreferences
 {
+    const NSInteger storedScheme = [MetasequoiaPreferencesWindowController storedScheme];
+    _shuangpinKeymapEnabled = [MetasequoiaPreferencesWindowController storedShuangpinKeymapEnabled];
+    if (storedScheme != 1 || !_shuangpinKeymapEnabled)
+    {
+        [_shuangpinKeymapPanel orderOut:nil];
+    }
     if (_session != nullptr && _session->has_composition())
     {
         return;
@@ -189,6 +202,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     _candidateData = @[];
     [_candidatePanel setCandidateData:_candidateData];
     [_candidatePanel hide];
+    [_shuangpinKeymapPanel orderOut:nil];
 }
 
 - (BOOL)prepareSessionIfNeeded
@@ -314,6 +328,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     }
     if ([MetasequoiaPreferencesWindowController storedEnglishInputMode])
     {
+        [_shuangpinKeymapPanel orderOut:nil];
         return NO;
     }
     if (metasequoia::mac::IsFullWidthInputToggle(event.keyCode, inputModeModifiers))
@@ -546,12 +561,60 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         [client insertText:MetasequoiaStringFromUtf8(*result.commit) replacementRange:replacementRange];
         _candidateSelection.reset();
         [_candidatePanel hide];
+        [_shuangpinKeymapPanel orderOut:nil];
         return;
     }
 
     NSString *preedit = MetasequoiaStringFromUtf8(_session->preedit());
     [client setMarkedText:preedit selectionRange:NSMakeRange(preedit.length, 0) replacementRange:replacementRange];
     [self updateCandidatePanel];
+    [self updateShuangpinKeymapPanelForClient:client];
+}
+
+- (void)updateShuangpinKeymapPanelForClient:(id<IMKTextInput>)client
+{
+    const BOOL hasComposition = _session != nullptr && _session->has_composition();
+    const BOOL isShuangpin = _session != nullptr && _session->scheme_type() == SchemeType::Shuangpin;
+    if (!MetasequoiaShouldShowShuangpinKeymap(isShuangpin, _shuangpinKeymapEnabled, hasComposition) ||
+        client == nil)
+    {
+        [_shuangpinKeymapPanel orderOut:nil];
+        return;
+    }
+
+    NSRect caretRect = NSZeroRect;
+    [client attributesForCharacterIndex:0 lineHeightRectangle:&caretRect];
+    if (!std::isfinite(NSMinX(caretRect)) || !std::isfinite(NSMinY(caretRect)) ||
+        !std::isfinite(NSMaxX(caretRect)) || !std::isfinite(NSMaxY(caretRect)) ||
+        NSHeight(caretRect) <= 0.0)
+    {
+        [_shuangpinKeymapPanel orderOut:nil];
+        return;
+    }
+
+    NSString *preedit = MetasequoiaStringFromUtf8(_session->preedit());
+    NSString *highlightedKey = @"";
+    if (preedit.length > 0)
+    {
+        const unichar character = [preedit characterAtIndex:preedit.length - 1];
+        if ((character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z'))
+        {
+            highlightedKey = [NSString stringWithCharacters:&character length:1];
+        }
+    }
+    [_shuangpinKeymapPanel updateHighlightedKey:highlightedKey];
+
+    const CGFloat fontSize = static_cast<CGFloat>(
+        [MetasequoiaPreferencesWindowController storedCandidateFontSize]);
+    CGFloat candidateClearance = fontSize + 42.0;
+    if (_candidatePanel.panelType != kIMKSingleRowSteppingCandidatePanel)
+    {
+        const NSUInteger visibleCandidates = MIN(
+            _candidateData.count,
+            static_cast<NSUInteger>([MetasequoiaPreferencesWindowController storedCandidatePageSize]));
+        candidateClearance = (fontSize + 10.0) * visibleCandidates + 24.0;
+    }
+    [_shuangpinKeymapPanel showNearCaretRect:caretRect candidateClearance:candidateClearance];
 }
 
 - (void)updateCandidatePanel
@@ -640,6 +703,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     [_floatingToolbarPanel deactivateForDelegate:self];
     [self commitComposition:sender];
     [_candidatePanel hide];
+    [_shuangpinKeymapPanel orderOut:nil];
     [super deactivateServer:sender];
 }
 
@@ -662,6 +726,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     }
     _candidateSelection.reset();
     [_candidatePanel hide];
+    [_shuangpinKeymapPanel orderOut:nil];
     [MetasequoiaPreferencesWindowController setEnglishInputMode:enabled];
 }
 

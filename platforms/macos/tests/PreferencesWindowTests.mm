@@ -155,6 +155,8 @@ int main()
         [MetasequoiaPreferencesWindowController setInputModeShortcutEnabled:NO];
         [MetasequoiaPreferencesWindowController setFullWidthInputEnabled:NO];
         [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:NO];
+        [[NSUserDefaults standardUserDefaults] setBool:YES
+                                                forKey:@"MetasequoiaImeShuangpinKeymapEnabled"];
         [MetasequoiaPreferencesWindowController setStoredScheme:2];
         require([MetasequoiaPreferencesWindowController storedScheme] == 2,
                 "The Wubi input scheme preference was not stored.");
@@ -270,8 +272,15 @@ int main()
                 "The input-scheme rows did not expose their concrete scheme choices.");
         NSView *wubiSettingsRow =
             FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔功能行");
+        NSView *shuangpinKeymapRow =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"双拼键位提示行");
+        NSView *shuangpinKeymapView =
+            FindViewWithAccessibilityLabel(controller.window.contentView, @"显示小鹤双拼键位提示");
         require(wubiSettingsRow != nil && !wubiSettingsRow.hidden,
                 "The selected Wubi scheme did not reveal its settings row.");
+        require(shuangpinKeymapRow != nil && shuangpinKeymapRow.hidden &&
+                    [shuangpinKeymapView isKindOfClass:[NSButton class]],
+                "The input-scheme card did not create the contextual Shuangpin keymap option.");
         require(fullWidthButton != nil && fullWidthButton.state == NSControlStateValueOff,
                 "The keyboard-input page did not expose the full-width input toggle.");
         fullWidthButton.state = NSControlStateValueOn;
@@ -285,11 +294,23 @@ int main()
                 "The Shuangpin scheme choice did not persist its selection.");
         require(wubiSettingsRow.hidden,
                 "The Wubi settings row remained visible after another scheme was selected.");
+        require(!shuangpinKeymapRow.hidden &&
+                    ((NSButton *)shuangpinKeymapView).state == NSControlStateValueOn,
+                "Selecting Shuangpin did not reveal the stored beginner keymap option.");
+        ((NSButton *)shuangpinKeymapView).state = NSControlStateValueOff;
+        require([NSApp sendAction:((NSButton *)shuangpinKeymapView).action
+                               to:((NSButton *)shuangpinKeymapView).target
+                             from:shuangpinKeymapView] &&
+                    ![[NSUserDefaults standardUserDefaults]
+                        boolForKey:@"MetasequoiaImeShuangpinKeymapEnabled"],
+                "The Shuangpin keymap option did not persist its disabled state.");
         [wubiSchemeButton performClick:nil];
         require([MetasequoiaPreferencesWindowController storedScheme] == 2,
                 "The Wubi scheme choice did not persist its selection.");
         require(!wubiSettingsRow.hidden,
                 "Selecting Wubi did not reveal the inline settings entry.");
+        require(shuangpinKeymapRow.hidden,
+                "The Shuangpin keymap option remained visible after Wubi was selected.");
         NSView *wubiSettingsView =
             FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔功能设置");
         require([wubiSettingsView isKindOfClass:[NSButton class]],
@@ -609,6 +630,8 @@ int main()
         [MetasequoiaPreferencesWindowController setFloatingToolbarEnabled:NO];
         [MetasequoiaPreferencesWindowController setEnglishInputMode:YES];
         [MetasequoiaPreferencesWindowController setWubiAutoCommitUniqueEnabled:YES];
+        [[NSUserDefaults standardUserDefaults] setBool:YES
+                                                forKey:@"MetasequoiaImeShuangpinKeymapEnabled"];
         NSButton *restoreDefaultsButton = FindButtonWithTitle(controller.window.contentView, @"恢复默认设置");
         require(restoreDefaultsButton != nil, "The settings window did not expose the restore-defaults button.");
         [restoreDefaultsButton performClick:nil];
@@ -624,7 +647,9 @@ int main()
                     [MetasequoiaPreferencesWindowController storedInputModeShortcutEnabled] &&
                     ![MetasequoiaPreferencesWindowController storedFullWidthInputEnabled] &&
                     [MetasequoiaPreferencesWindowController storedFloatingToolbarEnabled] &&
-                    ![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled],
+                    ![MetasequoiaPreferencesWindowController storedWubiAutoCommitUniqueEnabled] &&
+                    ![[NSUserDefaults standardUserDefaults]
+                        boolForKey:@"MetasequoiaImeShuangpinKeymapEnabled"],
                 "Restoring defaults did not restore every visible setting.");
         NSArray<NSString *> *preferenceKeys = @[
             @"MetasequoiaImeInputScheme",
@@ -640,6 +665,7 @@ int main()
             @"MetasequoiaImeFullWidthInputEnabled",
             @"MetasequoiaImeFloatingToolbarEnabled",
             @"MetasequoiaImeWubiAutoCommitUnique",
+            @"MetasequoiaImeShuangpinKeymapEnabled",
         ];
         for (NSString *key in preferenceKeys)
         {
