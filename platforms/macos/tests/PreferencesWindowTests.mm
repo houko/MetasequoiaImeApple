@@ -195,11 +195,11 @@ int main()
         NSColor *generalTitleColor = [generalNavigationButton.attributedTitle attribute:NSForegroundColorAttributeName
                                                                                 atIndex:0
                                                                          effectiveRange:nil];
-        require([generalTitleColor isEqual:[NSColor labelColor]],
-                "The settings sidebar did not render navigation titles with the readable label color.");
-        require([generalNavigationButton.contentTintColor isEqual:[NSColor labelColor]] &&
+        require([generalTitleColor isEqual:[NSColor whiteColor]],
+                "The settings sidebar did not render navigation titles in white.");
+        require([generalNavigationButton.contentTintColor isEqual:[NSColor whiteColor]] &&
                     ![generalNavigationButton.image isTemplate],
-                "The settings sidebar did not render navigation symbols with a readable tint.");
+                "The settings sidebar did not render navigation symbols in white.");
         require(generalNavigationButton.state == NSControlStateValueOn &&
                     appearanceNavigationButton.state == NSControlStateValueOff &&
                     dataNavigationButton.state == NSControlStateValueOff &&
@@ -327,8 +327,8 @@ int main()
         NSColor *websiteTitleColor = [websiteButton.attributedTitle attribute:NSForegroundColorAttributeName
                                                                       atIndex:0
                                                                effectiveRange:nil];
-        require([websiteTitleColor isEqual:[NSColor labelColor]],
-                "The canonical website link did not use the readable sidebar label color.");
+        require([websiteTitleColor isEqual:[NSColor whiteColor]],
+                "The canonical website link was unreadable against the sidebar.");
 
         [controller.window.contentView layoutSubtreeIfNeeded];
         NSView *schemeCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"输入方式卡片");
@@ -349,6 +349,14 @@ int main()
             [generalPage convertRect:candidatePageShortcutCard.bounds fromView:candidatePageShortcutCard];
         require(NSMaxY(candidatePageShortcutCardRect) <= NSMaxY(generalPage.bounds),
                 "The candidate page shortcut card overflowed the keyboard-input page.");
+        NSButton *footerRestoreButton = FindButtonWithTitle(controller.window.contentView, @"恢复默认设置");
+        NSRect candidatePageShortcutRectInWindow =
+            [controller.window.contentView convertRect:candidatePageShortcutCard.bounds
+                                               fromView:candidatePageShortcutCard];
+        NSRect footerRestoreRectInWindow =
+            [controller.window.contentView convertRect:footerRestoreButton.bounds fromView:footerRestoreButton];
+        require(NSMinY(candidatePageShortcutRectInWindow) >= NSMaxY(footerRestoreRectInWindow) + 8.0,
+                "The keyboard-input controls overlapped the settings footer.");
         NSRect feedbackCardRect = [updatesPage convertRect:feedbackCard.bounds fromView:feedbackCard];
         require(NSMaxY(feedbackCardRect) <= NSMaxY(updatesPage.bounds),
                 "The feedback card overflowed the updates page.");
