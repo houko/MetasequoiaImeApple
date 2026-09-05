@@ -165,15 +165,45 @@ int RunTest() {
   }
 
   {
-    // Every local input mode is unreachable from this adapter, and two of them have no data in the
-    // compact dictionary either. A trigger must therefore leave the session alone and come back
-    // unhandled, so the keyboard passes the capital to the host application.
     metasequoia::apple::InputSessionAdapter adapter;
+    // A capital typed as a key is still not a mode trigger. The keyboard has no shift in Chinese
+    // mode, and the engine reads A-Z during a composition as helpcode, which no Apple frontend
+    // offers, so it has to come back unhandled for the host application to insert.
     for (const char trigger : {'U', 'T', 'K', 'J', 'E', 'M', 'Y', 'R'}) {
-      const auto result = adapter.handle_character(trigger);
-      Require(!result.handled && result.preedit.empty(),
-              "A local input mode trigger was handled by the iOS adapter.");
+      const auto typed = adapter.handle_character(trigger);
+      Require(!typed.handled && typed.preedit.empty(),
+              "A capital typed as a key was taken as a local input mode trigger.");
     }
+
+    // Named explicitly, the three modes this frontend can answer open.
+    for (const char trigger : {'U', 'T', 'J'}) {
+      const auto opened = adapter.open_local_mode(trigger);
+      Require(opened.handled && opened.preedit == std::string(1, trigger),
+              "A serviceable local input mode did not open.");
+      Require(adapter.cancel().handled, "Cancel did not close the local input mode.");
+    }
+    Require(adapter.open_local_mode('U').handled && adapter.in_unicode_mode(),
+            "The Unicode mode did not report itself for digit routing.");
+    // Hexadecimal digits are input here, not candidate numbers.
+    const auto hexDigit = adapter.handle_character('4');
+    Require(hexDigit.handled && hexDigit.preedit == "U4",
+            "The Unicode mode rejected a hexadecimal digit.");
+    Require(adapter.cancel().handled && !adapter.in_unicode_mode(),
+            "Cancel left the Unicode mode open.");
+
+    // The modes whose data the mobile dictionary product does not carry stay shut even when named.
+    for (const char trigger : {'K', 'E', 'M', 'Y', 'R'}) {
+      const auto refused = adapter.open_local_mode(trigger);
+      Require(!refused.handled && refused.preedit.empty(),
+              "A local input mode without packaged data opened when it was named.");
+    }
+
+    // A mode cannot open on top of a composition; the engine guards every trigger on that.
+    Require(adapter.handle_character('n').handled, "The guard fixture did not start a composition.");
+    const auto duringComposition = adapter.open_local_mode('U');
+    Require(!duringComposition.handled && duringComposition.preedit == "n" && !adapter.in_unicode_mode(),
+            "A local input mode opened on top of a live composition.");
+    Require(adapter.cancel().handled, "The guard fixture did not cancel its composition.");
   }
 
   Require(metasequoia::apple::shuangpin_key_hints(false).empty(),

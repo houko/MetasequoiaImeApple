@@ -9,19 +9,20 @@ class InputSessionAdapter::Impl {
 public:
   explicit Impl(SchemeType scheme = SchemeType::Quanpin)
       : session{scheme, true, true, true, false} {
-    // The engine enables every local input mode by default and opens each one on a capital passed
-    // with shift_only. This adapter never passes it, and the iOS keyboard has no shift key in
-    // Chinese mode to pass it from, so all eight are unreachable here. Two of them could not work
-    // anyway: the compact dictionary this frontend packages keeps only the pinyin tables, so quick
-    // phrases and the Japanese lexicon are not in it. Saying so is better than shipping a session
-    // that reports modes it can neither enter nor answer.
+    // Only the modes this frontend can answer are offered, and that is decided by the dictionary
+    // product it ships. MSIME-Dict's mobile profile is compact pinyin — its manifest declares
+    // features ['pinyin'] — so quick phrases have no quick_parases table here, and temporary
+    // Japanese no dict_japanese.dat; emoji and kaomoji read others.db and temporary English reads
+    // english.db, neither of which is fetched on Apple at all. What is left needs nothing beyond
+    // the pinyin tables: Unicode parses its own input, date and time has a built-in provider, and
+    // super jianpin queries the pinyin tables directly.
     LocalModeOptions options;
-    options.unicode = false;
-    options.date_time = false;
+    options.unicode = true;
+    options.date_time = true;
     options.quick_phrase = false;
+    options.super_jianpin = true;
     options.emoji = false;
     options.kaomoji = false;
-    options.super_jianpin = false;
     options.temporary_english = false;
     options.temporary_japanese = false;
     session.set_local_mode_options(options);
@@ -58,6 +59,22 @@ InputSnapshot InputSessionAdapter::handle_character(char character) {
   }
   return MakeSnapshot(impl_->session,
                       impl_->session.handle_character(character));
+}
+
+InputSnapshot InputSessionAdapter::open_local_mode(char trigger) {
+  // The engine guards every trigger on there being no composition, so a mode opened on top of one
+  // would be a mode the user did not ask for. handle_character rejects A-Z outright, which is right
+  // for a keystroke and wrong here, so the session is called directly with the shift_only flag the
+  // triggers are keyed off.
+  if (trigger < 'A' || trigger > 'Z' || impl_->session.has_composition()) {
+    return MakeSnapshot(impl_->session, KeyResult{});
+  }
+  return MakeSnapshot(impl_->session,
+                      impl_->session.handle_character(trigger, true));
+}
+
+bool InputSessionAdapter::in_unicode_mode() const {
+  return impl_->session.local_input_mode() == LocalInputMode::Unicode;
 }
 
 InputSnapshot InputSessionAdapter::handle_candidate_key(char character) {

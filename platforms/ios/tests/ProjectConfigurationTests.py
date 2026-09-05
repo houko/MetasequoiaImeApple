@@ -110,9 +110,9 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn('configuration.title = "\\(number)  \\(display)"', controller)
         self.assertIn("self.render(self.session.selectCandidate(at: UInt(index)))", controller)
 
-        strip = controller.split("private func renderCandidateStrip", 1)[1].split("\n  }", 1)[0]
-        self.assertIn("visiblePreedit", strip)
-        self.assertNotIn("chineseOutput(visiblePreedit)", strip)
+        preedit = controller.split("private func updatePreeditButton", 1)[1].split("\n  }", 1)[0]
+        self.assertIn("visiblePreedit", preedit)
+        self.assertNotIn("chineseOutput(visiblePreedit)", preedit)
 
     def test_backspace_repeats_only_while_the_delete_key_is_held(self):
         controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
@@ -250,6 +250,51 @@ class ProjectConfigurationTests(unittest.TestCase):
         # English mode feeds the client directly rather than a composition, so a double-pinyin hint
         # there would describe something the key does not do.
         self.assertIn("let hint = isChineseMode ? shuangpinKeyHints[lowercase.uppercased()] : nil", controller)
+
+    def test_local_input_modes_are_reachable_and_only_the_serviceable_ones(self):
+        # The engine opens a local mode on a capital carried with its shift_only flag, which no iOS
+        # key can produce. The frontend names the mode instead and the bridge turns it back into the
+        # keystroke the engine expects.
+        adapter_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/InputSessionAdapter.h").read_text()
+        adapter = (IOS_ROOT.parents[1] / "shared/apple-bridge/InputSessionAdapter.cpp").read_text()
+        bridge_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.h").read_text()
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+        profile = (IOS_ROOT.parents[1] / "tools/MetasequoiaImeDict/build_profile.py").read_text()
+
+        self.assertIn("InputSnapshot open_local_mode(char trigger);", adapter_header)
+        self.assertIn("openLocalMode:", bridge_header)
+
+        # A mode cannot open on top of a composition, and the engine guards every trigger on that,
+        # so the bridge has to refuse rather than hand the capital over as helpcode.
+        opener = adapter.split("InputSessionAdapter::open_local_mode", 1)[1].split("\n}", 1)[0]
+        self.assertIn("impl_->session.has_composition()", opener)
+        self.assertIn("handle_character(trigger, true)", opener)
+
+        # Only the four this frontend can answer. The rest read others.db, english.db or
+        # dict_japanese.dat, none of which are packaged.
+        options = adapter.split("LocalModeOptions options;", 1)[1].split("set_local_mode_options", 1)[0]
+        for enabled in ("unicode", "date_time", "super_jianpin"):
+            self.assertIn(f"options.{enabled} = true;", options)
+        # quick_phrase reads quick_parases and temporary_japanese reads dict_japanese.dat, neither of
+        # which is in MSIME-Dict's mobile product: its manifest declares features ['pinyin']. Emoji
+        # and kaomoji read others.db and temporary English reads english.db, none of which Apple
+        # fetches at all.
+        for disabled in ("quick_phrase", "emoji", "kaomoji", "temporary_english", "temporary_japanese"):
+            self.assertIn(f"options.{disabled} = false;", options)
+        self.assertIn("['pinyin']", profile)
+
+        self.assertIn('(trigger: "U", title: "Unicode 码点")', controller)
+        self.assertNotIn('title: "快捷短语"', controller)
+        self.assertIn("session.openLocalMode(trigger)", controller)
+        self.assertIn('preeditButton.accessibilityIdentifier = "preeditButton"', controller)
+        # The entry point is the strip's own name, which is only dead space while nothing is being
+        # composed and the keyboard is in Chinese mode.
+        self.assertIn("let offersModes = idle && isChineseMode", controller)
+        # Disabling the button would dim the title, and the title is the preedit.
+        self.assertNotIn("preeditButton.isEnabled", controller)
+        self.assertIn("preeditButton.menu =", controller)
+        # Unicode reads hexadecimal, so its digits are input rather than candidate numbers.
+        self.assertIn("if session.isInUnicodeMode, symbol.count == 1, symbol >= \"0\", symbol <= \"9\" {", controller)
 
     def test_engine_diagnostics_reach_the_keyboard(self):
         # KeyResult carries a diagnostic when the key was handled but something behind it failed,
