@@ -116,6 +116,38 @@ int main()
     require(CandidateDisplayText(WordItem{"ni", "你", 1}, SchemeType::Quanpin, true) == "你(rX)" &&
                 CandidateDisplayText(WordItem{"nimen", "你们", 1}, SchemeType::Shuangpin, true) == "你们(rR)",
             "Pinyin candidate display did not append the configured auxiliary code.");
+    // A helpcode annotates a word the user could have typed in pinyin. compute_helpcodes still
+    // finds Han characters in a synthesised candidate and appends letters for them, so "2026年9月6日"
+    // came back carrying the codes for 年 and 日. Only the modes whose candidates are dictionary
+    // words keep the annotation.
+    using metasequoia::LocalInputMode;
+    using metasequoia::mac::HelpcodesAnnotateLocalMode;
+    require(HelpcodesAnnotateLocalMode(LocalInputMode::None) &&
+                HelpcodesAnnotateLocalMode(LocalInputMode::SuperJianpin),
+            "Ordinary and super-jianpin candidates lost their helpcode annotation.");
+    require(!HelpcodesAnnotateLocalMode(LocalInputMode::DateTime) &&
+                !HelpcodesAnnotateLocalMode(LocalInputMode::Unicode) &&
+                !HelpcodesAnnotateLocalMode(LocalInputMode::QuickPhrase) &&
+                !HelpcodesAnnotateLocalMode(LocalInputMode::Emoji) &&
+                !HelpcodesAnnotateLocalMode(LocalInputMode::Kaomoji),
+            "A synthesised local-mode candidate was annotated with a helpcode.");
+    require(CandidateDisplayText(WordItem{"T", "2026年9月6日", 1}, SchemeType::Quanpin, false) ==
+                "2026年9月6日",
+            "A date candidate did not come back unannotated.");
+    require(CandidateDisplayText(WordItem{"T", "2026年9月6日", 1}, SchemeType::Quanpin, true) !=
+                "2026年9月6日",
+            "The annotation this rule exists to suppress no longer happens, so the rule is dead.");
+
+    // Traditional output chooses how to render a word. A Unicode code point is one exact character,
+    // and its traditional counterpart is a different one than the user named.
+    using metasequoia::mac::ScriptConversionAppliesToLocalMode;
+    require(ScriptConversionAppliesToLocalMode(LocalInputMode::None) &&
+                ScriptConversionAppliesToLocalMode(LocalInputMode::DateTime) &&
+                ScriptConversionAppliesToLocalMode(LocalInputMode::QuickPhrase),
+            "Traditional output stopped applying to candidates that are words.");
+    require(!ScriptConversionAppliesToLocalMode(LocalInputMode::Unicode),
+            "A Unicode code point was handed to the traditional-output conversion.");
+
     require(CandidateDisplayText(WordItem{"ni", "你", 1}, SchemeType::Quanpin, false) == "你" &&
                 CandidateDisplayText(WordItem{"abcd", "你", 1}, SchemeType::Wubi, true) == "你",
             "Candidate display exposed auxiliary codes when the feature or scheme did not allow them.");

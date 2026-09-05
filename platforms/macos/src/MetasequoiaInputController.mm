@@ -463,6 +463,9 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         return NO;
     }
 
+    // Captured before the key is dispatched: a commit clears the local mode, and applyResult still
+    // needs to know which one produced the text it is inserting.
+    const metasequoia::LocalInputMode localModeForKey = _session->local_input_mode();
     metasequoia::KeyResult result;
     const BOOL candidatePageShortcutModified =
         (modifiers & (NSEventModifierFlagShift | NSEventModifierFlagCommand | NSEventModifierFlagControl |
@@ -603,7 +606,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
         }
         return NO;
     }
-    [self applyResult:result client:sender];
+    [self applyResult:result localMode:localModeForKey client:sender];
     return YES;
 }
 
@@ -619,11 +622,12 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     // arrowed onto — type shi, press Down to highlight 时, click into another application, and 是
     // was committed. The rest of the composition still finishes from the engine's first candidate,
     // which is what the default argument means and what this path already did.
+    const metasequoia::LocalInputMode localMode = _session->local_input_mode();
     const auto result =
         _session->finish_composition(_candidateSelection.live_selected_index(*_session).value_or(0));
     if (result.handled)
     {
-        [self applyResult:result client:sender];
+        [self applyResult:result localMode:localMode client:sender];
     }
 }
 
@@ -634,13 +638,20 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
            [MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled];
 }
 
-- (void)applyResult:(const metasequoia::KeyResult &)result client:(id)sender
+// The local input mode is taken as an argument rather than read from the session, because
+// committing resets it: by the time a result arrives here the session has already forgotten that a
+// Unicode code point is what produced it, and converting that to traditional would hand back a
+// different character than the one the user named.
+- (void)applyResult:(const metasequoia::KeyResult &)result
+          localMode:(metasequoia::LocalInputMode)localMode
+             client:(id)sender
 {
     id<IMKTextInput> client = sender;
     const NSRange replacementRange = NSMakeRange(NSNotFound, NSNotFound);
     if (result.commit.has_value())
     {
-        const BOOL traditionalOutput = [self traditionalChineseOutputActive];
+        const BOOL traditionalOutput = [self traditionalChineseOutputActive] &&
+                                       metasequoia::mac::ScriptConversionAppliesToLocalMode(localMode);
         NSString *commit = MetasequoiaChineseOutputString(MetasequoiaStringFromUtf8(*result.commit),
                                                            traditionalOutput);
         [client insertText:commit replacementRange:replacementRange];
@@ -727,12 +738,16 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     }
     _candidateLineIdentifiersCollapsed = NO;
     NSMutableArray *data = [NSMutableArray arrayWithCapacity:_session->candidates().size()];
-    const BOOL traditionalOutput = [self traditionalChineseOutputActive];
+    const metasequoia::LocalInputMode localMode = _session->local_input_mode();
+    const BOOL traditionalOutput = [self traditionalChineseOutputActive] &&
+                                   metasequoia::mac::ScriptConversionAppliesToLocalMode(localMode);
+    const bool annotateHelpcodes =
+        _session->helpcode_enabled() && metasequoia::mac::HelpcodesAnnotateLocalMode(localMode);
     NSUInteger candidateIndex = 0;
     for (const WordItem &candidate : _session->candidates())
     {
         NSString *display = MetasequoiaStringFromUtf8(metasequoia::mac::CandidateDisplayText(
-            candidate, _session->scheme_type(), _session->helpcode_enabled()));
+            candidate, _session->scheme_type(), annotateHelpcodes));
         NSString *convertedDisplay = MetasequoiaChineseOutputString(display, traditionalOutput);
         [data addObject:MetasequoiaIndexedCandidateString(convertedDisplay, candidateIndex)];
         ++candidateIndex;
@@ -830,10 +845,11 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     {
         return;
     }
+    const metasequoia::LocalInputMode localMode = _session->local_input_mode();
     const auto result = _session->select_candidate(static_cast<size_t>(index));
     if (result.handled)
     {
-        [self applyResult:result client:self.client];
+        [self applyResult:result localMode:localMode client:self.client];
     }
 }
 
