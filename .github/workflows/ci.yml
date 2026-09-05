@@ -44,6 +44,7 @@ jobs:
         run: brew install boost fmt spdlog
       - name: Validate the product lock
         run: |
+          python3 scripts/check-dictionary-contract.py
           python3 scripts/product_lock.py validate
           python3 platforms/macos/tests/ProductLockTests.py
       # The unit tests run against a fixture rather than the released database: they assert behaviour

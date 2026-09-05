@@ -7,7 +7,7 @@ The engine and helpcode pins are gitlinks. Git already makes those immutable and
 
 The dictionary the bundle actually *ships* is the one input git does not pin. It is a release asset behind a tag that upstream can retag, and the SHA256SUMS.txt published beside it is exactly as mutable as the data. So product-lock.json holds the tag and the SHA256 of every asset, and the build verifies those committed digests instead.
 
-The dictionary's *source* commit is locked alongside the digests rather than read from a gitlink. MSIME-Linux learned that the hard way: its dict gitlink recorded 55bd649 while every shipped byte came from 0c7368c, because nothing moves that pin in lockstep with the release tag (MSIME-Linux#47). The commit the tag resolves to is the only one that produced the data, so `refresh` resolves it at the moment the data is reviewed. There is no dict submodule here either, for the same reason.
+The dictionary's *source* commit is locked alongside the digests rather than read from a gitlink. MSIME-Linux learned that the hard way: its dict gitlink recorded 55bd649 while every shipped byte came from 0c7368c, because nothing moves that pin in lockstep with the release tag (MSIME-Linux#47). The commit the tag resolves to is the only one that produced the data, so `refresh` resolves it at the moment the data is reviewed. The tools/MetasequoiaImeDict gitlink is a separate mobile-profile builder dependency, never the source identity of the released database.
 
 `refresh` is the only command that reaches upstream. `manifest` records what a build consumed: the source commit, every gitlink, the locked dictionary and the digest of the lock itself.
 """
@@ -15,6 +15,7 @@ The dictionary's *source* commit is locked alongside the digests rather than rea
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import hashlib
 import json
 import re
@@ -25,6 +26,12 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+_product_spec = importlib.util.spec_from_file_location("dictionary_product", Path(__file__).with_name("dictionary_product.py"))
+_product = importlib.util.module_from_spec(_product_spec)
+_product_spec.loader.exec_module(_product)
+PRODUCT_MANIFEST = _product.MANIFEST_NAME
+LEGACY_DICTIONARY_TAG = "dict-2026.09.05"
+
 
 REPOSITORY = "metasequoiaime/MSIME-Apple"
 DICTIONARY_REPOSITORY = "metasequoiaime/MSIME-Dict"
@@ -33,6 +40,7 @@ DICTIONARY_URL = f"https://github.com/{DICTIONARY_REPOSITORY}.git"
 # Every gitlink this repository builds from. The manifest reads their commits here rather than from
 # a second copy in the lock, so there is one source of truth for what was checked out.
 SUBMODULES = {
+    "dictionary_builder": ("metasequoiaime/MSIME-Dict", "tools/MetasequoiaImeDict"),
     "engine": ("metasequoiaime/MSIME-Engine", "vendor/MetasequoiaImeEngine"),
     "helpcode": ("metasequoiaime/MSIME-HelpCode", "vendor/MetasequoiaImeHelpCode"),
 }
@@ -58,7 +66,8 @@ def validate(data: dict) -> dict:
     if not SHA.fullmatch(dictionary.get("source_commit", "")):
         raise ValueError("Dictionary source_commit must be the full commit the release tag resolves to")
     assets = dictionary.get("assets", {})
-    if set(assets) != set(ASSETS):
+    expected_assets = set(ASSETS) if dictionary['tag'] == LEGACY_DICTIONARY_TAG else set(ASSETS) | {PRODUCT_MANIFEST}
+    if set(assets) != expected_assets:
         raise ValueError("Dictionary lock must cover every shipped database and the checksum file")
     for name, digest in assets.items():
         if not DIGEST.fullmatch(digest):
@@ -93,6 +102,9 @@ def verify_assets(directory: Path, data: dict) -> None:
         if actual != expected:
             raise ValueError(f"{name} does not match the product lock: expected {expected}, got {actual}")
 
+    if PRODUCT_MANIFEST in data["dictionary"]["assets"]:
+        _product.verify_product(directory, "desktop", DATABASES)
+
 
 def download_assets(tag: str, destination: Path) -> None:
     """Plain HTTPS rather than the GitHub CLI or the API.
@@ -102,7 +114,8 @@ def download_assets(tag: str, destination: Path) -> None:
     if not TAG.fullmatch(tag):
         raise ValueError("Refusing to download from a tag that is not an explicit dict-* release")
     destination.mkdir(parents=True, exist_ok=True)
-    for name in ASSETS:
+    names = ASSETS if tag == LEGACY_DICTIONARY_TAG else (*ASSETS, PRODUCT_MANIFEST)
+    for name in names:
         url = f"https://github.com/{DICTIONARY_REPOSITORY}/releases/download/{tag}/{name}"
         target = destination / name
         last_error: Exception | None = None
@@ -193,7 +206,7 @@ def refresh(tag: str) -> dict:
         download_assets(tag, incoming)
         published = published_checksums(incoming)
         assets = {}
-        for name in ASSETS:
+        for name in (ASSETS if tag == LEGACY_DICTIONARY_TAG else (*ASSETS, PRODUCT_MANIFEST)):
             digest = sha256(incoming / name)
             if name in published and published[name] != digest:
                 raise ValueError(f"{name} does not match the checksums published with {tag}")

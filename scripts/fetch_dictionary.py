@@ -73,9 +73,9 @@ def main() -> None:
         incoming = Path(temporary)
         product_lock.download_assets(tag, incoming)
         product_lock.verify_assets(incoming, data)
-        print(f"verified {len(product_lock.ASSETS)} assets against product-lock.json")
+        print(f"verified {len(data["dictionary"]["assets"])} assets against product-lock.json")
         verify_contents(incoming)
-        for name in product_lock.ASSETS:
+        for name in data["dictionary"]["assets"]:
             shutil.copyfile(incoming / name, OUTPUT_DIR / name)
     print(f"staged into {OUTPUT_DIR}")
 

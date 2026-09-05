@@ -3,6 +3,8 @@
 
 #include "user_dictionary/user_dictionary_journal.h"
 
+#include <sqlite3.h>
+
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -131,6 +133,35 @@ int RunTest() {
                 *composedPunctuation.commit == "ni，" &&
                 composedPunctuation.preedit.empty(),
             "Punctuation did not atomically commit the raw composition.");
+  }
+
+  {
+    sqlite3 *database = nullptr;
+    Require(sqlite3_open((dataDirectory / "msime.db").c_str(), &database) == SQLITE_OK,
+            "Cannot open the partial-selection fixture.");
+    Require(sqlite3_exec(database,
+        "CREATE TABLE tbl_1_s(key TEXT,jp TEXT,value TEXT,weight INTEGER);"
+        "INSERT INTO tbl_1_s VALUES('shui','s','水',100);"
+        "CREATE TABLE tbl_1_l(key TEXT,jp TEXT,value TEXT,weight INTEGER);"
+        "INSERT INTO tbl_1_l VALUES('lin','l','林',100);"
+        "CREATE TABLE tbl_2_s(key TEXT,jp TEXT,value TEXT,weight INTEGER)",
+        nullptr, nullptr, nullptr) == SQLITE_OK, "Cannot populate the partial-selection fixture.");
+    sqlite3_close(database);
+    metasequoia::apple::InputSessionAdapter adapter;
+    for (char c : std::string("shui'lin")) adapter.handle_character(c);
+    const auto prefix = adapter.commit_candidate();
+    Require(prefix.commit == "水" && prefix.preedit == "lin" && !prefix.candidates.empty(),
+            "The keyboard snapshot lost the remaining input after partial selection.");
+    const auto suffix = adapter.commit_candidate();
+    Require(suffix.commit == "林" && suffix.preedit.empty(), "The keyboard repeated the committed prefix.");
+    for (char c : std::string("shui'lin")) adapter.handle_character(c);
+    const auto finished = adapter.finish_composition();
+    Require(finished.commit == "水林" && finished.preedit.empty() && finished.candidates.empty(),
+            "Return or direct-mode switching left a hidden keyboard composition.");
+    for (char c : std::string("shui'lin")) adapter.handle_character(c);
+    const auto switched = adapter.switch_to_shuangpin(true);
+    Require(switched.commit == "水林" && switched.preedit.empty(),
+            "Switching keyboard schemes lost the pending suffix.");
   }
 
   Require(metasequoia::apple::shuangpin_key_hints(false).empty(),

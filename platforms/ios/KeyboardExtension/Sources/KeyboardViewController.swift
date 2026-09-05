@@ -389,7 +389,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
 
   private func toggleInputMode() {
     playInputClick()
-    let snapshot = isChineseMode ? session.commitCandidate() : session.cancel()
+    let snapshot = isChineseMode ? session.finishComposition() : session.cancel()
     isChineseMode.toggle()
     letterCaseState = .lowercase
     isAutomaticShift = false
@@ -699,7 +699,7 @@ final class KeyboardViewController: UIInputViewController, UIInputViewAudioFeedb
 
   private func handleReturn() {
     playInputClick()
-    render(session.commitCandidate())
+    render(session.finishComposition())
     textDocumentProxy.insertText("\n")
   }
 

@@ -25,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (MetasequoiaInputSnapshot *)handlePunctuation:(NSString *)character;
 - (MetasequoiaInputSnapshot *)handleBackspace;
 - (MetasequoiaInputSnapshot *)commitCandidate;
+- (MetasequoiaInputSnapshot *)finishComposition;
 - (MetasequoiaInputSnapshot *)commitRaw;
 - (MetasequoiaInputSnapshot *)cancel;
 - (MetasequoiaInputSnapshot *)selectCandidateAtIndex:(NSUInteger)index;

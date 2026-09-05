@@ -565,7 +565,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     {
         return;
     }
-    const auto result = _session->handle_command(metasequoia::Command::CommitCandidate);
+    const auto result = _session->finish_composition();
     if (result.handled)
     {
         [self applyResult:result client:sender];
@@ -590,9 +590,12 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
                                                            traditionalOutput);
         [client insertText:commit replacementRange:replacementRange];
         _candidateSelection.reset();
-        [_candidatePanel hide];
-        [_shuangpinKeymapPanel orderOut:nil];
-        return;
+        if (!_session->has_composition())
+        {
+            [_candidatePanel hide];
+            [_shuangpinKeymapPanel orderOut:nil];
+            return;
+        }
     }
 
     NSString *preedit = MetasequoiaStringFromUtf8(_session->preedit());

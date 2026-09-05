@@ -181,6 +181,10 @@ void ConfigureDataDirectory() {
   return [self snapshotFrom:_adapter->commit_candidate()];
 }
 
+- (MetasequoiaInputSnapshot *)finishComposition {
+  return [self snapshotFrom:_adapter->finish_composition()];
+}
+
 - (MetasequoiaInputSnapshot *)commitRaw {
   return [self snapshotFrom:_adapter->commit_raw()];
 }
