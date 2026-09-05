@@ -11,7 +11,7 @@
 - (instancetype)initWithUpdateController:(MetasequoiaUpdateController *)updateController;
 - (void)refreshControls;
 - (void)refreshUpdateControls;
-- (void)selectPreferencesPage:(id)sender;
+- (void)selectPreferencesPageFromToolbar:(id)sender;
 - (void)openWebsite:(id)sender;
 - (void)openFeedback:(id)sender;
 @end
@@ -108,6 +108,18 @@ NSButton *FindButtonWithTitle(NSView *view, NSString *title)
         if (match != nil)
         {
             return match;
+        }
+    }
+    return nil;
+}
+
+NSToolbarItem *FindToolbarItemWithLabel(NSToolbar *toolbar, NSString *label)
+{
+    for (NSToolbarItem *item in toolbar.items)
+    {
+        if ([item.label isEqualToString:label])
+        {
+            return item;
         }
     }
     return nil;
@@ -213,28 +225,22 @@ int main()
         MetasequoiaPreferencesWindowController *controller =
             [[MetasequoiaPreferencesWindowController alloc] initWithUpdateController:updateController];
         [controller refreshControls];
-        NSButton *generalNavigationButton = FindButtonWithTitle(controller.window.contentView, @"键盘输入");
-        NSButton *appearanceNavigationButton = FindButtonWithTitle(controller.window.contentView, @"外观");
-        NSButton *dataNavigationButton = FindButtonWithTitle(controller.window.contentView, @"词库与数据");
-        NSButton *updatesNavigationButton = FindButtonWithTitle(controller.window.contentView, @"更新与反馈");
-        require(generalNavigationButton != nil && appearanceNavigationButton != nil && dataNavigationButton != nil &&
-                    updatesNavigationButton != nil,
-                "The settings window did not expose all sidebar destinations.");
-        NSColor *generalTitleColor = [generalNavigationButton.attributedTitle attribute:NSForegroundColorAttributeName
-                                                                                atIndex:0
-                                                                         effectiveRange:nil];
-        require([generalTitleColor isEqual:[NSColor labelColor]],
-                "The settings sidebar did not render navigation titles with the readable label color.");
-        require([generalNavigationButton.contentTintColor isEqual:[NSColor labelColor]] &&
-                    ![generalNavigationButton.image isTemplate],
-                "The settings sidebar did not render navigation symbols with a readable tint.");
-        require(generalNavigationButton.state == NSControlStateValueOn &&
-                    appearanceNavigationButton.state == NSControlStateValueOff &&
-                    dataNavigationButton.state == NSControlStateValueOff &&
-                    updatesNavigationButton.state == NSControlStateValueOff &&
-                    [generalNavigationButton.accessibilityValue integerValue] == 1 &&
-                    [appearanceNavigationButton.accessibilityValue integerValue] == 0,
-                "The settings sidebar did not mark the initial page as selected.");
+        require(controller.window.titleVisibility == NSWindowTitleVisible &&
+                    !controller.window.titlebarAppearsTransparent &&
+                    !controller.window.movableByWindowBackground,
+                "The settings window did not use standard macOS window chrome.");
+        require(FindViewWithAccessibilityLabel(controller.window.contentView, @"水杉输入法导航") == nil,
+                "The settings window still exposed the custom branded sidebar.");
+        NSToolbar *toolbar = controller.window.toolbar;
+        NSToolbarItem *generalNavigationItem = FindToolbarItemWithLabel(toolbar, @"键盘输入");
+        NSToolbarItem *appearanceNavigationItem = FindToolbarItemWithLabel(toolbar, @"外观");
+        NSToolbarItem *dataNavigationItem = FindToolbarItemWithLabel(toolbar, @"词库与数据");
+        NSToolbarItem *updatesNavigationItem = FindToolbarItemWithLabel(toolbar, @"更新与反馈");
+        require(toolbar != nil && generalNavigationItem != nil && appearanceNavigationItem != nil &&
+                    dataNavigationItem != nil && updatesNavigationItem != nil,
+                "The settings window did not expose all native toolbar destinations.");
+        require([toolbar.selectedItemIdentifier isEqualToString:generalNavigationItem.itemIdentifier],
+                "The settings toolbar did not mark the initial page as selected.");
         NSView *generalPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"键盘输入设置页");
         NSView *appearancePage = FindViewWithAccessibilityLabel(controller.window.contentView, @"外观设置页");
         NSView *dataPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"词库与数据设置页");
@@ -243,20 +249,30 @@ int main()
                 "The settings window did not create all functional pages.");
         require(!generalPage.hidden && appearancePage.hidden && dataPage.hidden && updatesPage.hidden,
                 "The settings window did not open on the keyboard-input page.");
-        [appearanceNavigationButton performClick:nil];
-        require(generalPage.hidden && !appearancePage.hidden && dataPage.hidden &&
-                    appearanceNavigationButton.state == NSControlStateValueOn &&
-                    generalNavigationButton.state == NSControlStateValueOff,
-                "The appearance sidebar item did not reveal and select the appearance page.");
-        [dataNavigationButton performClick:nil];
-        require(generalPage.hidden && appearancePage.hidden && !dataPage.hidden &&
-                    dataNavigationButton.state == NSControlStateValueOn,
-                "The data sidebar item did not reveal and select the data page.");
-        [updatesNavigationButton performClick:nil];
-        require(generalPage.hidden && appearancePage.hidden && dataPage.hidden && !updatesPage.hidden &&
-                    updatesNavigationButton.state == NSControlStateValueOn,
-                "The updates sidebar item did not reveal and select the updates page.");
-        [generalNavigationButton performClick:nil];
+        require([NSApp sendAction:appearanceNavigationItem.action
+                               to:appearanceNavigationItem.target
+                             from:appearanceNavigationItem] &&
+                    generalPage.hidden && !appearancePage.hidden && dataPage.hidden &&
+                    [toolbar.selectedItemIdentifier isEqualToString:appearanceNavigationItem.itemIdentifier],
+                "The appearance toolbar item did not reveal and select the appearance page.");
+        require([NSApp sendAction:dataNavigationItem.action
+                               to:dataNavigationItem.target
+                             from:dataNavigationItem] &&
+                    generalPage.hidden && appearancePage.hidden && !dataPage.hidden &&
+                    [toolbar.selectedItemIdentifier isEqualToString:dataNavigationItem.itemIdentifier],
+                "The data toolbar item did not reveal and select the data page.");
+        require([NSApp sendAction:updatesNavigationItem.action
+                               to:updatesNavigationItem.target
+                             from:updatesNavigationItem] &&
+                    generalPage.hidden && appearancePage.hidden && dataPage.hidden && !updatesPage.hidden &&
+                    [toolbar.selectedItemIdentifier isEqualToString:updatesNavigationItem.itemIdentifier],
+                "The updates toolbar item did not reveal and select the updates page.");
+        require([NSApp sendAction:generalNavigationItem.action
+                               to:generalNavigationItem.target
+                             from:generalNavigationItem] &&
+                    !generalPage.hidden && appearancePage.hidden && dataPage.hidden && updatesPage.hidden &&
+                    [toolbar.selectedItemIdentifier isEqualToString:generalNavigationItem.itemIdentifier],
+                "The keyboard-input toolbar item did not reveal and select the keyboard page.");
 
         NSView *candidatePageShortcutView =
             FindViewWithAccessibilityLabel(controller.window.contentView, @"候选翻页快捷键");
@@ -348,8 +364,9 @@ int main()
                 "The Wubi settings entry did not use the readable dynamic label color.");
         [wubiSettingsButton performClick:nil];
         NSView *wubiPage = FindViewWithAccessibilityLabel(controller.window.contentView, @"五笔设置页");
-        require(wubiPage != nil && !wubiPage.hidden && generalPage.hidden,
-                "The Wubi settings entry did not open its detail page.");
+        require(wubiPage != nil && !wubiPage.hidden && generalPage.hidden &&
+                    [toolbar.selectedItemIdentifier isEqualToString:generalNavigationItem.itemIdentifier],
+                "The Wubi settings entry did not open its detail page under the keyboard toolbar item.");
         NSView *wubiAutoCommitView =
             FindViewWithAccessibilityLabel(controller.window.contentView, @"四码唯一候选自动上屏");
         require([wubiAutoCommitView isKindOfClass:[NSButton class]] &&
@@ -364,18 +381,19 @@ int main()
                 "The Wubi auto-commit option did not persist its enabled state.");
         NSButton *backToKeyboardButton = FindButtonWithTitle(controller.window.contentView, @"返回键盘输入");
         [backToKeyboardButton performClick:nil];
-        require(!generalPage.hidden && wubiPage.hidden,
-                "The Wubi detail page did not return to keyboard-input settings.");
+        require(!generalPage.hidden && wubiPage.hidden &&
+                    [toolbar.selectedItemIdentifier isEqualToString:generalNavigationItem.itemIdentifier],
+                "The Wubi detail page did not return to keyboard-input settings under its toolbar item.");
 
-        NSButton *websiteButton = FindButtonWithTitle(controller.window.contentView, @"msime.app");
+        NSButton *websiteButton = FindButtonWithTitle(controller.window.contentView, @"访问 msime.app");
         require(websiteButton != nil && websiteButton.action == @selector(openWebsite:) &&
                     websiteButton.target == controller,
-                "The settings sidebar did not expose the canonical product website.");
+                "The updates page did not expose the canonical product website.");
         NSColor *websiteTitleColor = [websiteButton.attributedTitle attribute:NSForegroundColorAttributeName
                                                                       atIndex:0
                                                                effectiveRange:nil];
-        require([websiteTitleColor isEqual:[NSColor labelColor]],
-                "The canonical website link did not use the readable sidebar label color.");
+        require([websiteTitleColor isEqual:[NSColor linkColor]],
+                "The canonical website link did not use the system link color.");
 
         [controller.window.contentView layoutSubtreeIfNeeded];
         NSView *schemeCard = FindViewWithAccessibilityLabel(controller.window.contentView, @"输入方式卡片");
