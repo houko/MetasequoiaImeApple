@@ -560,15 +560,20 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     }
 }
 
+// Single source of truth for the traditional-output predicate so the candidate panel and the committed text can never disagree about which script the user sees.
+- (BOOL)traditionalChineseOutputActive
+{
+    return _session != nullptr && _session->scheme_type() != SchemeType::JapaneseRomaji &&
+           [MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled];
+}
+
 - (void)applyResult:(const metasequoia::KeyResult &)result client:(id)sender
 {
     id<IMKTextInput> client = sender;
     const NSRange replacementRange = NSMakeRange(NSNotFound, NSNotFound);
     if (result.commit.has_value())
     {
-        const BOOL traditionalOutput =
-            _session->scheme_type() != SchemeType::JapaneseRomaji &&
-            [MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled];
+        const BOOL traditionalOutput = [self traditionalChineseOutputActive];
         NSString *commit = MetasequoiaChineseOutputString(MetasequoiaStringFromUtf8(*result.commit),
                                                            traditionalOutput);
         [client insertText:commit replacementRange:replacementRange];
@@ -652,9 +657,7 @@ bool SessionMatchesPreferences(const metasequoia::InputSession &session, const S
     }
     _candidateLineIdentifiersCollapsed = NO;
     NSMutableArray *data = [NSMutableArray arrayWithCapacity:_session->candidates().size()];
-    const BOOL traditionalOutput =
-        _session->scheme_type() != SchemeType::JapaneseRomaji &&
-        [MetasequoiaPreferencesWindowController storedTraditionalChineseOutputEnabled];
+    const BOOL traditionalOutput = [self traditionalChineseOutputActive];
     NSUInteger candidateIndex = 0;
     for (const WordItem &candidate : _session->candidates())
     {

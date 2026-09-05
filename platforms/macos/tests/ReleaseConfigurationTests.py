@@ -144,7 +144,13 @@ class ReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("selectSimplifiedOutput:", controller)
         self.assertIn("selectTraditionalOutput:", controller)
 
+        self.assertEqual(controller.count("- (BOOL)traditionalChineseOutputActive\n"), 1)
+        accessor = controller.split("- (BOOL)traditionalChineseOutputActive\n", 1)[1].split("\n}", 1)[0]
+        self.assertIn("storedTraditionalChineseOutputEnabled", accessor)
+
         apply_result = controller.split("- (void)applyResult:", 1)[1].split("\n}", 1)[0]
+        self.assertIn("[self traditionalChineseOutputActive]", apply_result)
+        self.assertNotIn("storedTraditionalChineseOutputEnabled", apply_result)
         self.assertLess(
             apply_result.index("MetasequoiaChineseOutputString"),
             apply_result.index("insertText:"),
@@ -152,8 +158,12 @@ class ReleaseConfigurationTests(unittest.TestCase):
         candidate_panel = controller.split("- (void)rebuildCandidatePanelPreservingSelection:", 1)[1].split(
             "\n}", 1
         )[0]
-        self.assertIn("MetasequoiaChineseOutputString", candidate_panel)
-        self.assertIn("MetasequoiaIndexedCandidateString", candidate_panel)
+        self.assertIn("[self traditionalChineseOutputActive]", candidate_panel)
+        self.assertNotIn("storedTraditionalChineseOutputEnabled", candidate_panel)
+        self.assertLess(
+            candidate_panel.index("MetasequoiaChineseOutputString"),
+            candidate_panel.index("MetasequoiaIndexedCandidateString"),
+        )
 
         preference_refresh = controller.split("- (void)floatingToolbarPreferenceDidChange:", 1)[1].split(
             "\n}", 1
