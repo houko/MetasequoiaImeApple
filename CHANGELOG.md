@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.36.0](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.35.1...v0.36.0) (2026-09-05)
+
+
+### Features
+
+* **mac:** add native floating status toolbar ([#205](https://github.com/metasequoiaime/MSIME-Apple/issues/205)) ([3f2686b](https://github.com/metasequoiaime/MSIME-Apple/commit/3f2686b1270a5b9f514b78a7356740608081ee04))
+
 ## [0.35.1](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.35.0...v0.35.1) (2026-09-05)
 
 
