@@ -19,6 +19,8 @@ bash platforms/ios/scripts/run_ui_tests.sh
 
 The UI-test runner prefers an already booted iPhone Simulator, otherwise selects the newest available iPhone runtime, waits for its reported boot readiness, and runs the onboarding smoke test without fixed startup delays. Set `IOS_SIMULATOR_UDID` to target a specific device.
 
+`CODE_SIGNING_ALLOWED=NO` above keeps the Simulator build reproducible without a signing identity, but it also means the installed app carries no entitlements and the operating system never provisions the App Group. The host app and the keyboard extension then each get their own `group.com.houko.metasequoiaime.ios` preferences file inside their own container, so a setting changed in the host app never reaches the keyboard and the sharing looks broken when it is not. Build and install with signing enabled when the shared settings themselves are what needs verifying; the two containers are under `~/Library/Developer/CoreSimulator/Devices/<udid>/data/Containers/Data/` and reading both plists tells the two cases apart immediately.
+
 `BREW_PREFIX` defaults to `/opt/homebrew` in `project.yml`; override that build setting when dependencies are installed under another prefix.
 
 The keyboard routes letter input, composition editing, raw/candidate commit, cancellation, numbered candidate selection, and Chinese punctuation through the shared engine. Its candidate bar also provides a local `中` / `英` switch; entering English mode first commits the leading Engine candidate, then passes letters and symbols directly to the host app. The native `123` / `ABC` layer owns only key layout; it does not duplicate the engine's composition or punctuation policy.

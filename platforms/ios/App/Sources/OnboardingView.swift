@@ -42,11 +42,15 @@ struct OnboardingView: View {
 
         VStack(alignment: .leading, spacing: 16) {
           HStack(spacing: 12) {
+            // Decorative next to the row's own title and subtitle. Left visible to VoiceOver, a
+            // symbol reads either its system name ("插入文本") or, when it has none, its raw
+            // identifier, and neither says anything the row's text does not already say.
             Image(systemName: "character.cursor.ibeam")
               .font(.system(size: 17, weight: .semibold))
               .foregroundStyle(MetasequoiaTheme.forest)
               .frame(width: 38, height: 38)
               .background(MetasequoiaTheme.mist, in: Circle())
+              .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
               Text("输入方案")
@@ -76,6 +80,7 @@ struct OnboardingView: View {
               .foregroundStyle(MetasequoiaTheme.forest)
               .frame(width: 38, height: 38)
               .background(MetasequoiaTheme.mist, in: Circle())
+              .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 3) {
               Text("输出字形")

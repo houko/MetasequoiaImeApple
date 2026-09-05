@@ -175,6 +175,16 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("handleInputModeList(from:", controller)
         self.assertNotIn("URLSession", controller)
 
+    def test_setting_row_icons_stay_out_of_the_accessibility_tree(self):
+        # Both icons sit next to a title and a subtitle that already carry the row's meaning. Left
+        # visible, VoiceOver reads the symbol's system name where it has one and its raw identifier
+        # where it does not, which is how "character.book.closed" ended up being announced.
+        onboarding = (IOS_ROOT / "App/Sources/OnboardingView.swift").read_text()
+
+        for symbol in ("character.cursor.ibeam", "character.book.closed"):
+            row = onboarding.split(f'Image(systemName: "{symbol}")', 1)[1].split("\n\n", 1)[0]
+            self.assertIn(".accessibilityHidden(true)", row, f"{symbol} is still announced")
+
     def test_onboarding_exposes_a_regular_text_field_for_keyboard_tryout(self):
         onboarding = (IOS_ROOT / "App/Sources/OnboardingView.swift").read_text()
 
