@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.39.3](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.2...v0.39.3) (2026-09-05)
+
+
+### Bug Fixes
+
+* **apple:** keep the engine's helpcode and English paths out of the Apple frontends ([c288592](https://github.com/metasequoiaime/MSIME-Apple/commit/c28859267255d8313f81e4418d23787f5daaa8ac))
+* **apple:** keep the engine's helpcode and English paths out of the Apple frontends ([6c90eeb](https://github.com/metasequoiaime/MSIME-Apple/commit/6c90eeb52f023a731489dd2a64683507386f47ca))
+
 ## [0.39.2](https://github.com/metasequoiaime/MSIME-Apple/compare/v0.39.1...v0.39.2) (2026-09-05)
 
 
