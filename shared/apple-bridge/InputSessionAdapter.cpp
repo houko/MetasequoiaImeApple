@@ -32,6 +32,12 @@ InputSessionAdapter::InputSessionAdapter() : impl_(std::make_unique<Impl>()) {}
 InputSessionAdapter::~InputSessionAdapter() = default;
 
 InputSnapshot InputSessionAdapter::handle_character(char character) {
+  // The engine accepts A-Z during a composition as helpcode input, which no Apple frontend offers.
+  // Reject it here so an uppercase letter stays unhandled and the frontend passes it to the client,
+  // matching what core/input_session.h still documents and what the macOS controller does.
+  if (character >= 'A' && character <= 'Z') {
+    return MakeSnapshot(impl_->session, KeyResult{});
+  }
   return MakeSnapshot(impl_->session,
                       impl_->session.handle_character(character));
 }

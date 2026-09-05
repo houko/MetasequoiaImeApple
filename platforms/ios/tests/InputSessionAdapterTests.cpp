@@ -60,6 +60,19 @@ int RunTest() {
     Require(!adapter.handle_character('N').handled,
             "Unsupported uppercase input was swallowed by the adapter.");
 
+    // The engine treats A-Z during a composition as helpcode input, so testing uppercase with no
+    // composition proves nothing any more: that path was always unhandled. Pin the state that
+    // actually changed, and pin that the composition survives untouched.
+    Require(adapter.handle_character('n').handled &&
+                adapter.handle_character('i').handled,
+            "The uppercase fixture did not start a composition.");
+    const auto uppercaseDuringComposition = adapter.handle_character('H');
+    Require(!uppercaseDuringComposition.handled,
+            "Uppercase input during a composition was swallowed instead of passed to the client.");
+    Require(uppercaseDuringComposition.preedit == "ni",
+            "Uppercase input during a composition altered the preedit.");
+    Require(adapter.cancel().handled, "The uppercase fixture did not clear its composition.");
+
     const auto punctuation = adapter.handle_punctuation('.');
     Require(punctuation.handled && punctuation.commit.has_value() &&
                 *punctuation.commit == "。",
