@@ -30,6 +30,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (MetasequoiaInputSnapshot *)selectCandidateAtIndex:(NSUInteger)index;
 - (MetasequoiaInputSnapshot *)switchToShuangpin:(BOOL)usesShuangpin;
 
+/// Per-key double-pinyin hints for the scheme the session is actually running, keyed by uppercase
+/// letter. Empty in full pinyin. Derived from the engine's own profile so a frontend never hardcodes
+/// a keymap that can drift from the scheme.
+- (NSDictionary<NSString *, NSString *> *)shuangpinKeyHints;
+
 @end
 
 NS_ASSUME_NONNULL_END

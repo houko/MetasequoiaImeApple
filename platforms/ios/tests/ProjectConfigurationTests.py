@@ -175,6 +175,27 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("handleInputModeList(from:", controller)
         self.assertNotIn("URLSession", controller)
 
+    def test_double_pinyin_key_hints_come_from_the_engine_profile(self):
+        # A hardcoded keymap in Swift would drift from whatever profile the session actually runs.
+        # The hints are derived from the engine's own ShuangpinProfile and refreshed wherever the
+        # scheme is, so the two cannot disagree.
+        keymap = (IOS_ROOT.parents[1] / "shared/apple-bridge/ShuangpinKeymap.cpp").read_text()
+        bridge_header = (IOS_ROOT.parents[1] / "shared/apple-bridge/MetasequoiaInputSessionBridge.h").read_text()
+        controller = (IOS_ROOT / "KeyboardExtension/Sources/KeyboardViewController.swift").read_text()
+        cmake = (IOS_ROOT.parents[1] / "CMakeLists.txt").read_text()
+
+        self.assertIn("GetXiaoheShuangpinProfile()", keymap)
+        self.assertIn("shuangpinKeyHints", bridge_header)
+        self.assertIn("shared/apple-bridge/ShuangpinKeymap.cpp", cmake)
+
+        self.assertIn("private var shuangpinKeyHints: [String: String] = [:]", controller)
+        self.assertIn("shuangpinKeyHints = session.shuangpinKeyHints()", controller)
+        self.assertIn("configuration.subtitle = hint", controller)
+        self.assertIn("button.accessibilityValue = hint", controller)
+        # English mode feeds the client directly rather than a composition, so a double-pinyin hint
+        # there would describe something the key does not do.
+        self.assertIn("let hint = isChineseMode ? shuangpinKeyHints[lowercase.uppercased()] : nil", controller)
+
     def test_engine_diagnostics_reach_the_keyboard(self):
         # KeyResult carries a diagnostic when the key was handled but something behind it failed,
         # such as a candidate the user dictionary could not learn. The bridge used to drop it on the
